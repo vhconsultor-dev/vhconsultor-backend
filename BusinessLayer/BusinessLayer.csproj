@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ModelLayer\ModelLayer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="NewVehicleSales\Commands\" />
+    <Folder Include="NewVehicleSales\Queries\" />
+    <Folder Include="NewVehicleSales\Validators\" />
+    <Folder Include="OperationsManagement\Commands\" />
+    <Folder Include="OperationsManagement\Queries\" />
+    <Folder Include="OperationsManagement\Validators\" />
+    <Folder Include="Security\Commands\" />
+    <Folder Include="Security\Validators\" />
+    <Folder Include="Shared\Commands\" />
+    <Folder Include="Shared\Queries\" />
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="FluentValidation" Version="12.0.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.2" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.130" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.6" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.6" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
