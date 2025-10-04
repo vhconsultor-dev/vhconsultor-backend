@@ -21,9 +21,11 @@
 
   <ItemGroup>
 
-    <Folder Include="Controllers\NewVehicleSales\" />
+    <Folder Include="Controllers\BrandParthner\" />
 
-    <Folder Include="Controllers\OperationsManagement\" />
+    <Folder Include="Controllers\Corporate\" />
+
+    <Folder Include="Controllers\Ecommerce\" />
 
     <Folder Include="Controllers\Shared\" />
 

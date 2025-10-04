@@ -22,3 +22,4 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/refint/ModelLayer.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.pdb
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ref/ModelLayer.dll
+/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.sourcelink.json

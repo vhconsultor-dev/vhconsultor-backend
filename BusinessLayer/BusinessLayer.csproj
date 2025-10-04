@@ -5,12 +5,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="NewVehicleSales\Commands\" />
-    <Folder Include="NewVehicleSales\Queries\" />
-    <Folder Include="NewVehicleSales\Validators\" />
-    <Folder Include="OperationsManagement\Commands\" />
-    <Folder Include="OperationsManagement\Queries\" />
-    <Folder Include="OperationsManagement\Validators\" />
+    <Folder Include="BrandParthner\" />
+    <Folder Include="Corporate\" />
+    <Folder Include="Ecommerce\" />
     <Folder Include="Security\Commands\" />
     <Folder Include="Security\Validators\" />
     <Folder Include="Shared\Commands\" />

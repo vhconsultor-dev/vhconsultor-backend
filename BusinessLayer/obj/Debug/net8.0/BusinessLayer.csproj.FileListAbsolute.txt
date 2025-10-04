@@ -28,3 +28,4 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/obj/Debug/net8.0/refint/BusinessLayer.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/obj/Debug/net8.0/BusinessLayer.pdb
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/obj/Debug/net8.0/ref/BusinessLayer.dll
+/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/obj/Debug/net8.0/BusinessLayer.sourcelink.json

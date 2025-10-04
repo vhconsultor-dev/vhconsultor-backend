@@ -6,9 +6,11 @@
 
   <ItemGroup>
 
-    <Folder Include="NewVehicleSales\" />
+    <Folder Include="BrandParthner\" />
 
-    <Folder Include="OperationsManagement\" />
+    <Folder Include="Corporate\" />
+
+    <Folder Include="Ecommerce\" />
 
     <Folder Include="Shared\" />
 

@@ -244,3 +244,4 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ApiLayer.pdb
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ApiLayer.genruntimeconfig.cache
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ref/ApiLayer.dll
+/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ApiLayer.sourcelink.json
