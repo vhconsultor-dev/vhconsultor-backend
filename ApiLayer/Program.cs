@@ -32,7 +32,7 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 #region Database Configuration
 // Registrar DBcontext
 builder.Services.AddDbContext<ModelLayer.DBcontext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("VH-DB")));
 
 // Registrar ConnectionResolver
 builder.Services.AddScoped<ModelLayer.Shared.IConnectionResolver>(serviceProvider =>
