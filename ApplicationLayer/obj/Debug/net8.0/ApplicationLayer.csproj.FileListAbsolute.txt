@@ -32,3 +32,4 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/refint/ApplicationLayer.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ApplicationLayer.pdb
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ref/ApplicationLayer.dll
+/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ApplicationLayer.sourcelink.json
