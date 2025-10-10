@@ -15,7 +15,7 @@ public class ErrorLogCommandRepository : IErrorLogCommandRepository
 
     public async Task<int> CreateAsync(ErrorLog errorLog)
     {
-        var connectionString = _connectionResolver.GetConnectionString("DefaultConnection");
+        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new Microsoft.Data.SqlClient.SqlConnection(connectionString);
         await connection.OpenAsync();
         
@@ -36,7 +36,7 @@ public class ErrorLogCommandRepository : IErrorLogCommandRepository
 
     public async Task<bool> UpdateAsync(ErrorLog errorLog)
     {
-        var connectionString = _connectionResolver.GetConnectionString("DefaultConnection");
+        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new Microsoft.Data.SqlClient.SqlConnection(connectionString);
         await connection.OpenAsync();
         
@@ -63,7 +63,7 @@ public class ErrorLogCommandRepository : IErrorLogCommandRepository
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var connectionString = _connectionResolver.GetConnectionString("DefaultConnection");
+        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new Microsoft.Data.SqlClient.SqlConnection(connectionString);
         await connection.OpenAsync();
         

@@ -7,12 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="NewVehicleSales\DapperEntities\" />
-    <Folder Include="NewVehicleSales\DBcontext\" />
-    <Folder Include="NewVehicleSales\Entities\" />
-    <Folder Include="OperationsManagement\DapperEntities\" />
-    <Folder Include="OperationsManagement\DBcontext\" />
-    <Folder Include="OperationsManagement\Entities\" />
+    <Folder Include="BrandParthner\" />
+    <Folder Include="Corporate\" />
+    <Folder Include="Ecommerce\" />
     <Folder Include="Shared\DapperEntities\" />
     <Folder Include="Shared\DBcontext\" />
 
