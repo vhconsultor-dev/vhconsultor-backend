@@ -1,5 +1,6 @@
 using BusinessLayer.Shared.Commands;
 using ModelLayer.Shared.Entities;
+using ModelLayer.Shared;
 using Microsoft.AspNetCore.Http;
 
 namespace ApplicationLayer.Shared;
@@ -28,7 +29,7 @@ public class ErrorLogService : IErrorLogService
             StackTrace = exception.StackTrace,
             Source = exception.Source,
             ExceptionType = exception.GetType().Name,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateTimeService.GetCostaRicaNow(),
             Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development",
             AdditionalData = additionalData
         };
@@ -67,7 +68,7 @@ public class ErrorLogService : IErrorLogService
         {
             ErrorNumber = GenerateErrorNumber(),
             Message = message,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateTimeService.GetCostaRicaNow(),
             Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development",
             AdditionalData = additionalData
         };
@@ -94,7 +95,7 @@ public class ErrorLogService : IErrorLogService
     private string GenerateErrorNumber()
     {
         // Generar un número de error único: ERR-YYYYMMDD-HHMMSS-XXXX
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
+        var timestamp = DateTimeService.GetCostaRicaNow().ToString("yyyyMMdd-HHmmss");
         var random = new Random();
         var randomPart = random.Next(1000, 9999).ToString();
         return $"ERR-{timestamp}-{randomPart}";

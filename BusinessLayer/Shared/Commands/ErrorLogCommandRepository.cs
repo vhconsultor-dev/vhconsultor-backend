@@ -71,4 +71,4 @@ public class ErrorLogCommandRepository : IErrorLogCommandRepository
         var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id });
         return rowsAffected > 0;
     }
-} 
+}

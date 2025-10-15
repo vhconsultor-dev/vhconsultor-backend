@@ -1,3 +1,5 @@
+using ModelLayer.Shared;
+
 namespace ApiLayer.Tools;
 
 public class ResponseStructure<T>
@@ -7,7 +9,7 @@ public class ResponseStructure<T>
     public T? Data { get; set; }
     public string Message { get; set; } = string.Empty;
     public string? ErrorNumber { get; set; }
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public DateTime Timestamp { get; set; } = DateTimeService.GetCostaRicaNow();
 
     public ResponseStructure()
     {

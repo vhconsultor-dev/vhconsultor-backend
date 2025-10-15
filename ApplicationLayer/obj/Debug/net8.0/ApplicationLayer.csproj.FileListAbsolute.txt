@@ -27,9 +27,9 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ApplicationLayer.AssemblyInfoInputs.cache
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ApplicationLayer.AssemblyInfo.cs
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ApplicationLayer.csproj.CoreCompileInputs.cache
+/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ApplicationLayer.sourcelink.json
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/Applicat.033E422A.Up2Date
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ApplicationLayer.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/refint/ApplicationLayer.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ApplicationLayer.pdb
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ref/ApplicationLayer.dll
-/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/Debug/net8.0/ApplicationLayer.sourcelink.json

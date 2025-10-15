@@ -230,6 +230,7 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ApiLayer.csproj.CoreCompileInputs.cache
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ApiLayer.MvcApplicationPartsAssemblyInfo.cs
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ApiLayer.MvcApplicationPartsAssemblyInfo.cache
+/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ApiLayer.sourcelink.json
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/rjimswa.dswa.cache.json
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/rjsmrazor.dswa.cache.json
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/rjsmcshtml.dswa.cache.json
@@ -244,4 +245,3 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ApiLayer.pdb
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ApiLayer.genruntimeconfig.cache
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ref/ApiLayer.dll
-/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/obj/Debug/net8.0/ApiLayer.sourcelink.json
