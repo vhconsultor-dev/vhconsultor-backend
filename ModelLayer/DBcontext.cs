@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ModelLayer.Ecommerce.Entities;
 using ModelLayer.Shared;
+using ModelLayer.Shared.Entities;
 
 namespace ModelLayer;
 
@@ -12,6 +13,9 @@ public class DBcontext : DbContext
 
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
+    
+    // Shared DbSets
+    public DbSet<ErrorLog> ErrorLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +46,27 @@ public class DBcontext : DbContext
             entity.Property(e => e.AdditionalDetails);
             entity.Property(e => e.SubmissionDate).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
             entity.Property(e => e.SubmissionType).HasMaxLength(20).IsRequired();
+        });
+
+        // Configuración de ErrorLog
+        modelBuilder.Entity<ErrorLog>(entity =>
+        {
+            entity.ToTable("ErrorLogs", "Global");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ErrorNumber).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Message).IsRequired();
+            entity.Property(e => e.StackTrace);
+            entity.Property(e => e.Source).HasMaxLength(255);
+            entity.Property(e => e.RequestPath).HasMaxLength(500);
+            entity.Property(e => e.RequestMethod).HasMaxLength(10);
+            entity.Property(e => e.UserAgent).HasMaxLength(500);
+            entity.Property(e => e.UserId).HasMaxLength(100);
+            entity.Property(e => e.RequestBody);
+            entity.Property(e => e.QueryString);
+            entity.Property(e => e.ExceptionType).HasMaxLength(100);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+            entity.Property(e => e.Environment).HasMaxLength(50);
+            entity.Property(e => e.AdditionalData);
         });
     }
 } 

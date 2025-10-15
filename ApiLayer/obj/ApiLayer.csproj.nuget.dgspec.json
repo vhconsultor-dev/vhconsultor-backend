@@ -150,7 +150,7 @@
             },
             "Microsoft.Extensions.Options": {
               "target": "Package",
-              "version": "[9.0.6, )"
+              "version": "[8.0.2, )"
             },
             "Microsoft.IdentityModel.Tokens": {
               "target": "Package",
@@ -239,11 +239,11 @@
             },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[9.0.6, )"
+              "version": "[8.0.17, )"
             },
             "Microsoft.Extensions.Configuration": {
               "target": "Package",
-              "version": "[9.0.6, )"
+              "version": "[8.0.2, )"
             },
             "Oracle.ManagedDataAccess.Core": {
               "target": "Package",

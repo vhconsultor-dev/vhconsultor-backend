@@ -20,7 +20,7 @@ public class ErrorLogCommandRepository : IErrorLogCommandRepository
         await connection.OpenAsync();
         
         var sql = @"
-            INSERT INTO ErrorLogs (
+            INSERT INTO [Global].[ErrorLogs] (
                 ErrorNumber, Message, StackTrace, Source, RequestPath, 
                 RequestMethod, UserAgent, UserId, RequestBody, QueryString, 
                 ExceptionType, CreatedAt, Environment, AdditionalData
@@ -41,7 +41,7 @@ public class ErrorLogCommandRepository : IErrorLogCommandRepository
         await connection.OpenAsync();
         
         var sql = @"
-            UPDATE ErrorLogs SET 
+            UPDATE [Global].[ErrorLogs] SET 
                 ErrorNumber = @ErrorNumber,
                 Message = @Message,
                 StackTrace = @StackTrace,
@@ -67,7 +67,7 @@ public class ErrorLogCommandRepository : IErrorLogCommandRepository
         using var connection = new Microsoft.Data.SqlClient.SqlConnection(connectionString);
         await connection.OpenAsync();
         
-        var sql = "DELETE FROM ErrorLogs WHERE Id = @Id";
+        var sql = "DELETE FROM [Global].[ErrorLogs] WHERE Id = @Id";
         var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id });
         return rowsAffected > 0;
     }

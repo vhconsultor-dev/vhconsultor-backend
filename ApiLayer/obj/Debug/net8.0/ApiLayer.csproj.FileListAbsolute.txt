@@ -146,7 +146,6 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Microsoft.EntityFrameworkCore.Abstractions.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Microsoft.EntityFrameworkCore.Relational.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Microsoft.EntityFrameworkCore.SqlServer.dll
-/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Microsoft.Extensions.Caching.Abstractions.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Microsoft.Extensions.Caching.Memory.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Microsoft.Extensions.Configuration.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Microsoft.Extensions.Configuration.Abstractions.dll
@@ -174,7 +173,6 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Swashbuckle.AspNetCore.SwaggerUI.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.ClientModel.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.Configuration.ConfigurationManager.dll
-/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.Diagnostics.DiagnosticSource.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.Diagnostics.EventLog.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.Diagnostics.PerformanceCounter.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.DirectoryServices.dll
