@@ -57,6 +57,12 @@ if (builder.Environment.IsProduction())
 #region FluentValidation
 // Validación manual en los controllers, no automática
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Ecommerce.Commands.CreateCustomerSubmissionRequest>, BusinessLayer.Ecommerce.Validators.CreateCustomerSubmissionValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.GenerateJwtCommand>, BusinessLayer.Shared.Validators.GenerateJwtValidator>();
+#endregion
+
+#region JWT Configuration
+// Configurar JWT Settings
+builder.Services.Configure<BusinessLayer.Shared.JwtSettings>(builder.Configuration.GetSection("Jwt"));
 #endregion
 
 
@@ -67,6 +73,9 @@ builder.Services.AddScoped<ApplicationLayer.Shared.IDatabaseConfigurationService
 // Error Logging Services
 builder.Services.AddScoped<BusinessLayer.Shared.Commands.IErrorLogCommandRepository, BusinessLayer.Shared.Commands.ErrorLogCommandRepository>();
 builder.Services.AddScoped<ApplicationLayer.Shared.IErrorLogService, ApplicationLayer.Shared.ErrorLogService>();
+
+// Security Services
+builder.Services.AddScoped<ApplicationLayer.Shared.JwtService>();
 
 // Ecommerce Services
 builder.Services.AddScoped<ApplicationLayer.Ecommerce.CustomerSubmissionService>();
