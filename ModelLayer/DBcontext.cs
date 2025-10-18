@@ -29,6 +29,7 @@ public class DBcontext : DbContext
         {
             entity.ToTable("CustomerSubmissions", "Ecommerce");
             entity.HasKey(e => e.SubmissionID);
+            entity.Property(e => e.SubmissionID).ValueGeneratedOnAdd();
             entity.Property(e => e.FirstName).HasMaxLength(100).IsRequired();
             entity.Property(e => e.LastName).HasMaxLength(100).IsRequired();
             entity.Property(e => e.Email).HasMaxLength(255).IsRequired();
@@ -53,6 +54,7 @@ public class DBcontext : DbContext
         {
             entity.ToTable("ErrorLogs", "Global");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.ErrorNumber).HasMaxLength(50).IsRequired();
             entity.Property(e => e.Message).IsRequired();
             entity.Property(e => e.StackTrace);
