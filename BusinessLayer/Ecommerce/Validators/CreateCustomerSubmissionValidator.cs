@@ -85,7 +85,9 @@ public class CreateCustomerSubmissionValidator : AbstractValidator<CreateCustome
             .NotEmpty()
             .WithMessage("El tipo de submission es requerido")
             .MaximumLength(20)
-            .WithMessage("El tipo de submission no puede exceder 20 caracteres");
+            .WithMessage("El tipo de submission no puede exceder 20 caracteres")
+            .Must(BeValidSubmissionType)
+            .WithMessage("El tipo de submission debe ser uno de los siguientes: 'New', 'Follow-up', 'Update', 'Renewal', 'Cancellation'");
     }
 
     private bool BeAValidUrl(string? url)
@@ -104,6 +106,15 @@ public class CreateCustomerSubmissionValidator : AbstractValidator<CreateCustome
 
         return Uri.TryCreate(url, UriKind.Absolute, out var uriResult)
             && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
+    }
+
+    private bool BeValidSubmissionType(string? submissionType)
+    {
+        if (string.IsNullOrEmpty(submissionType))
+            return false;
+
+        var validTypes = new[] { "New", "Follow-up", "Update", "Renewal", "Cancellation" };
+        return validTypes.Contains(submissionType, StringComparer.OrdinalIgnoreCase);
     }
 }
 
