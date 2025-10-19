@@ -58,6 +58,10 @@ if (builder.Environment.IsProduction())
 // Validación manual en los controllers, no automática
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Ecommerce.Commands.CreateCustomerSubmissionRequest>, BusinessLayer.Ecommerce.Validators.CreateCustomerSubmissionValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.GenerateJwtCommand>, BusinessLayer.Shared.Validators.GenerateJwtValidator>();
+
+// Corporate Validators
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateCustomerRequest>, BusinessLayer.Corporate.Validators.CreateCustomerValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateCustomerRequest>, BusinessLayer.Corporate.Validators.UpdateCustomerValidator>();
 #endregion
 
 #region JWT Configuration
@@ -79,6 +83,9 @@ builder.Services.AddScoped<ApplicationLayer.Shared.JwtService>();
 
 // Ecommerce Services
 builder.Services.AddScoped<ApplicationLayer.Ecommerce.CustomerSubmissionService>();
+
+// Corporate Services
+builder.Services.AddScoped<ApplicationLayer.Corporate.CustomerService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -87,6 +94,15 @@ builder.Services.AddScoped<ApplicationLayer.Ecommerce.CustomerSubmissionService>
 
 // Ecommerce CQRS Repositories
 builder.Services.AddScoped<BusinessLayer.Ecommerce.Commands.CreateCustomerSubmissionCommand>();
+
+// Corporate CQRS Repositories
+// Commands
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateCustomerCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateCustomerCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteCustomerCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateLastContactDateCommand>();
+// Queries
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CustomerQueryRepository>();
 #endregion
 
 #region SwaggerConfig

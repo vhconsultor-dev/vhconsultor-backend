@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ModelLayer.Corporate.Entities;
 using ModelLayer.Ecommerce.Entities;
 using ModelLayer.Shared;
 using ModelLayer.Shared.Entities;
@@ -11,6 +12,9 @@ public class DBcontext : DbContext
     {
     }
 
+    // Corporate DbSets
+    public DbSet<Customer> Customers { get; set; }
+    
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
     
@@ -23,6 +27,46 @@ public class DBcontext : DbContext
         
         // Configuración base del modelo
         modelBuilder.HasDefaultSchema("dbo");
+
+        // Configuración de Customer (Corporate)
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.ToTable("Customers", "Corporate");
+            entity.HasKey(e => e.CustomerId);
+            entity.Property(e => e.CustomerId).ValueGeneratedOnAdd();
+            entity.Property(e => e.CompanyName).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.NIT).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CompanyType).HasMaxLength(50);
+            entity.Property(e => e.PrimaryEmail).HasMaxLength(255);
+            entity.Property(e => e.SecondaryEmail).HasMaxLength(255);
+            entity.Property(e => e.BillingEmail).HasMaxLength(255);
+            entity.Property(e => e.PrimaryPhone).HasMaxLength(50);
+            entity.Property(e => e.SecondaryPhone).HasMaxLength(50);
+            entity.Property(e => e.EmergencyPhone).HasMaxLength(50);
+            entity.Property(e => e.Contact1Name).HasMaxLength(100);
+            entity.Property(e => e.Contact1Phone).HasMaxLength(50);
+            entity.Property(e => e.Contact2Name).HasMaxLength(100);
+            entity.Property(e => e.Contact2Phone).HasMaxLength(50);
+            entity.Property(e => e.Contact3Name).HasMaxLength(100);
+            entity.Property(e => e.Contact3Phone).HasMaxLength(50);
+            entity.Property(e => e.CountryId);
+            entity.Property(e => e.State).HasMaxLength(100);
+            entity.Property(e => e.City).HasMaxLength(100);
+            entity.Property(e => e.Address).HasMaxLength(500);
+            entity.Property(e => e.PostalCode).HasMaxLength(20);
+            entity.Property(e => e.SectorId);
+            entity.Property(e => e.CompanySize).HasMaxLength(50);
+            entity.Property(e => e.AnnualRevenue).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Website).HasMaxLength(255);
+            entity.Property(e => e.ClientStatus).HasMaxLength(50);
+            entity.Property(e => e.Priority).HasMaxLength(20);
+            entity.Property(e => e.Source).HasMaxLength(100);
+            entity.Property(e => e.Notes);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt);
+            entity.Property(e => e.LastContactDate);
+        });
 
         // Configuración de CustomerSubmission
         modelBuilder.Entity<CustomerSubmission>(entity =>
