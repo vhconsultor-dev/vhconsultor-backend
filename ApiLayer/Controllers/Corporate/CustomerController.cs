@@ -193,231 +193,130 @@ public class CustomerController : ControllerBase
 
     #endregion
 
-    #region GET - Get All Customers
+    #region GET - Get Customers (Flexible Search)
 
     /// <summary>
-    /// Obtiene todos los customers activos
+    /// Obtiene customers con búsqueda flexible usando parámetros opcionales
     /// </summary>
-    /// <returns>Lista de customers</returns>
+    /// <param name="id">ID del customer (si se especifica, devuelve solo ese customer)</param>
+    /// <param name="nit">NIT del customer (si se especifica, devuelve solo ese customer)</param>
+    /// <param name="companyName">Nombre de la compañía para búsqueda parcial</param>
+    /// <param name="clientStatus">Estado del cliente para filtrar</param>
+    /// <param name="priority">Prioridad para filtrar</param>
+    /// <param name="countryId">ID del país para filtrar</param>
+    /// <param name="sectorId">ID del sector para filtrar</param>
+    /// <param name="city">Ciudad para filtrar</param>
+    /// <returns>Lista de customers que coinciden con los criterios</returns>
     [HttpGet]
-    public async Task<IActionResult> GetAllCustomers()
+    public async Task<IActionResult> GetCustomers(
+        [FromQuery] int? id = null,
+        [FromQuery] string? nit = null,
+        [FromQuery] string? companyName = null,
+        [FromQuery] string? clientStatus = null,
+        [FromQuery] string? priority = null,
+        [FromQuery] int? countryId = null,
+        [FromQuery] int? sectorId = null,
+        [FromQuery] string? city = null)
     {
         try
         {
-            var customers = await _customerService.GetAllCustomersAsync();
+            // Si se especifica ID, devolver solo ese customer
+            if (id.HasValue)
+            {
+                var customer = await _customerService.GetCustomerByIdAsync(id.Value);
+                
+                if (customer == null)
+                {
+                    var response = ResponseStructure<object>.Error(
+                        $"No se encontró el customer con ID {id.Value}", 
+                        404);
+                    return NotFound(response);
+                }
+
+                var successResponse = ResponseStructure<ModelLayer.Corporate.Entities.Customer>.Success(
+                    customer, 
+                    "Customer obtenido exitosamente");
+                
+                return Ok(successResponse);
+            }
+
+            // Si se especifica NIT, devolver solo ese customer
+            if (!string.IsNullOrEmpty(nit))
+            {
+                var customer = await _customerService.GetCustomerByNITAsync(nit);
+                
+                if (customer == null)
+                {
+                    var response = ResponseStructure<object>.Error(
+                        $"No se encontró el customer con NIT {nit}", 
+                        404);
+                    return NotFound(response);
+                }
+
+                var successResponse = ResponseStructure<ModelLayer.Corporate.Entities.Customer>.Success(
+                    customer, 
+                    "Customer obtenido exitosamente");
+                
+                return Ok(successResponse);
+            }
+
+            // Si se especifica solo companyName, hacer búsqueda parcial
+            if (!string.IsNullOrEmpty(companyName) && 
+                string.IsNullOrEmpty(clientStatus) && 
+                string.IsNullOrEmpty(priority) && 
+                !countryId.HasValue && 
+                !sectorId.HasValue && 
+                string.IsNullOrEmpty(city))
+            {
+                var customers = await _customerService.SearchByCompanyNameAsync(companyName);
+                
+                var response = ResponseStructure<IEnumerable<ModelLayer.Corporate.Entities.Customer>>.Success(
+                    customers, 
+                    "Búsqueda completada exitosamente");
+                
+                return Ok(response);
+            }
+
+            // Si hay múltiples filtros, usar el filtro avanzado
+            if (!string.IsNullOrEmpty(clientStatus) || 
+                !string.IsNullOrEmpty(priority) || 
+                countryId.HasValue || 
+                sectorId.HasValue || 
+                !string.IsNullOrEmpty(city) ||
+                !string.IsNullOrEmpty(companyName))
+            {
+                var filter = new CustomerFilter
+                {
+                    CompanyName = companyName,
+                    ClientStatus = clientStatus,
+                    Priority = priority,
+                    CountryId = countryId,
+                    SectorId = sectorId,
+                    City = city
+                };
+
+                var customers = await _customerService.GetFilteredCustomersAsync(filter);
+                
+                var response = ResponseStructure<IEnumerable<ModelLayer.Corporate.Entities.Customer>>.Success(
+                    customers, 
+                    "Customers filtrados obtenidos exitosamente");
+                
+                return Ok(response);
+            }
+
+            // Si no hay filtros, devolver todos los customers
+            var allCustomers = await _customerService.GetAllCustomersAsync();
             
-            var response = ResponseStructure<IEnumerable<ModelLayer.Corporate.Entities.Customer>>.Success(
-                customers, 
+            var allResponse = ResponseStructure<IEnumerable<ModelLayer.Corporate.Entities.Customer>>.Success(
+                allCustomers, 
                 "Customers obtenidos exitosamente");
             
-            return Ok(response);
+            return Ok(allResponse);
         }
         catch (Exception ex)
         {
             var errorResponse = ResponseStructure<object>.Error(
                 $"Error al obtener los Customers: {ex.Message}", 
-                500);
-            return StatusCode(500, errorResponse);
-        }
-    }
-
-    #endregion
-
-    #region GET - Get Customer By ID
-
-    /// <summary>
-    /// Obtiene un customer por su ID
-    /// </summary>
-    /// <param name="customerId">ID del customer</param>
-    /// <returns>Customer encontrado</returns>
-    [HttpGet("{customerId}")]
-    public async Task<IActionResult> GetCustomerById(int customerId)
-    {
-        try
-        {
-            var customer = await _customerService.GetCustomerByIdAsync(customerId);
-            
-            if (customer == null)
-            {
-                var response = ResponseStructure<object>.Error(
-                    $"No se encontró el customer con ID {customerId}", 
-                    404);
-                return NotFound(response);
-            }
-
-            var successResponse = ResponseStructure<ModelLayer.Corporate.Entities.Customer>.Success(
-                customer, 
-                "Customer obtenido exitosamente");
-            
-            return Ok(successResponse);
-        }
-        catch (Exception ex)
-        {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"Error al obtener el Customer: {ex.Message}", 
-                500);
-            return StatusCode(500, errorResponse);
-        }
-    }
-
-    #endregion
-
-    #region GET - Get Customer By NIT
-
-    /// <summary>
-    /// Obtiene un customer por su NIT
-    /// </summary>
-    /// <param name="nit">NIT del customer</param>
-    /// <returns>Customer encontrado</returns>
-    [HttpGet("by-nit/{nit}")]
-    public async Task<IActionResult> GetCustomerByNIT(string nit)
-    {
-        try
-        {
-            var customer = await _customerService.GetCustomerByNITAsync(nit);
-            
-            if (customer == null)
-            {
-                var response = ResponseStructure<object>.Error(
-                    $"No se encontró el customer con NIT {nit}", 
-                    404);
-                return NotFound(response);
-            }
-
-            var successResponse = ResponseStructure<ModelLayer.Corporate.Entities.Customer>.Success(
-                customer, 
-                "Customer obtenido exitosamente");
-            
-            return Ok(successResponse);
-        }
-        catch (Exception ex)
-        {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"Error al obtener el Customer: {ex.Message}", 
-                500);
-            return StatusCode(500, errorResponse);
-        }
-    }
-
-    #endregion
-
-    #region GET - Search Customers By Company Name
-
-    /// <summary>
-    /// Busca customers por nombre de compañía
-    /// </summary>
-    /// <param name="companyName">Nombre o parte del nombre de la compañía</param>
-    /// <returns>Lista de customers que coinciden</returns>
-    [HttpGet("search/{companyName}")]
-    public async Task<IActionResult> SearchByCompanyName(string companyName)
-    {
-        try
-        {
-            var customers = await _customerService.SearchByCompanyNameAsync(companyName);
-            
-            var response = ResponseStructure<IEnumerable<ModelLayer.Corporate.Entities.Customer>>.Success(
-                customers, 
-                "Búsqueda completada exitosamente");
-            
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"Error al buscar Customers: {ex.Message}", 
-                500);
-            return StatusCode(500, errorResponse);
-        }
-    }
-
-    #endregion
-
-    #region POST - Get Filtered Customers
-
-    /// <summary>
-    /// Obtiene customers filtrados por múltiples criterios
-    /// </summary>
-    /// <param name="filter">Filtros de búsqueda</param>
-    /// <returns>Lista de customers que coinciden con los filtros</returns>
-    [HttpPost("filter")]
-    public async Task<IActionResult> GetFilteredCustomers([FromBody] CustomerFilter filter)
-    {
-        try
-        {
-            var customers = await _customerService.GetFilteredCustomersAsync(filter);
-            
-            var response = ResponseStructure<IEnumerable<ModelLayer.Corporate.Entities.Customer>>.Success(
-                customers, 
-                "Customers filtrados obtenidos exitosamente");
-            
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"Error al filtrar Customers: {ex.Message}", 
-                500);
-            return StatusCode(500, errorResponse);
-        }
-    }
-
-    #endregion
-
-    #region GET - Get Customers By Client Status
-
-    /// <summary>
-    /// Obtiene customers por estado de cliente
-    /// </summary>
-    /// <param name="clientStatus">Estado del cliente</param>
-    /// <returns>Lista de customers con ese estado</returns>
-    [HttpGet("by-status/{clientStatus}")]
-    public async Task<IActionResult> GetCustomersByClientStatus(string clientStatus)
-    {
-        try
-        {
-            var customers = await _customerService.GetCustomersByClientStatusAsync(clientStatus);
-            
-            var response = ResponseStructure<IEnumerable<ModelLayer.Corporate.Entities.Customer>>.Success(
-                customers, 
-                "Customers obtenidos exitosamente");
-            
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"Error al obtener Customers: {ex.Message}", 
-                500);
-            return StatusCode(500, errorResponse);
-        }
-    }
-
-    #endregion
-
-    #region GET - Get Customers By Priority
-
-    /// <summary>
-    /// Obtiene customers por prioridad
-    /// </summary>
-    /// <param name="priority">Prioridad</param>
-    /// <returns>Lista de customers con esa prioridad</returns>
-    [HttpGet("by-priority/{priority}")]
-    public async Task<IActionResult> GetCustomersByPriority(string priority)
-    {
-        try
-        {
-            var customers = await _customerService.GetCustomersByPriorityAsync(priority);
-            
-            var response = ResponseStructure<IEnumerable<ModelLayer.Corporate.Entities.Customer>>.Success(
-                customers, 
-                "Customers obtenidos exitosamente");
-            
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"Error al obtener Customers: {ex.Message}", 
                 500);
             return StatusCode(500, errorResponse);
         }
