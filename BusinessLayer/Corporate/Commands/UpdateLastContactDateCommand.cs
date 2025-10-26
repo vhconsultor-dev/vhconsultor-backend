@@ -1,4 +1,5 @@
 using ModelLayer;
+using ModelLayer.Shared;
 
 namespace BusinessLayer.Corporate.Commands;
 
@@ -26,8 +27,8 @@ public class UpdateLastContactDateCommand
         if (customer == null)
             return false;
 
-        customer.LastContactDate = DateTime.Now;
-        customer.UpdatedAt = DateTime.Now;
+        customer.LastContactDate = DateTimeService.GetCostaRicaNow();
+        customer.UpdatedAt = DateTimeService.GetCostaRicaNow();
 
         await _context.SaveChangesAsync();
         

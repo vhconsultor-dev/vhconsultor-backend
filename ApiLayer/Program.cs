@@ -62,6 +62,10 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Comm
 // Corporate Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateCustomerRequest>, BusinessLayer.Corporate.Validators.CreateCustomerValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateCustomerRequest>, BusinessLayer.Corporate.Validators.UpdateCustomerValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateContractRequest>, BusinessLayer.Corporate.Validators.CreateContractValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateContractRequest>, BusinessLayer.Corporate.Validators.UpdateContractValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateContractServiceRequest>, BusinessLayer.Corporate.Validators.CreateContractServiceValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateContractServiceRequest>, BusinessLayer.Corporate.Validators.UpdateContractServiceValidator>();
 #endregion
 
 #region JWT Configuration
@@ -111,6 +115,13 @@ builder.Services.AddScoped<ApplicationLayer.Ecommerce.CustomerSubmissionService>
 builder.Services.AddScoped<ApplicationLayer.Corporate.CustomerService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.CountryService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.IndustrySectorService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.PaymentMethodService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.ServiceService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.FeeTypeService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.CurrencyService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.ContractTypeService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.ContractService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.ContractServiceService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -126,10 +137,23 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateCustomerComman
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateCustomerCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteCustomerCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateLastContactDateCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateContractCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateContractCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteContractCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateContractServiceCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateContractServiceCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteContractServiceCommand>();
 // Queries
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CustomerQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CountryQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.IndustrySectorQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PaymentMethodQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ServiceQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.FeeTypeQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CurrencyQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ContractTypeQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ContractQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ContractServiceQueryRepository>();
 #endregion
 
 #region SwaggerConfig

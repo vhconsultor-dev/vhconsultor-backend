@@ -1,5 +1,6 @@
 using ModelLayer;
 using ModelLayer.Corporate.Entities;
+using ModelLayer.Shared;
 
 namespace BusinessLayer.Corporate.Commands;
 
@@ -53,7 +54,7 @@ public class CreateCustomerCommand
             Source = request.Source,
             Notes = request.Notes,
             IsActive = true,
-            CreatedAt = DateTime.Now
+            CreatedAt = DateTimeService.GetCostaRicaNow()
         };
 
         _context.Customers.Add(customer);

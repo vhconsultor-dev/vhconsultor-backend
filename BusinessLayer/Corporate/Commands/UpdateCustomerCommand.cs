@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ModelLayer;
 using ModelLayer.Corporate.Entities;
+using ModelLayer.Shared;
 
 namespace BusinessLayer.Corporate.Commands;
 
@@ -58,7 +59,7 @@ public class UpdateCustomerCommand
         customer.Priority = request.Priority;
         customer.Source = request.Source;
         customer.Notes = request.Notes;
-        customer.UpdatedAt = DateTime.Now;
+        customer.UpdatedAt = DateTimeService.GetCostaRicaNow();
 
         await _context.SaveChangesAsync();
         

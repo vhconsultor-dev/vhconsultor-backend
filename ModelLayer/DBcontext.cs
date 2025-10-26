@@ -16,6 +16,8 @@ public class DBcontext : DbContext
     public DbSet<Customer> Customers { get; set; }
     public DbSet<Country> Countries { get; set; }
     public DbSet<IndustrySector> IndustrySectors { get; set; }
+    public DbSet<Contract> Contracts { get; set; }
+    public DbSet<ContractService> ContractServices { get; set; }
     
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
@@ -93,6 +95,73 @@ public class DBcontext : DbContext
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+        });
+
+        // Configuración de Contract (Corporate)
+        modelBuilder.Entity<Contract>(entity =>
+        {
+            entity.ToTable("Contracts", "Corporate");
+            entity.HasKey(e => e.ContractId);
+            entity.Property(e => e.ContractId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CustomerId).IsRequired();
+            entity.Property(e => e.ContractNumber).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.ClientLegalName).HasMaxLength(255);
+            entity.Property(e => e.ClientTaxId).HasMaxLength(50);
+            entity.Property(e => e.ClientNationality).HasMaxLength(100);
+            entity.Property(e => e.ClientAddress);
+            entity.Property(e => e.ClientPrimaryContact).HasMaxLength(255);
+            entity.Property(e => e.ClientEmail).HasMaxLength(255);
+            entity.Property(e => e.ClientPhone).HasMaxLength(50);
+            entity.Property(e => e.ContractTypeId);
+            entity.Property(e => e.ServiceDescription);
+            entity.Property(e => e.FeeTypeId);
+            entity.Property(e => e.FeeAmount).HasColumnType("decimal(10,4)");
+            entity.Property(e => e.FeeDescription);
+            entity.Property(e => e.CurrencyCode).HasMaxLength(3);
+            entity.Property(e => e.ContractTerm).HasMaxLength(50);
+            entity.Property(e => e.PaymentFrequency).HasMaxLength(50);
+            entity.Property(e => e.PaymentDay);
+            entity.Property(e => e.PaymentMethodId);
+            entity.Property(e => e.SignedDate);
+            entity.Property(e => e.EffectiveDate);
+            entity.Property(e => e.StartDate);
+            entity.Property(e => e.EndDate);
+            entity.Property(e => e.AutoRenewal);
+            entity.Property(e => e.RenewalTerm).HasMaxLength(50);
+            entity.Property(e => e.RenewalNoticeDays);
+            entity.Property(e => e.NoticePeriodDays);
+            entity.Property(e => e.Status).HasMaxLength(50);
+            entity.Property(e => e.GoverningLaw).HasMaxLength(100);
+            entity.Property(e => e.DisputeResolution).HasMaxLength(100);
+            entity.Property(e => e.ContractualDomicile);
+            entity.Property(e => e.Jurisdiction).HasMaxLength(100);
+            entity.Property(e => e.Notes);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+            entity.Property(e => e.UpdatedAt);
+            entity.Property(e => e.LastModifiedBy).HasMaxLength(255);
+            entity.Property(e => e.DocumentUrl).HasMaxLength(500);
+            entity.Property(e => e.SignedDocumentUrl).HasMaxLength(500);
+        });
+
+        // Configuración de ContractService (Corporate)
+        modelBuilder.Entity<ContractService>(entity =>
+        {
+            entity.ToTable("ContractServices", "Corporate");
+            entity.HasKey(e => e.ContractServiceId);
+            entity.Property(e => e.ContractServiceId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ContractId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ServiceId);
+            entity.Property(e => e.ServiceDescription);
+            entity.Property(e => e.Regions);
+            entity.Property(e => e.UnitPrice).HasColumnType("decimal(15,2)");
+            entity.Property(e => e.Quantity).HasColumnType("decimal(10,2)");
+            entity.Property(e => e.DiscountPercentage).HasColumnType("decimal(5,2)");
+            entity.Property(e => e.FinalPrice).HasColumnType("decimal(15,2)");
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.ServiceOrder);
+            entity.Property(e => e.BillingFrequency).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+            entity.Property(e => e.UpdatedAt);
         });
 
         // Configuración de CustomerSubmission

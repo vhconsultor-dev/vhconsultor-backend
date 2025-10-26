@@ -1,4 +1,5 @@
 using ModelLayer;
+using ModelLayer.Shared;
 
 namespace BusinessLayer.Corporate.Commands;
 
@@ -28,7 +29,7 @@ public class DeleteCustomerCommand
 
         // Soft delete: marcar como inactivo
         customer.IsActive = false;
-        customer.UpdatedAt = DateTime.Now;
+        customer.UpdatedAt = DateTimeService.GetCostaRicaNow();
 
         await _context.SaveChangesAsync();
         
