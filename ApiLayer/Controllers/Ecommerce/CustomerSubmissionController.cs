@@ -3,11 +3,13 @@ using ApplicationLayer.Shared;
 using ApiLayer.Tools;
 using BusinessLayer.Ecommerce.Commands;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ApiLayer.Controllers.Ecommerce;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class CustomerSubmissionController : ControllerBase
 {
     private readonly CustomerSubmissionService _customerSubmissionService;

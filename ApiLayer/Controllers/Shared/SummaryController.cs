@@ -6,11 +6,13 @@ using ApiLayer.Tools;
 using ModelLayer;
 using ModelLayer.Shared;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ApiLayer.Controllers.Shared;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class SummaryController : ControllerBase
 {
     private readonly IHostEnvironment _environment;

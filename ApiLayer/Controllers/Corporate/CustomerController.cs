@@ -4,6 +4,7 @@ using ApiLayer.Tools;
 using BusinessLayer.Corporate.Commands;
 using BusinessLayer.Corporate.Queries;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ApiLayer.Controllers.Corporate;
 
@@ -12,6 +13,7 @@ namespace ApiLayer.Controllers.Corporate;
 /// </summary>
 [ApiController]
 [Route("api/corporate/[controller]")]
+[Authorize]
 public class CustomerController : ControllerBase
 {
     private readonly CustomerService _customerService;

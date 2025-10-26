@@ -67,6 +67,29 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 #region JWT Configuration
 // Configurar JWT Settings
 builder.Services.Configure<BusinessLayer.Shared.JwtSettings>(builder.Configuration.GetSection("Jwt"));
+
+// Configurar JWT Authentication
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        var jwtSettings = builder.Configuration.GetSection("Jwt").Get<BusinessLayer.Shared.JwtSettings>();
+        
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+                System.Text.Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtSettings.Audience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+// Configurar Authorization
+builder.Services.AddAuthorization();
 #endregion
 
 
@@ -122,6 +145,8 @@ app.UseCors(builder => builder
 );
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseGlobalExceptionHandler();
 app.MapControllers();
 app.Run();
