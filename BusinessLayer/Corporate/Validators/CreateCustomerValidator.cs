@@ -151,7 +151,14 @@ public class CreateCustomerValidator : AbstractValidator<CreateCustomerRequest>
         if (string.IsNullOrEmpty(url))
             return true;
 
-        return Uri.TryCreate(url, UriKind.Absolute, out var uriResult)
+        // Si la URL no tiene esquema, agregar https://
+        var normalizedUrl = url;
+        if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+        {
+            normalizedUrl = "https://" + url;
+        }
+
+        return Uri.TryCreate(normalizedUrl, UriKind.Absolute, out var uriResult)
             && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
     }
 }
