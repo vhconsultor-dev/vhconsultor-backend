@@ -109,6 +109,7 @@ builder.Services.AddScoped<ApplicationLayer.Ecommerce.CustomerSubmissionService>
 
 // Corporate Services
 builder.Services.AddScoped<ApplicationLayer.Corporate.CustomerService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.CountryService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -126,6 +127,7 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteCustomerComman
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateLastContactDateCommand>();
 // Queries
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CustomerQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CountryQueryRepository>();
 #endregion
 
 #region SwaggerConfig

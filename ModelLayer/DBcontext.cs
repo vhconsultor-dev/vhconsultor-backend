@@ -14,6 +14,7 @@ public class DBcontext : DbContext
 
     // Corporate DbSets
     public DbSet<Customer> Customers { get; set; }
+    public DbSet<Country> Countries { get; set; }
     
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
@@ -66,6 +67,19 @@ public class DBcontext : DbContext
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.UpdatedAt);
             entity.Property(e => e.LastContactDate);
+        });
+
+        // Configuración de Country (Corporate)
+        modelBuilder.Entity<Country>(entity =>
+        {
+            entity.ToTable("Countries", "Corporate");
+            entity.HasKey(e => e.CountryId);
+            entity.Property(e => e.CountryId).ValueGeneratedOnAdd();
+            entity.Property(e => e.CountryCode).HasMaxLength(3).IsRequired();
+            entity.Property(e => e.CountryName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.PhoneCode).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
         });
 
         // Configuración de CustomerSubmission
