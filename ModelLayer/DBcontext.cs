@@ -15,6 +15,7 @@ public class DBcontext : DbContext
     // Corporate DbSets
     public DbSet<Customer> Customers { get; set; }
     public DbSet<Country> Countries { get; set; }
+    public DbSet<IndustrySector> IndustrySectors { get; set; }
     
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
@@ -78,6 +79,18 @@ public class DBcontext : DbContext
             entity.Property(e => e.CountryCode).HasMaxLength(3).IsRequired();
             entity.Property(e => e.CountryName).HasMaxLength(100).IsRequired();
             entity.Property(e => e.PhoneCode).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+        });
+
+        // Configuración de IndustrySector (Corporate)
+        modelBuilder.Entity<IndustrySector>(entity =>
+        {
+            entity.ToTable("IndustrySectors", "Corporate");
+            entity.HasKey(e => e.SectorId);
+            entity.Property(e => e.SectorId).ValueGeneratedOnAdd();
+            entity.Property(e => e.SectorName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
         });
