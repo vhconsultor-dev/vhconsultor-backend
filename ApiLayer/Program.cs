@@ -158,11 +158,54 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ContractServiceQueryR
 
 #region SwaggerConfig
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "VHConsultor API",
+        Version = "v1",
+        Description = "API para VHConsultor - Sistema de Consultoría",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "VHConsultor Team",
+            Email = "support@vhconsultor.com"
+        }
+    });
+
+    // Configurar autenticación JWT en Swagger
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header usando el esquema Bearer. Ejemplo: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 var app = builder.Build();
 
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "VHConsultor API v1");
+    c.RoutePrefix = string.Empty; // Para que Swagger UI esté en la raíz
+    c.DocumentTitle = "VHConsultor API Documentation";
+});
 #endregion
 
 #region MiddleWares
