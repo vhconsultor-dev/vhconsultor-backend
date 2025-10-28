@@ -199,13 +199,26 @@ builder.Services.AddSwaggerGen(c =>
 });
 var app = builder.Build();
 
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+// Configurar Swagger para desarrollo y producción
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "VHConsultor API v1");
-    c.RoutePrefix = string.Empty; // Para que Swagger UI esté en la raíz
-    c.DocumentTitle = "VHConsultor API Documentation";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "VHConsultor API v1");
+        c.RoutePrefix = "swagger"; // Ruta por defecto: /swagger
+        c.DocumentTitle = "VHConsultor API Documentation";
+        c.DisplayRequestDuration();
+        c.EnableDeepLinking();
+        c.EnableFilter();
+        c.ShowExtensions();
+        c.EnableValidator();
+    });
+
+    // Configurar ruta personalizada /VHBackend/swagger
+    app.MapGet("/VHBackend/swagger", () => Results.Redirect("/swagger"))
+        .ExcludeFromDescription();
+}
 #endregion
 
 #region MiddleWares
