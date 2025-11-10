@@ -59,6 +59,12 @@ if (builder.Environment.IsProduction())
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Ecommerce.Commands.CreateCustomerSubmissionRequest>, BusinessLayer.Ecommerce.Validators.CreateCustomerSubmissionValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.GenerateJwtCommand>, BusinessLayer.Shared.Validators.GenerateJwtValidator>();
 
+// Auth Validators
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.LoginCommand>, BusinessLayer.Shared.Validators.LoginCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.ChangePasswordCommand>, BusinessLayer.Shared.Validators.ChangePasswordCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.LockAccountCommand>, BusinessLayer.Shared.Validators.LockAccountCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.UnlockAccountCommand>, BusinessLayer.Shared.Validators.UnlockAccountCommandValidator>();
+
 // Corporate Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateCustomerRequest>, BusinessLayer.Corporate.Validators.CreateCustomerValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateCustomerRequest>, BusinessLayer.Corporate.Validators.UpdateCustomerValidator>();
@@ -107,6 +113,7 @@ builder.Services.AddScoped<ApplicationLayer.Shared.IErrorLogService, Application
 
 // Security Services
 builder.Services.AddScoped<ApplicationLayer.Shared.JwtService>();
+builder.Services.AddScoped<ApplicationLayer.Shared.AuthService>();
 
 // Ecommerce Services
 builder.Services.AddScoped<ApplicationLayer.Ecommerce.CustomerSubmissionService>();
@@ -127,6 +134,11 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.ContractServiceService>();
 #region ScopedInterfazAndRepository
 
 // Security CQRS Repositories
+// Commands
+builder.Services.AddScoped<BusinessLayer.Shared.Commands.UserAuthCommandRepository>();
+// Queries
+builder.Services.AddScoped<BusinessLayer.Shared.Queries.UserQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Shared.Queries.UserLoginHistoryQueryRepository>();
 
 // Ecommerce CQRS Repositories
 builder.Services.AddScoped<BusinessLayer.Ecommerce.Commands.CreateCustomerSubmissionCommand>();

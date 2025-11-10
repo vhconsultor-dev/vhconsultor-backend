@@ -24,6 +24,8 @@ public class DBcontext : DbContext
     
     // Shared DbSets
     public DbSet<ErrorLog> ErrorLogs { get; set; }
+    public DbSet<User> Users { get; set; }
+    public DbSet<UserLoginHistory> UserLoginHistory { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -209,6 +211,59 @@ public class DBcontext : DbContext
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
             entity.Property(e => e.Environment).HasMaxLength(50);
             entity.Property(e => e.AdditionalData);
+        });
+
+        // Configuración de User
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.ToTable("Users", "Global");
+            entity.HasKey(e => e.UserId);
+            entity.Property(e => e.UserId).ValueGeneratedOnAdd();
+            entity.Property(e => e.FirstName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.LastName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Email).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.Username).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.PasswordHash).IsRequired();
+            entity.Property(e => e.PhoneNumber).HasMaxLength(50);
+            entity.Property(e => e.ProfilePictureUrl).HasMaxLength(500);
+            entity.Property(e => e.IsCorporate).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.IsBrandPartner).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.EmailVerified).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.FailedLoginAttempts).IsRequired().HasDefaultValue(0);
+            entity.Property(e => e.LockedUntil);
+            entity.Property(e => e.LastLogin);
+            entity.Property(e => e.LastLoginIP).HasMaxLength(45);
+            entity.Property(e => e.LastLoginLocation).HasMaxLength(255);
+            entity.Property(e => e.LastLoginCountry).HasMaxLength(100);
+            entity.Property(e => e.LastLoginCity).HasMaxLength(100);
+            entity.Property(e => e.LastLoginUserAgent).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt);
+            entity.Property(e => e.CreatedBy).HasMaxLength(255);
+            entity.Property(e => e.LastModifiedBy).HasMaxLength(255);
+        });
+
+        // Configuración de UserLoginHistory
+        modelBuilder.Entity<UserLoginHistory>(entity =>
+        {
+            entity.ToTable("UserLoginHistory", "Global");
+            entity.HasKey(e => e.LoginHistoryId);
+            entity.Property(e => e.LoginHistoryId).ValueGeneratedOnAdd();
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.LoginDate).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.IPAddress).HasMaxLength(45).IsRequired();
+            entity.Property(e => e.Location).HasMaxLength(255);
+            entity.Property(e => e.Country).HasMaxLength(100);
+            entity.Property(e => e.City).HasMaxLength(100);
+            entity.Property(e => e.Region).HasMaxLength(100);
+            entity.Property(e => e.UserAgent).HasMaxLength(500);
+            entity.Property(e => e.DeviceType).HasMaxLength(50);
+            entity.Property(e => e.Browser).HasMaxLength(100);
+            entity.Property(e => e.OperatingSystem).HasMaxLength(100);
+            entity.Property(e => e.LoginSuccessful).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.FailureReason).HasMaxLength(255);
+            entity.Property(e => e.SessionId).HasMaxLength(255);
         });
     }
 } 
