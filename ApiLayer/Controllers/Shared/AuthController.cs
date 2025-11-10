@@ -75,6 +75,51 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Crea un nuevo usuario
+    /// </summary>
+    /// <param name="command">Datos del usuario a crear</param>
+    /// <returns>Información del usuario creado</returns>
+    [HttpPost("register")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CreateUser([FromBody] CreateUserCommand command)
+    {
+        // Validación usando FluentValidation
+        var validationResult = await _validationService.ValidateAsync(command);
+        if (!validationResult.IsValid)
+        {
+            var errorResponse = ResponseStructure<object>.ValidationError(
+                string.Join(", ", validationResult.Errors));
+            return BadRequest(errorResponse);
+        }
+
+        try
+        {
+            var result = await _authService.CreateUserAsync(command);
+
+            if (!result.Success)
+            {
+                var errorResponse = ResponseStructure<object>.BadRequest(result.Message);
+                return BadRequest(errorResponse);
+            }
+
+            var response = ResponseStructure<object>.Success(
+                new
+                {
+                    userId = result.UserId,
+                    user = result.User,
+                    message = result.Message
+                },
+                result.Message);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error($"Error al crear el usuario: {ex.Message}");
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    /// <summary>
     /// Cambia la contraseña de un usuario
     /// </summary>
     /// <param name="command">Datos para cambio de contraseña</param>

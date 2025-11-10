@@ -61,6 +61,7 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Comm
 
 // Auth Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.LoginCommand>, BusinessLayer.Shared.Validators.LoginCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.CreateUserCommand>, BusinessLayer.Shared.Validators.CreateUserCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.ChangePasswordCommand>, BusinessLayer.Shared.Validators.ChangePasswordCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.LockAccountCommand>, BusinessLayer.Shared.Validators.LockAccountCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.UnlockAccountCommand>, BusinessLayer.Shared.Validators.UnlockAccountCommandValidator>();
@@ -235,7 +236,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 
 #region MiddleWares
 app.UseCors(builder => builder
-    .WithOrigins("https://pss.purdyseguros.com", "https://localhost:5001", "http://localhost:5009")
+    .WithOrigins( "https://localhost:5001", "http://localhost:5009")
     .AllowAnyMethod()
     .AllowAnyHeader()
 );

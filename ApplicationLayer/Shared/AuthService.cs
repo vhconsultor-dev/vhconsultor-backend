@@ -1,5 +1,6 @@
 using BusinessLayer.Shared.Commands;
 using BusinessLayer.Shared.Queries;
+using ModelLayer.Shared;
 using ModelLayer.Shared.Entities;
 using System.Security.Cryptography;
 using System.Text;
@@ -39,7 +40,7 @@ public class AuthService
         var loginHistory = new UserLoginHistory
         {
             UserId = user?.UserId ?? 0,
-            LoginDate = DateTime.UtcNow,
+            LoginDate = DateTimeService.GetCostaRicaNow(),
             IPAddress = command.IPAddress ?? "Unknown",
             Location = command.Location,
             Country = command.Country,
@@ -81,7 +82,7 @@ public class AuthService
         }
 
         // Verificar si la cuenta está bloqueada
-        if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTime.UtcNow)
+        if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTimeService.GetCostaRicaNow())
         {
             loginHistory.UserId = user.UserId;
             loginHistory.FailureReason = "Cuenta bloqueada";
@@ -200,6 +201,85 @@ public class AuthService
 
     #endregion
 
+    #region User Creation
+
+    /// <summary>
+    /// Crea un nuevo usuario
+    /// </summary>
+    public async Task<CreateUserResult> CreateUserAsync(CreateUserCommand command)
+    {
+        // Verificar si el email ya existe
+        var existingUserByEmail = await _userQueryRepository.GetByUsernameOrEmailAsync(command.Email);
+        if (existingUserByEmail != null)
+        {
+            return new CreateUserResult
+            {
+                Success = false,
+                Message = "El email ya está registrado"
+            };
+        }
+
+        // Verificar si el username ya existe
+        var existingUserByUsername = await _userQueryRepository.GetByUsernameOrEmailAsync(command.Username);
+        if (existingUserByUsername != null)
+        {
+            return new CreateUserResult
+            {
+                Success = false,
+                Message = "El nombre de usuario ya está en uso"
+            };
+        }
+
+        // Crear el hash de la contraseña
+        var passwordHash = HashPassword(command.Password);
+
+        // Crear el nuevo usuario
+        var user = new User
+        {
+            FirstName = command.FirstName,
+            LastName = command.LastName,
+            Email = command.Email,
+            Username = command.Username,
+            PasswordHash = passwordHash,
+            PhoneNumber = command.PhoneNumber,
+            ProfilePictureUrl = command.ProfilePictureUrl,
+            IsCorporate = command.IsCorporate,
+            IsBrandPartner = command.IsBrandPartner,
+            IsActive = true,
+            EmailVerified = false,
+            FailedLoginAttempts = 0,
+            LockedUntil = null,
+            CreatedAt = DateTimeService.GetCostaRicaNow(),
+            CreatedBy = command.CreatedBy
+        };
+
+        try
+        {
+            var userId = await _authCommandRepository.CreateUserAsync(user);
+            
+            // Ocultar información sensible
+            user.PasswordHash = string.Empty;
+
+            return new CreateUserResult
+            {
+                Success = true,
+                Message = "Usuario creado exitosamente",
+                User = user,
+                UserId = userId
+            };
+        }
+        catch (Exception ex)
+        {
+            return new CreateUserResult
+            {
+                Success = false,
+                Message = $"Error al crear el usuario: {ex.Message}"
+            };
+        }
+    }
+
+    #endregion
+
     #region Account Lock Management
 
     /// <summary>
@@ -220,7 +300,7 @@ public class AuthService
         var success = await _authCommandRepository.LockAccountAsync(command.UserId, command.LockDurationMinutes);
         if (success)
         {
-            var lockedUntil = DateTime.UtcNow.AddMinutes(command.LockDurationMinutes);
+            var lockedUntil = DateTimeService.GetCostaRicaNow().AddMinutes(command.LockDurationMinutes);
             return new AccountLockResult
             {
                 Success = true,
@@ -356,6 +436,14 @@ public class AccountLockResult
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public DateTime? LockedUntil { get; set; }
+}
+
+public class CreateUserResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public User? User { get; set; }
+    public int? UserId { get; set; }
 }
 
 #endregion
