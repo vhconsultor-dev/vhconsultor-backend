@@ -80,7 +80,7 @@ public class AuthController : ControllerBase
     /// <param name="command">Datos del usuario a crear</param>
     /// <returns>Información del usuario creado</returns>
     [HttpPost("register")]
-    [AllowAnonymous]
+    [Authorize]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserCommand command)
     {
         // Validación usando FluentValidation
