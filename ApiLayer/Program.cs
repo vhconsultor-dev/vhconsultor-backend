@@ -140,6 +140,8 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.ContractTypeService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.ContractService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.ContractServiceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.PricingService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.BusinessTypeService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.PlatformService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -181,6 +183,8 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ContractQueryReposito
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ContractServiceQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.PricingCommandRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PricingQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.BusinessTypeQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PlatformQueryRepository>();
 #endregion
 
 #region SwaggerConfig
