@@ -18,6 +18,7 @@ public class DBcontext : DbContext
     public DbSet<IndustrySector> IndustrySectors { get; set; }
     public DbSet<Contract> Contracts { get; set; }
     public DbSet<Service> Services { get; set; }
+    public DbSet<PricingService> PricingServices { get; set; }
     public DbSet<ContractService> ContractServices { get; set; }
     public DbSet<ServiceBudgetRange> ServiceBudgetRanges { get; set; }
     public DbSet<ServiceAdBudgetRange> ServiceAdBudgetRanges { get; set; }
@@ -172,6 +173,21 @@ public class DBcontext : DbContext
             entity.Property(e => e.UpdatedAt);
         });
         
+        // Configuración de PricingService (Corporate)
+        modelBuilder.Entity<PricingService>(entity =>
+        {
+            entity.ToTable("PricingServices", "Corporate");
+            entity.HasKey(e => e.ServiceId);
+            entity.Property(e => e.ServiceId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ServiceName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.ServiceKey).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.ServiceCategory).HasMaxLength(100);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt);
+        });
+
         // Configuración de ContractService (Corporate)
         modelBuilder.Entity<ContractService>(entity =>
         {

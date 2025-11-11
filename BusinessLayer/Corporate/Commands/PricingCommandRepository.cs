@@ -116,7 +116,7 @@ public class PricingCommandRepository
 
     public async Task<bool> ServiceExistsAsync(int serviceId)
     {
-        return await _context.Services.AnyAsync(s => s.ServiceId == serviceId && s.IsActive);
+        return await _context.PricingServices.AnyAsync(s => s.ServiceId == serviceId && s.IsActive);
     }
 
     public async Task<bool> BusinessTypeExistsAsync(int businessTypeId)

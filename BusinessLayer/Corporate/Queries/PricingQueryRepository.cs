@@ -41,7 +41,7 @@ public class PricingQueryRepository
                 sbr.CreatedAt,
                 sbr.UpdatedAt
             FROM Corporate.ServiceBudgetRanges sbr
-            INNER JOIN Corporate.Services s ON sbr.ServiceId = s.ServiceId
+            INNER JOIN Corporate.PricingServices s ON sbr.ServiceId = s.ServiceId
             WHERE 1=1");
 
         var parameters = new DynamicParameters();
@@ -94,7 +94,7 @@ public class PricingQueryRepository
                 sbr.CreatedAt,
                 sbr.UpdatedAt
             FROM Corporate.ServiceBudgetRanges sbr
-            INNER JOIN Corporate.Services s ON sbr.ServiceId = s.ServiceId
+            INNER JOIN Corporate.PricingServices s ON sbr.ServiceId = s.ServiceId
             WHERE sbr.ServiceBudgetRangeId = @Id";
 
         return await connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
@@ -189,7 +189,7 @@ public class PricingQueryRepository
                 sabr.CreatedAt,
                 sabr.UpdatedAt
             FROM Corporate.ServiceAdBudgetRanges sabr
-            INNER JOIN Corporate.Services s ON sabr.ServiceId = s.ServiceId
+            INNER JOIN Corporate.PricingServices s ON sabr.ServiceId = s.ServiceId
             WHERE 1=1");
 
         var parameters = new DynamicParameters();
@@ -242,7 +242,7 @@ public class PricingQueryRepository
                 sabr.CreatedAt,
                 sabr.UpdatedAt
             FROM Corporate.ServiceAdBudgetRanges sabr
-            INNER JOIN Corporate.Services s ON sabr.ServiceId = s.ServiceId
+            INNER JOIN Corporate.PricingServices s ON sabr.ServiceId = s.ServiceId
             WHERE sabr.ServiceAdBudgetRangeId = @Id";
 
         return await connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { Id = id });
@@ -340,10 +340,10 @@ public class PricingQueryRepository
                     sbr.Percentage,
                     NULL as FixedQuote,
                     s.ServiceName,
-                    s.ServiceCode,
-                    s.ServiceDescription
+                    s.ServiceKey,
+                    s.Description
                 FROM Corporate.ServiceBudgetRanges sbr
-                INNER JOIN Corporate.Services s ON sbr.ServiceId = s.ServiceId
+                INNER JOIN Corporate.PricingServices s ON sbr.ServiceId = s.ServiceId
                 WHERE sbr.ServiceId = @ServiceId
                     AND sbr.BusinessTypeId = @BusinessTypeId
                     AND sbr.PlatformId = @PlatformId
@@ -371,10 +371,10 @@ public class PricingQueryRepository
                     sbr.Percentage,
                     NULL as FixedQuote,
                     s.ServiceName,
-                    s.ServiceCode,
-                    s.ServiceDescription
+                    s.ServiceKey,
+                    s.Description
                 FROM Corporate.ServiceBudgetRanges sbr
-                INNER JOIN Corporate.Services s ON sbr.ServiceId = s.ServiceId
+                INNER JOIN Corporate.PricingServices s ON sbr.ServiceId = s.ServiceId
                 WHERE sbr.ServiceId = @ServiceId
                     AND sbr.BusinessTypeId = @BusinessTypeId
                     AND sbr.PlatformId IS NULL
@@ -408,10 +408,10 @@ public class PricingQueryRepository
                     NULL as Percentage,
                     sabr.FixedQuote,
                     s.ServiceName,
-                    s.ServiceCode,
-                    s.ServiceDescription
+                    s.ServiceKey,
+                    s.Description
                 FROM Corporate.ServiceAdBudgetRanges sabr
-                INNER JOIN Corporate.Services s ON sabr.ServiceId = s.ServiceId
+                INNER JOIN Corporate.PricingServices s ON sabr.ServiceId = s.ServiceId
                 WHERE sabr.ServiceId = @ServiceId
                     AND sabr.BusinessTypeId = @BusinessTypeId
                     AND sabr.PlatformId = @PlatformId
@@ -439,10 +439,10 @@ public class PricingQueryRepository
                     NULL as Percentage,
                     sabr.FixedQuote,
                     s.ServiceName,
-                    s.ServiceCode,
-                    s.ServiceDescription
+                    s.ServiceKey,
+                    s.Description
                 FROM Corporate.ServiceAdBudgetRanges sabr
-                INNER JOIN Corporate.Services s ON sabr.ServiceId = s.ServiceId
+                INNER JOIN Corporate.PricingServices s ON sabr.ServiceId = s.ServiceId
                 WHERE sabr.ServiceId = @ServiceId
                     AND sabr.BusinessTypeId = @BusinessTypeId
                     AND sabr.PlatformId IS NULL
@@ -502,10 +502,10 @@ public class PricingQueryRepository
         var sql = @"
             SELECT 
                 ServiceId,
-                ServiceCode,
+                ServiceKey,
                 ServiceName,
-                ServiceDescription
-            FROM Corporate.Services
+                Description
+            FROM Corporate.PricingServices
             WHERE ServiceId = @ServiceId";
 
         return await connection.QueryFirstOrDefaultAsync<dynamic>(sql, new { ServiceId = serviceId });
