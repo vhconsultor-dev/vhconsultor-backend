@@ -115,6 +115,7 @@ builder.Services.AddScoped<ApplicationLayer.Shared.IErrorLogService, Application
 // Security Services
 builder.Services.AddScoped<ApplicationLayer.Shared.JwtService>();
 builder.Services.AddScoped<ApplicationLayer.Shared.AuthService>();
+builder.Services.AddScoped<ApplicationLayer.Shared.RBACService>();
 
 // Ecommerce Services
 builder.Services.AddScoped<ApplicationLayer.Ecommerce.CustomerSubmissionService>();
@@ -137,9 +138,11 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.ContractServiceService>();
 // Security CQRS Repositories
 // Commands
 builder.Services.AddScoped<BusinessLayer.Shared.Commands.UserAuthCommandRepository>();
+builder.Services.AddScoped<BusinessLayer.Shared.Commands.RBACCommandRepository>();
 // Queries
 builder.Services.AddScoped<BusinessLayer.Shared.Queries.UserQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Shared.Queries.UserLoginHistoryQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Shared.Queries.RBACQueryRepository>();
 
 // Ecommerce CQRS Repositories
 builder.Services.AddScoped<BusinessLayer.Ecommerce.Commands.CreateCustomerSubmissionCommand>();

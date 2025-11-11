@@ -26,6 +26,14 @@ public class DBcontext : DbContext
     public DbSet<ErrorLog> ErrorLogs { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<UserLoginHistory> UserLoginHistory { get; set; }
+    public DbSet<Resource> Resources { get; set; }
+    public DbSet<ModelLayer.Shared.Entities.Action> Actions { get; set; }
+    public DbSet<Permission> Permissions { get; set; }
+    public DbSet<Role> Roles { get; set; }
+    public DbSet<RolePermission> RolePermissions { get; set; }
+    public DbSet<UserRole> UserRoles { get; set; }
+    public DbSet<UserPermission> UserPermissions { get; set; }
+    public DbSet<UserPermissionDenial> UserPermissionDenials { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -264,6 +272,119 @@ public class DBcontext : DbContext
             entity.Property(e => e.LoginSuccessful).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.FailureReason).HasMaxLength(255);
             entity.Property(e => e.SessionId).HasMaxLength(255);
+        });
+
+        // Configuración de Resource
+        modelBuilder.Entity<Resource>(entity =>
+        {
+            entity.ToTable("Resources", "Global");
+            entity.HasKey(e => e.ResourceId);
+            entity.Property(e => e.ResourceId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ResourceName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.ResourceKey).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Module).HasMaxLength(50);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt);
+        });
+
+        // Configuración de Action
+        modelBuilder.Entity<ModelLayer.Shared.Entities.Action>(entity =>
+        {
+            entity.ToTable("Actions", "Global");
+            entity.HasKey(e => e.ActionId);
+            entity.Property(e => e.ActionId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ActionName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.ActionKey).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+        });
+
+        // Configuración de Permission
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.ToTable("Permissions", "Global");
+            entity.HasKey(e => e.PermissionId);
+            entity.Property(e => e.PermissionId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ResourceId).IsRequired();
+            entity.Property(e => e.ActionId).IsRequired();
+            entity.Property(e => e.PermissionName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.PermissionKey).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt);
+        });
+
+        // Configuración de Role
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.ToTable("Roles", "Global");
+            entity.HasKey(e => e.RoleId);
+            entity.Property(e => e.RoleId).ValueGeneratedOnAdd();
+            entity.Property(e => e.RoleName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.RoleKey).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.IsSystemRole).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt);
+        });
+
+        // Configuración de RolePermission
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.ToTable("RolePermissions", "Global");
+            entity.HasKey(e => e.RolePermissionId);
+            entity.Property(e => e.RolePermissionId).ValueGeneratedOnAdd();
+            entity.Property(e => e.RoleId).IsRequired();
+            entity.Property(e => e.PermissionId).IsRequired();
+            entity.Property(e => e.GrantedBy);
+            entity.Property(e => e.GrantedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+        });
+
+        // Configuración de UserRole
+        modelBuilder.Entity<UserRole>(entity =>
+        {
+            entity.ToTable("UserRoles", "Global");
+            entity.HasKey(e => e.UserRoleId);
+            entity.Property(e => e.UserRoleId).ValueGeneratedOnAdd();
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.RoleId).IsRequired();
+            entity.Property(e => e.AssignedBy);
+            entity.Property(e => e.AssignedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.ExpiresAt);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+        });
+
+        // Configuración de UserPermission
+        modelBuilder.Entity<UserPermission>(entity =>
+        {
+            entity.ToTable("UserPermissions", "Global");
+            entity.HasKey(e => e.UserPermissionId);
+            entity.Property(e => e.UserPermissionId).ValueGeneratedOnAdd();
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.PermissionId).IsRequired();
+            entity.Property(e => e.GrantedBy);
+            entity.Property(e => e.GrantedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.ExpiresAt);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+        });
+
+        // Configuración de UserPermissionDenial
+        modelBuilder.Entity<UserPermissionDenial>(entity =>
+        {
+            entity.ToTable("UserPermissionDenials", "Global");
+            entity.HasKey(e => e.UserPermissionDenialId);
+            entity.Property(e => e.UserPermissionDenialId).ValueGeneratedOnAdd();
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.PermissionId).IsRequired();
+            entity.Property(e => e.DeniedBy);
+            entity.Property(e => e.DeniedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
         });
     }
 } 
