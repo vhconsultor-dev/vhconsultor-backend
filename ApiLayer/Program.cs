@@ -73,6 +73,14 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateContractRequest>, BusinessLayer.Corporate.Validators.UpdateContractValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateContractServiceRequest>, BusinessLayer.Corporate.Validators.CreateContractServiceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateContractServiceRequest>, BusinessLayer.Corporate.Validators.UpdateContractServiceValidator>();
+// Pricing Validators
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateServiceBudgetRangeCommand>, BusinessLayer.Corporate.Validators.CreateServiceBudgetRangeCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateServiceBudgetRangeCommand>, BusinessLayer.Corporate.Validators.UpdateServiceBudgetRangeCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateServiceAdBudgetRangeCommand>, BusinessLayer.Corporate.Validators.CreateServiceAdBudgetRangeCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateServiceAdBudgetRangeCommand>, BusinessLayer.Corporate.Validators.UpdateServiceAdBudgetRangeCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CalculatePercentageCommand>, BusinessLayer.Corporate.Validators.CalculatePercentageCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CalculateFixedCommand>, BusinessLayer.Corporate.Validators.CalculateFixedCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CalculatePricingCommand>, BusinessLayer.Corporate.Validators.CalculatePricingCommandValidator>();
 #endregion
 
 #region JWT Configuration
@@ -131,6 +139,7 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.CurrencyService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.ContractTypeService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.ContractService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.ContractServiceService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.PricingService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -170,6 +179,8 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CurrencyQueryReposito
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ContractTypeQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ContractQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ContractServiceQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.PricingCommandRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PricingQueryRepository>();
 #endregion
 
 #region SwaggerConfig

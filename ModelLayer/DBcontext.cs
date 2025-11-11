@@ -17,7 +17,10 @@ public class DBcontext : DbContext
     public DbSet<Country> Countries { get; set; }
     public DbSet<IndustrySector> IndustrySectors { get; set; }
     public DbSet<Contract> Contracts { get; set; }
+    public DbSet<Service> Services { get; set; }
     public DbSet<ContractService> ContractServices { get; set; }
+    public DbSet<ServiceBudgetRange> ServiceBudgetRanges { get; set; }
+    public DbSet<ServiceAdBudgetRange> ServiceAdBudgetRanges { get; set; }
     
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
@@ -153,6 +156,22 @@ public class DBcontext : DbContext
             entity.Property(e => e.SignedDocumentUrl).HasMaxLength(500);
         });
 
+        // Configuración de Service (Corporate)
+        modelBuilder.Entity<Service>(entity =>
+        {
+            entity.ToTable("Services", "Corporate");
+            entity.HasKey(e => e.ServiceId);
+            entity.Property(e => e.ServiceId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ServiceCode).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ServiceName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.ServiceDescription).HasMaxLength(1000);
+            entity.Property(e => e.DefaultUnitPrice).HasColumnType("decimal(15,2)");
+            entity.Property(e => e.BillingUnit).HasMaxLength(50);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt);
+        });
+        
         // Configuración de ContractService (Corporate)
         modelBuilder.Entity<ContractService>(entity =>
         {
@@ -385,6 +404,40 @@ public class DBcontext : DbContext
             entity.Property(e => e.DeniedAt).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.Reason).HasMaxLength(500);
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+        });
+        
+        // Configuración de ServiceBudgetRange (Corporate)
+        modelBuilder.Entity<ServiceBudgetRange>(entity =>
+        {
+            entity.ToTable("ServiceBudgetRanges", "Corporate");
+            entity.HasKey(e => e.ServiceBudgetRangeId);
+            entity.Property(e => e.ServiceBudgetRangeId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ServiceId).IsRequired();
+            entity.Property(e => e.BusinessTypeId).IsRequired();
+            entity.Property(e => e.PlatformId);
+            entity.Property(e => e.MinBudgetValue).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MaxBudgetValue).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Percentage).IsRequired().HasColumnType("decimal(5,2)");
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt);
+        });
+        
+        // Configuración de ServiceAdBudgetRange (Corporate)
+        modelBuilder.Entity<ServiceAdBudgetRange>(entity =>
+        {
+            entity.ToTable("ServiceAdBudgetRanges", "Corporate");
+            entity.HasKey(e => e.ServiceAdBudgetRangeId);
+            entity.Property(e => e.ServiceAdBudgetRangeId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ServiceId).IsRequired();
+            entity.Property(e => e.BusinessTypeId).IsRequired();
+            entity.Property(e => e.PlatformId);
+            entity.Property(e => e.MinAdBudgetValue).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MaxAdBudgetValue).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.FixedQuote).IsRequired().HasColumnType("decimal(18,2)");
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt);
         });
     }
 } 
