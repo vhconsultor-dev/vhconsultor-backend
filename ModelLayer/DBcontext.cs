@@ -30,6 +30,7 @@ public class DBcontext : DbContext
     public DbSet<ErrorLog> ErrorLogs { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<UserLoginHistory> UserLoginHistory { get; set; }
+    public DbSet<Application> Applications { get; set; }
     public DbSet<Resource> Resources { get; set; }
     public DbSet<ModelLayer.Shared.Entities.Action> Actions { get; set; }
     public DbSet<Permission> Permissions { get; set; }
@@ -309,12 +310,27 @@ public class DBcontext : DbContext
             entity.Property(e => e.SessionId).HasMaxLength(255);
         });
 
+        // Configuración de Application
+        modelBuilder.Entity<Application>(entity =>
+        {
+            entity.ToTable("Applications", "Global");
+            entity.HasKey(e => e.ApplicationId);
+            entity.Property(e => e.ApplicationId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ApplicationName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.ApplicationKey).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt);
+        });
+
         // Configuración de Resource
         modelBuilder.Entity<Resource>(entity =>
         {
             entity.ToTable("Resources", "Global");
             entity.HasKey(e => e.ResourceId);
             entity.Property(e => e.ResourceId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ApplicationId).IsRequired();
             entity.Property(e => e.ResourceName).HasMaxLength(100).IsRequired();
             entity.Property(e => e.ResourceKey).HasMaxLength(50).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(500);
@@ -322,6 +338,12 @@ public class DBcontext : DbContext
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.UpdatedAt);
+            
+            // Foreign Key a Applications
+            entity.HasOne<Application>()
+                .WithMany()
+                .HasForeignKey(e => e.ApplicationId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuración de Action
@@ -359,6 +381,7 @@ public class DBcontext : DbContext
             entity.ToTable("Roles", "Global");
             entity.HasKey(e => e.RoleId);
             entity.Property(e => e.RoleId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ApplicationId).IsRequired();
             entity.Property(e => e.RoleName).HasMaxLength(100).IsRequired();
             entity.Property(e => e.RoleKey).HasMaxLength(50).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(500);
@@ -366,6 +389,12 @@ public class DBcontext : DbContext
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.UpdatedAt);
+            
+            // Foreign Key a Applications
+            entity.HasOne<Application>()
+                .WithMany()
+                .HasForeignKey(e => e.ApplicationId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuración de RolePermission

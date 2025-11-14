@@ -7,6 +7,7 @@ namespace ModelLayer.Shared.Entities;
 public class Role
 {
     public int RoleId { get; set; }
+    public int ApplicationId { get; set; }
     public string RoleName { get; set; } = string.Empty;
     public string RoleKey { get; set; } = string.Empty;
     public string? Description { get; set; }

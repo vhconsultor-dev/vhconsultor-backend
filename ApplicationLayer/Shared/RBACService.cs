@@ -28,13 +28,32 @@ public class RBACService
         string? resourceName = null,
         string? resourceKey = null,
         string? module = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        int? applicationId = null,
+        string? applicationKey = null)
     {
-        return await _queryRepository.GetResourcesAsync(resourceId, resourceName, resourceKey, module, isActive);
+        return await _queryRepository.GetResourcesAsync(resourceId, resourceName, resourceKey, module, isActive, applicationId, applicationKey);
     }
 
-    public async Task<int> CreateResourceAsync(Resource resource)
+    public async Task<int> CreateResourceAsync(Resource resource, string? applicationKey = null)
     {
+        // Si se proporciona applicationKey pero no applicationId, convertir
+        if (!string.IsNullOrEmpty(applicationKey) && resource.ApplicationId <= 0)
+        {
+            var appId = await _commandRepository.GetApplicationIdByKeyAsync(applicationKey);
+            if (!appId.HasValue)
+            {
+                throw new ArgumentException($"ApplicationKey '{applicationKey}' no encontrado o inactivo");
+            }
+            resource.ApplicationId = appId.Value;
+        }
+
+        // Validar que ApplicationId esté presente
+        if (resource.ApplicationId <= 0)
+        {
+            throw new ArgumentException("ApplicationId o ApplicationKey es requerido para crear un Resource");
+        }
+
         resource.CreatedAt = DateTimeService.GetCostaRicaNow();
         resource.IsActive = true;
         return await _commandRepository.CreateResourceAsync(resource);
@@ -110,13 +129,32 @@ public class RBACService
         string? roleName = null,
         string? roleKey = null,
         bool? isSystemRole = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        int? applicationId = null,
+        string? applicationKey = null)
     {
-        return await _queryRepository.GetRolesAsync(roleId, roleName, roleKey, isSystemRole, isActive);
+        return await _queryRepository.GetRolesAsync(roleId, roleName, roleKey, isSystemRole, isActive, applicationId, applicationKey);
     }
 
-    public async Task<int> CreateRoleAsync(Role role)
+    public async Task<int> CreateRoleAsync(Role role, string? applicationKey = null)
     {
+        // Si se proporciona applicationKey pero no applicationId, convertir
+        if (!string.IsNullOrEmpty(applicationKey) && role.ApplicationId <= 0)
+        {
+            var appId = await _commandRepository.GetApplicationIdByKeyAsync(applicationKey);
+            if (!appId.HasValue)
+            {
+                throw new ArgumentException($"ApplicationKey '{applicationKey}' no encontrado o inactivo");
+            }
+            role.ApplicationId = appId.Value;
+        }
+
+        // Validar que ApplicationId esté presente
+        if (role.ApplicationId <= 0)
+        {
+            throw new ArgumentException("ApplicationId o ApplicationKey es requerido para crear un Role");
+        }
+
         role.CreatedAt = DateTimeService.GetCostaRicaNow();
         role.IsActive = true;
         return await _commandRepository.CreateRoleAsync(role);
@@ -257,9 +295,9 @@ public class RBACService
 
     #region Helper Methods
 
-    public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId)
+    public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId, string? applicationKey = null)
     {
-        return await _queryRepository.GetEffectiveUserPermissionsAsync(userId);
+        return await _queryRepository.GetEffectiveUserPermissionsAsync(userId, applicationKey);
     }
 
     #endregion

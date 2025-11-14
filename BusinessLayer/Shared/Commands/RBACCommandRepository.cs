@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using ModelLayer;
 using ModelLayer.Shared;
 using ModelLayer.Shared.Entities;
@@ -20,6 +21,12 @@ public class RBACCommandRepository
 
     public async Task<int> CreateResourceAsync(Resource resource)
     {
+        // Validar que ApplicationId esté presente
+        if (resource.ApplicationId <= 0)
+        {
+            throw new ArgumentException("ApplicationId es requerido para crear un Resource");
+        }
+
         _context.Resources.Add(resource);
         await _context.SaveChangesAsync();
         return resource.ResourceId;
@@ -30,6 +37,7 @@ public class RBACCommandRepository
         var existing = await _context.Resources.FindAsync(resource.ResourceId);
         if (existing == null) return false;
 
+        existing.ApplicationId = resource.ApplicationId;
         existing.ResourceName = resource.ResourceName;
         existing.ResourceKey = resource.ResourceKey;
         existing.Description = resource.Description;
@@ -108,6 +116,12 @@ public class RBACCommandRepository
 
     public async Task<int> CreateRoleAsync(Role role)
     {
+        // Validar que ApplicationId esté presente
+        if (role.ApplicationId <= 0)
+        {
+            throw new ArgumentException("ApplicationId es requerido para crear un Role");
+        }
+
         _context.Roles.Add(role);
         await _context.SaveChangesAsync();
         return role.RoleId;
@@ -118,6 +132,7 @@ public class RBACCommandRepository
         var existing = await _context.Roles.FindAsync(role.RoleId);
         if (existing == null) return false;
 
+        existing.ApplicationId = role.ApplicationId;
         existing.RoleName = role.RoleName;
         existing.RoleKey = role.RoleKey;
         existing.Description = role.Description;
@@ -229,6 +244,21 @@ public class RBACCommandRepository
         denial.IsActive = false;
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    /// <summary>
+    /// Obtiene el ApplicationId desde ApplicationKey
+    /// </summary>
+    public async Task<int?> GetApplicationIdByKeyAsync(string applicationKey)
+    {
+        var application = await _context.Applications
+            .FirstOrDefaultAsync(a => a.ApplicationKey == applicationKey && a.IsActive);
+        
+        return application?.ApplicationId;
     }
 
     #endregion

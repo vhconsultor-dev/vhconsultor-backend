@@ -7,6 +7,7 @@ namespace ModelLayer.Shared.Entities;
 public class Resource
 {
     public int ResourceId { get; set; }
+    public int ApplicationId { get; set; }
     public string ResourceName { get; set; } = string.Empty;
     public string ResourceKey { get; set; } = string.Empty;
     public string? Description { get; set; }
