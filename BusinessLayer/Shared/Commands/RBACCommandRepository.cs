@@ -198,8 +198,28 @@ public class RBACCommandRepository
             if (innerException != null)
             {
                 // Error 2627: Violación de constraint UNIQUE
+                // Esto puede ocurrir si existe un registro inactivo con la misma combinación UserId/RoleId
                 if (innerException.Number == 2627)
                 {
+                    // Verificar si existe un registro inactivo que podamos reactivar
+                    var existingInactive = _context.UserRoles
+                        .FirstOrDefault(ur => ur.UserId == userRole.UserId && 
+                                             ur.RoleId == userRole.RoleId && 
+                                             !ur.IsActive);
+                    
+                    if (existingInactive != null)
+                    {
+                        // Reactivar el registro existente
+                        existingInactive.IsActive = true;
+                        existingInactive.AssignedBy = userRole.AssignedBy ?? existingInactive.AssignedBy;
+                        existingInactive.AssignedAt = DateTimeService.GetCostaRicaNow();
+                        existingInactive.ExpiresAt = userRole.ExpiresAt;
+                        
+                        await _context.SaveChangesAsync();
+                        return existingInactive.UserRoleId;
+                    }
+                    
+                    // Si no hay registro inactivo, entonces hay uno activo (aunque la validación debería haberlo detectado)
                     throw new InvalidOperationException(
                         $"El rol con ID {userRole.RoleId} ya está asignado al usuario con ID {userRole.UserId}");
                 }
@@ -250,6 +270,23 @@ public class RBACCommandRepository
         userRole.IsActive = false;
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<int> ReactivateUserRoleAsync(int userRoleId, int? assignedBy = null, DateTime? expiresAt = null)
+    {
+        var userRole = await _context.UserRoles.FindAsync(userRoleId);
+        if (userRole == null)
+        {
+            throw new ArgumentException($"No se encontró el registro de asignación de rol con ID {userRoleId}");
+        }
+
+        userRole.IsActive = true;
+        userRole.AssignedBy = assignedBy ?? userRole.AssignedBy;
+        userRole.AssignedAt = DateTimeService.GetCostaRicaNow();
+        userRole.ExpiresAt = expiresAt;
+        
+        await _context.SaveChangesAsync();
+        return userRole.UserRoleId;
     }
 
     #endregion

@@ -236,12 +236,23 @@ public class RBACService
         }
 
         // Validar que no existe una asignación activa duplicada
-        var existingUserRoles = await _queryRepository.GetUserRolesAsync(userId: userId, roleId: roleId, isActive: true);
-        if (existingUserRoles.Any())
+        var existingActiveUserRoles = await _queryRepository.GetUserRolesAsync(userId: userId, roleId: roleId, isActive: true);
+        if (existingActiveUserRoles.Any())
         {
             throw new InvalidOperationException($"El rol con ID {roleId} ya está asignado al usuario con ID {userId}");
         }
 
+        // Verificar si existe un registro inactivo para reactivarlo
+        var existingInactiveUserRoles = await _queryRepository.GetUserRolesAsync(userId: userId, roleId: roleId, isActive: false);
+        var inactiveUserRole = existingInactiveUserRoles.FirstOrDefault();
+        
+        if (inactiveUserRole != null)
+        {
+            // Reactivar el registro existente en lugar de crear uno nuevo
+            return await _commandRepository.ReactivateUserRoleAsync(inactiveUserRole.UserRoleId, assignedBy, expiresAt);
+        }
+
+        // Crear un nuevo registro
         var userRole = new UserRole
         {
             UserId = userId,
