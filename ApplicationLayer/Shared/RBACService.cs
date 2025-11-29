@@ -12,13 +12,16 @@ public class RBACService
 {
     private readonly RBACCommandRepository _commandRepository;
     private readonly RBACQueryRepository _queryRepository;
+    private readonly UserQueryRepository _userQueryRepository;
 
     public RBACService(
         RBACCommandRepository commandRepository,
-        RBACQueryRepository queryRepository)
+        RBACQueryRepository queryRepository,
+        UserQueryRepository userQueryRepository)
     {
         _commandRepository = commandRepository;
         _queryRepository = queryRepository;
+        _userQueryRepository = userQueryRepository;
     }
 
     #region Resources
@@ -212,6 +215,33 @@ public class RBACService
 
     public async Task<int> AssignRoleToUserAsync(int userId, int roleId, int? assignedBy = null, DateTime? expiresAt = null)
     {
+        // Validar que el usuario existe
+        var user = await _userQueryRepository.GetByIdAsync(userId);
+        if (user == null)
+        {
+            throw new ArgumentException($"El usuario con ID {userId} no existe");
+        }
+
+        if (!user.IsActive)
+        {
+            throw new ArgumentException($"El usuario con ID {userId} está inactivo");
+        }
+
+        // Validar que el rol existe
+        var roles = await _queryRepository.GetRolesAsync(roleId: roleId, isActive: true);
+        var role = roles.FirstOrDefault();
+        if (role == null)
+        {
+            throw new ArgumentException($"El rol con ID {roleId} no existe o está inactivo");
+        }
+
+        // Validar que no existe una asignación activa duplicada
+        var existingUserRoles = await _queryRepository.GetUserRolesAsync(userId: userId, roleId: roleId, isActive: true);
+        if (existingUserRoles.Any())
+        {
+            throw new InvalidOperationException($"El rol con ID {roleId} ya está asignado al usuario con ID {userId}");
+        }
+
         var userRole = new UserRole
         {
             UserId = userId,

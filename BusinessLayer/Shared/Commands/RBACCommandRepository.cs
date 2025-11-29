@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using ModelLayer;
 using ModelLayer.Shared;
 using ModelLayer.Shared.Entities;
@@ -183,9 +184,60 @@ public class RBACCommandRepository
 
     public async Task<int> AssignRoleToUserAsync(UserRole userRole)
     {
-        _context.UserRoles.Add(userRole);
-        await _context.SaveChangesAsync();
-        return userRole.UserRoleId;
+        try
+        {
+            _context.UserRoles.Add(userRole);
+            await _context.SaveChangesAsync();
+            return userRole.UserRoleId;
+        }
+        catch (DbUpdateException ex)
+        {
+            // Capturar errores específicos de base de datos
+            var innerException = ex.InnerException as SqlException;
+            
+            if (innerException != null)
+            {
+                // Error 2627: Violación de constraint UNIQUE
+                if (innerException.Number == 2627)
+                {
+                    throw new InvalidOperationException(
+                        $"El rol con ID {userRole.RoleId} ya está asignado al usuario con ID {userRole.UserId}");
+                }
+                
+                // Error 547: Violación de constraint FOREIGN KEY
+                if (innerException.Number == 547)
+                {
+                    // Determinar qué foreign key falló basándose en el mensaje
+                    var errorMessage = innerException.Message.ToLower();
+                    if (errorMessage.Contains("userid") || errorMessage.Contains("user"))
+                    {
+                        throw new ArgumentException($"El usuario con ID {userRole.UserId} no existe");
+                    }
+                    if (errorMessage.Contains("roleid") || errorMessage.Contains("role"))
+                    {
+                        throw new ArgumentException($"El rol con ID {userRole.RoleId} no existe");
+                    }
+                    if (errorMessage.Contains("assignedby"))
+                    {
+                        throw new ArgumentException($"El usuario asignador con ID {userRole.AssignedBy} no existe");
+                    }
+                    
+                    throw new ArgumentException("Error de integridad referencial. Verifique que el usuario y el rol existan");
+                }
+                
+                // Otros errores de SQL Server
+                throw new InvalidOperationException(
+                    $"Error de base de datos al asignar rol: {innerException.Message}", ex);
+            }
+            
+            // Si no es SqlException, re-lanzar la excepción original
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Error inesperado al asignar rol al usuario: {ex.Message}", ex);
+        }
     }
 
     public async Task<bool> RemoveRoleFromUserAsync(int userId, int roleId)

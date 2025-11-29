@@ -449,9 +449,27 @@ public class RBACController : ControllerBase
             var response = ResponseStructure<object>.Success(new { userRoleId }, "Rol asignado al usuario exitosamente");
             return Ok(response);
         }
+        catch (ArgumentException ex)
+        {
+            // Errores de validación (usuario/rol no existe, etc.)
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Errores de lógica de negocio (duplicado, etc.)
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
+        }
         catch (Exception ex)
         {
-            var errorResponse = ResponseStructure<object>.Error($"Error al asignar rol al usuario: {ex.Message}");
+            // Errores inesperados
+            var errorMessage = $"Error inesperado al asignar rol al usuario: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorMessage += $" Detalles: {ex.InnerException.Message}";
+            }
+            var errorResponse = ResponseStructure<object>.Error(errorMessage);
             return StatusCode(500, errorResponse);
         }
     }
