@@ -198,13 +198,14 @@ public class RBACCommandRepository
             if (innerException != null)
             {
                 // Error 2627: Violación de constraint UNIQUE
-                // Esto puede ocurrir si existe un registro inactivo con la misma combinación UserId/RoleId
+                // Esto puede ocurrir si existe un registro inactivo con la misma combinación UserId/RoleId/ApplicationId
                 if (innerException.Number == 2627)
                 {
                     // Verificar si existe un registro inactivo que podamos reactivar
                     var existingInactive = _context.UserRoles
                         .FirstOrDefault(ur => ur.UserId == userRole.UserId && 
                                              ur.RoleId == userRole.RoleId && 
+                                             ur.ApplicationId == userRole.ApplicationId &&
                                              !ur.IsActive);
                     
                     if (existingInactive != null)
@@ -221,7 +222,7 @@ public class RBACCommandRepository
                     
                     // Si no hay registro inactivo, entonces hay uno activo (aunque la validación debería haberlo detectado)
                     throw new InvalidOperationException(
-                        $"El rol con ID {userRole.RoleId} ya está asignado al usuario con ID {userRole.UserId}");
+                        $"El rol con ID {userRole.RoleId} ya está asignado al usuario con ID {userRole.UserId} en la aplicación con ID {userRole.ApplicationId}");
                 }
                 
                 // Error 547: Violación de constraint FOREIGN KEY
@@ -260,10 +261,10 @@ public class RBACCommandRepository
         }
     }
 
-    public async Task<bool> RemoveRoleFromUserAsync(int userId, int roleId)
+    public async Task<bool> RemoveRoleFromUserAsync(int userId, int roleId, int applicationId)
     {
         var userRole = _context.UserRoles
-            .FirstOrDefault(ur => ur.UserId == userId && ur.RoleId == roleId && ur.IsActive);
+            .FirstOrDefault(ur => ur.UserId == userId && ur.RoleId == roleId && ur.ApplicationId == applicationId && ur.IsActive);
         
         if (userRole == null) return false;
 

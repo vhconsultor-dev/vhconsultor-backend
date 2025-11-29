@@ -214,11 +214,12 @@ public class RBACController : ControllerBase
     public async Task<IActionResult> GetUserRoles(
         [FromQuery] int? userId = null,
         [FromQuery] int? roleId = null,
-        [FromQuery] bool? isActive = true)
+        [FromQuery] bool? isActive = true,
+        [FromQuery] int? applicationId = null)
     {
         try
         {
-            var userRoles = await _rbacService.GetUserRolesAsync(userId, roleId, isActive);
+            var userRoles = await _rbacService.GetUserRolesAsync(userId, roleId, isActive, applicationId);
             var userRolesList = userRoles.ToList();
 
             if (!userRolesList.Any())
@@ -445,7 +446,12 @@ public class RBACController : ControllerBase
     {
         try
         {
-            var userRoleId = await _rbacService.AssignRoleToUserAsync(request.UserId, request.RoleId, request.AssignedBy, request.ExpiresAt);
+            var userRoleId = await _rbacService.AssignRoleToUserAsync(
+                request.UserId, 
+                request.RoleId, 
+                request.ApplicationId, 
+                request.AssignedBy, 
+                request.ExpiresAt);
             var response = ResponseStructure<object>.Success(new { userRoleId }, "Rol asignado al usuario exitosamente");
             return Ok(response);
         }
@@ -709,11 +715,11 @@ public class RBACController : ControllerBase
     /// Remueve un rol de un usuario
     /// </summary>
     [HttpDelete("user-roles")]
-    public async Task<IActionResult> RemoveRoleFromUser([FromQuery] int userId, [FromQuery] int roleId)
+    public async Task<IActionResult> RemoveRoleFromUser([FromQuery] int userId, [FromQuery] int roleId, [FromQuery] int applicationId)
     {
         try
         {
-            var success = await _rbacService.RemoveRoleFromUserAsync(userId, roleId);
+            var success = await _rbacService.RemoveRoleFromUserAsync(userId, roleId, applicationId);
             
             if (!success)
             {
@@ -799,6 +805,7 @@ public class AssignRoleToUserRequest
 {
     public int UserId { get; set; }
     public int RoleId { get; set; }
+    public int ApplicationId { get; set; }
     public int? AssignedBy { get; set; }
     public DateTime? ExpiresAt { get; set; }
 }

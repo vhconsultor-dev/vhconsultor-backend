@@ -323,14 +323,15 @@ public class RBACQueryRepository
     public async Task<IEnumerable<UserRole>> GetUserRolesAsync(
         int? userId = null,
         int? roleId = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        int? applicationId = null)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
         var sql = @"
-            SELECT UserRoleId, UserId, RoleId, AssignedBy, AssignedAt, ExpiresAt, IsActive
+            SELECT UserRoleId, UserId, RoleId, ApplicationId, AssignedBy, AssignedAt, ExpiresAt, IsActive
             FROM [Global].[UserRoles]
             WHERE 1=1";
 
@@ -352,6 +353,12 @@ public class RBACQueryRepository
         {
             sql += " AND IsActive = @IsActive";
             parameters.Add("IsActive", isActive.Value);
+        }
+
+        if (applicationId.HasValue)
+        {
+            sql += " AND ApplicationId = @ApplicationId";
+            parameters.Add("ApplicationId", applicationId.Value);
         }
 
         sql += " ORDER BY AssignedAt DESC";
@@ -443,6 +450,30 @@ public class RBACQueryRepository
         sql += " ORDER BY DeniedAt DESC";
 
         return await connection.QueryAsync<UserPermissionDenial>(sql, parameters);
+    }
+
+    #endregion
+
+    #region UserApplications
+
+    /// <summary>
+    /// Valida si un usuario tiene acceso a una aplicación
+    /// </summary>
+    public async Task<bool> ValidateUserApplicationAccessAsync(int userId, int applicationId)
+    {
+        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        var sql = @"
+            SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END AS HasAccess
+            FROM [Global].[UserApplications]
+            WHERE UserId = @UserId 
+              AND ApplicationId = @ApplicationId 
+              AND IsActive = 1";
+
+        var hasAccess = await connection.QueryFirstOrDefaultAsync<int>(sql, new { UserId = userId, ApplicationId = applicationId });
+        return hasAccess > 0;
     }
 
     #endregion

@@ -208,13 +208,21 @@ public class RBACService
     public async Task<IEnumerable<UserRole>> GetUserRolesAsync(
         int? userId = null,
         int? roleId = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        int? applicationId = null)
     {
-        return await _queryRepository.GetUserRolesAsync(userId, roleId, isActive);
+        return await _queryRepository.GetUserRolesAsync(userId, roleId, isActive, applicationId);
     }
 
-    public async Task<int> AssignRoleToUserAsync(int userId, int roleId, int? assignedBy = null, DateTime? expiresAt = null)
+    public async Task<int> AssignRoleToUserAsync(int userId, int roleId, int applicationId, int? assignedBy = null, DateTime? expiresAt = null)
     {
+        // Validar que el usuario tiene acceso a la aplicación
+        var hasApplicationAccess = await _queryRepository.ValidateUserApplicationAccessAsync(userId, applicationId);
+        if (!hasApplicationAccess)
+        {
+            throw new ArgumentException($"El usuario con ID {userId} no tiene acceso a la aplicación con ID {applicationId}");
+        }
+
         // Validar que el usuario existe
         var user = await _userQueryRepository.GetByIdAsync(userId);
         if (user == null)
@@ -227,23 +235,31 @@ public class RBACService
             throw new ArgumentException($"El usuario con ID {userId} está inactivo");
         }
 
-        // Validar que el rol existe
-        var roles = await _queryRepository.GetRolesAsync(roleId: roleId, isActive: true);
+        // Validar que el rol existe y pertenece a la aplicación
+        var roles = await _queryRepository.GetRolesAsync(roleId: roleId, isActive: true, applicationId: applicationId);
         var role = roles.FirstOrDefault();
         if (role == null)
         {
-            throw new ArgumentException($"El rol con ID {roleId} no existe o está inactivo");
+            throw new ArgumentException($"El rol con ID {roleId} no existe, está inactivo o no pertenece a la aplicación con ID {applicationId}");
         }
 
-        // Validar que no existe una asignación activa duplicada
-        var existingActiveUserRoles = await _queryRepository.GetUserRolesAsync(userId: userId, roleId: roleId, isActive: true);
+        // Validar que no existe una asignación activa duplicada (mismo UserId, RoleId, ApplicationId)
+        var existingActiveUserRoles = await _queryRepository.GetUserRolesAsync(
+            userId: userId, 
+            roleId: roleId, 
+            isActive: true, 
+            applicationId: applicationId);
         if (existingActiveUserRoles.Any())
         {
-            throw new InvalidOperationException($"El rol con ID {roleId} ya está asignado al usuario con ID {userId}");
+            throw new InvalidOperationException($"El rol con ID {roleId} ya está asignado al usuario con ID {userId} en la aplicación con ID {applicationId}");
         }
 
         // Verificar si existe un registro inactivo para reactivarlo
-        var existingInactiveUserRoles = await _queryRepository.GetUserRolesAsync(userId: userId, roleId: roleId, isActive: false);
+        var existingInactiveUserRoles = await _queryRepository.GetUserRolesAsync(
+            userId: userId, 
+            roleId: roleId, 
+            isActive: false, 
+            applicationId: applicationId);
         var inactiveUserRole = existingInactiveUserRoles.FirstOrDefault();
         
         if (inactiveUserRole != null)
@@ -257,6 +273,7 @@ public class RBACService
         {
             UserId = userId,
             RoleId = roleId,
+            ApplicationId = applicationId,
             AssignedBy = assignedBy,
             AssignedAt = DateTimeService.GetCostaRicaNow(),
             ExpiresAt = expiresAt,
@@ -265,9 +282,9 @@ public class RBACService
         return await _commandRepository.AssignRoleToUserAsync(userRole);
     }
 
-    public async Task<bool> RemoveRoleFromUserAsync(int userId, int roleId)
+    public async Task<bool> RemoveRoleFromUserAsync(int userId, int roleId, int applicationId)
     {
-        return await _commandRepository.RemoveRoleFromUserAsync(userId, roleId);
+        return await _commandRepository.RemoveRoleFromUserAsync(userId, roleId, applicationId);
     }
 
     #endregion

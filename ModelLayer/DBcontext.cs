@@ -417,6 +417,7 @@ public class DBcontext : DbContext
             entity.Property(e => e.UserRoleId).ValueGeneratedOnAdd();
             entity.Property(e => e.UserId).IsRequired();
             entity.Property(e => e.RoleId).IsRequired();
+            entity.Property(e => e.ApplicationId).IsRequired();
             entity.Property(e => e.AssignedBy);
             entity.Property(e => e.AssignedAt).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.ExpiresAt);
