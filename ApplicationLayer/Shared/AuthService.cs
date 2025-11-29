@@ -15,15 +15,18 @@ public class AuthService
     private readonly UserQueryRepository _userQueryRepository;
     private readonly UserLoginHistoryQueryRepository _loginHistoryQueryRepository;
     private readonly UserAuthCommandRepository _authCommandRepository;
+    private readonly RBACQueryRepository _rbacQueryRepository;
 
     public AuthService(
         UserQueryRepository userQueryRepository,
         UserLoginHistoryQueryRepository loginHistoryQueryRepository,
-        UserAuthCommandRepository authCommandRepository)
+        UserAuthCommandRepository authCommandRepository,
+        RBACQueryRepository rbacQueryRepository)
     {
         _userQueryRepository = userQueryRepository;
         _loginHistoryQueryRepository = loginHistoryQueryRepository;
         _authCommandRepository = authCommandRepository;
+        _rbacQueryRepository = rbacQueryRepository;
     }
 
     #region Login
@@ -128,14 +131,38 @@ public class AuthService
         // Login exitoso
         loginHistory.UserId = user.UserId;
         loginHistory.LoginSuccessful = true;
-        await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
-        await _authCommandRepository.UpdateLastLoginInfoAsync(
-            user.UserId, 
-            command.IPAddress ?? "Unknown", 
-            command.Location, 
-            command.Country, 
-            command.City, 
-            command.UserAgent);
+        loginHistory.ApplicationId = null; // En el login inicial no hay aplicación seleccionada
+        
+        try
+        {
+            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
+        }
+        catch (Exception ex)
+        {
+            // Si falla el registro del historial, continuar con el login pero loguear el error
+            // No queremos que un error en el historial impida el login
+            // En producción, aquí deberías loguear el error
+            System.Diagnostics.Debug.WriteLine($"Error al registrar historial de login: {ex.Message}");
+        }
+        
+        try
+        {
+            await _authCommandRepository.UpdateLastLoginInfoAsync(
+                user.UserId, 
+                command.IPAddress ?? "Unknown", 
+                command.Location, 
+                command.Country, 
+                command.City, 
+                command.UserAgent);
+        }
+        catch (Exception ex)
+        {
+            // Si falla la actualización de último login, continuar con el login
+            System.Diagnostics.Debug.WriteLine($"Error al actualizar último login: {ex.Message}");
+        }
+
+        // Obtener aplicaciones disponibles para el usuario
+        var applications = await _rbacQueryRepository.GetUserApplicationsAsync(user.UserId);
 
         // Ocultar información sensible
         user.PasswordHash = string.Empty;
@@ -144,7 +171,8 @@ public class AuthService
         {
             Success = true,
             Message = "Inicio de sesión exitoso",
-            User = user
+            User = user,
+            Applications = applications.ToList()
         };
     }
 
@@ -423,6 +451,7 @@ public class LoginResult
     public string Message { get; set; } = string.Empty;
     public User? User { get; set; }
     public DateTime? LockedUntil { get; set; }
+    public List<Application> Applications { get; set; } = new();
 }
 
 public class ChangePasswordResult

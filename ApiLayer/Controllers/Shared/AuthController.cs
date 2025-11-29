@@ -62,14 +62,44 @@ public class AuthController : ControllerBase
                 new
                 {
                     user = result.User,
+                    applications = result.Applications.Select(a => new
+                    {
+                        applicationId = a.ApplicationId,
+                        applicationKey = a.ApplicationKey,
+                        applicationName = a.ApplicationName,
+                        description = a.Description
+                    }),
                     message = result.Message
                 },
                 result.Message);
             return Ok(response);
         }
+        catch (ArgumentException ex)
+        {
+            // Errores de validación (usuario no existe, etc.)
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Errores de lógica de negocio o base de datos
+            var errorMessage = ex.Message;
+            if (ex.InnerException != null)
+            {
+                errorMessage += $" Detalles: {ex.InnerException.Message}";
+            }
+            var errorResponse = ResponseStructure<object>.Error(errorMessage);
+            return BadRequest(errorResponse);
+        }
         catch (Exception ex)
         {
-            var errorResponse = ResponseStructure<object>.Error($"Error al procesar el login: {ex.Message}");
+            // Errores inesperados
+            var errorMessage = $"Error inesperado al procesar el login: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorMessage += $" Detalles: {ex.InnerException.Message}";
+            }
+            var errorResponse = ResponseStructure<object>.Error(errorMessage);
             return StatusCode(500, errorResponse);
         }
     }

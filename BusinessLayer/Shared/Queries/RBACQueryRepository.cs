@@ -457,6 +457,34 @@ public class RBACQueryRepository
     #region UserApplications
 
     /// <summary>
+    /// Obtiene las aplicaciones disponibles para un usuario
+    /// </summary>
+    public async Task<IEnumerable<Application>> GetUserApplicationsAsync(int userId)
+    {
+        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        var sql = @"
+            SELECT 
+                a.ApplicationId,
+                a.ApplicationKey,
+                a.ApplicationName,
+                a.Description,
+                a.IsActive,
+                a.CreatedAt,
+                a.UpdatedAt
+            FROM [Global].[Applications] a
+            INNER JOIN [Global].[UserApplications] ua ON a.ApplicationId = ua.ApplicationId
+            WHERE ua.UserId = @UserId 
+              AND ua.IsActive = 1
+              AND a.IsActive = 1
+            ORDER BY a.ApplicationName";
+
+        return await connection.QueryAsync<Application>(sql, new { UserId = userId });
+    }
+
+    /// <summary>
     /// Valida si un usuario tiene acceso a una aplicación
     /// </summary>
     public async Task<bool> ValidateUserApplicationAccessAsync(int userId, int applicationId)

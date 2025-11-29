@@ -295,6 +295,7 @@ public class DBcontext : DbContext
             entity.HasKey(e => e.LoginHistoryId);
             entity.Property(e => e.LoginHistoryId).ValueGeneratedOnAdd();
             entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.ApplicationId);
             entity.Property(e => e.LoginDate).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.IPAddress).HasMaxLength(45).IsRequired();
             entity.Property(e => e.Location).HasMaxLength(255);

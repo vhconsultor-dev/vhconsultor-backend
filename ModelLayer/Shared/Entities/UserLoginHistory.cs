@@ -7,6 +7,7 @@ public class UserLoginHistory
 {
     public int LoginHistoryId { get; set; }
     public int UserId { get; set; }
+    public int? ApplicationId { get; set; }
     public DateTime LoginDate { get; set; }
     public string IPAddress { get; set; } = string.Empty;
     public string? Location { get; set; }
