@@ -39,29 +39,10 @@ public class AuthService
         // Buscar usuario por username o email
         var user = await _userQueryRepository.GetByUsernameOrEmailAsync(command.UsernameOrEmail);
 
-        // Registrar intento de login
-        var loginHistory = new UserLoginHistory
-        {
-            UserId = user?.UserId ?? 0,
-            LoginDate = DateTimeService.GetCostaRicaNow(),
-            IPAddress = command.IPAddress ?? "Unknown",
-            Location = command.Location,
-            Country = command.Country,
-            City = command.City,
-            Region = command.Region,
-            UserAgent = command.UserAgent,
-            DeviceType = command.DeviceType,
-            Browser = command.Browser,
-            OperatingSystem = command.OperatingSystem,
-            LoginSuccessful = false,
-            FailureReason = null
-        };
-
         // Validar si el usuario existe
         if (user == null)
         {
-            loginHistory.FailureReason = "Usuario no encontrado";
-            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
+            // No registrar historial si el usuario no existe (para evitar problemas de FK)
             return new LoginResult
             {
                 Success = false,
@@ -73,9 +54,31 @@ public class AuthService
         // Verificar si la cuenta está activa
         if (!user.IsActive)
         {
-            loginHistory.UserId = user.UserId;
-            loginHistory.FailureReason = "Cuenta inactiva";
-            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
+            try
+            {
+                await _authCommandRepository.RecordLoginAttemptAsync(new UserLoginHistory
+                {
+                    UserId = user.UserId,
+                    LoginDate = DateTimeService.GetCostaRicaNow(),
+                    IPAddress = command.IPAddress ?? "Unknown",
+                    Location = command.Location,
+                    Country = command.Country,
+                    City = command.City,
+                    Region = command.Region,
+                    UserAgent = command.UserAgent,
+                    DeviceType = command.DeviceType,
+                    Browser = command.Browser,
+                    OperatingSystem = command.OperatingSystem,
+                    LoginSuccessful = false,
+                    FailureReason = "Cuenta inactiva",
+                    ApplicationId = command.ApplicationId
+                });
+            }
+            catch
+            {
+                // Silenciar error del historial, no debe impedir mostrar el mensaje
+            }
+            
             return new LoginResult
             {
                 Success = false,
@@ -87,9 +90,31 @@ public class AuthService
         // Verificar si la cuenta está bloqueada
         if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTimeService.GetCostaRicaNow())
         {
-            loginHistory.UserId = user.UserId;
-            loginHistory.FailureReason = "Cuenta bloqueada";
-            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
+            try
+            {
+                await _authCommandRepository.RecordLoginAttemptAsync(new UserLoginHistory
+                {
+                    UserId = user.UserId,
+                    LoginDate = DateTimeService.GetCostaRicaNow(),
+                    IPAddress = command.IPAddress ?? "Unknown",
+                    Location = command.Location,
+                    Country = command.Country,
+                    City = command.City,
+                    Region = command.Region,
+                    UserAgent = command.UserAgent,
+                    DeviceType = command.DeviceType,
+                    Browser = command.Browser,
+                    OperatingSystem = command.OperatingSystem,
+                    LoginSuccessful = false,
+                    FailureReason = "Cuenta bloqueada",
+                    ApplicationId = command.ApplicationId
+                });
+            }
+            catch
+            {
+                // Silenciar error del historial, no debe impedir mostrar el mensaje
+            }
+            
             return new LoginResult
             {
                 Success = false,
@@ -103,9 +128,31 @@ public class AuthService
         var passwordHash = HashPassword(command.Password);
         if (user.PasswordHash != passwordHash)
         {
-            loginHistory.UserId = user.UserId;
-            loginHistory.FailureReason = "Contraseña incorrecta";
-            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
+            try
+            {
+                await _authCommandRepository.RecordLoginAttemptAsync(new UserLoginHistory
+                {
+                    UserId = user.UserId,
+                    LoginDate = DateTimeService.GetCostaRicaNow(),
+                    IPAddress = command.IPAddress ?? "Unknown",
+                    Location = command.Location,
+                    Country = command.Country,
+                    City = command.City,
+                    Region = command.Region,
+                    UserAgent = command.UserAgent,
+                    DeviceType = command.DeviceType,
+                    Browser = command.Browser,
+                    OperatingSystem = command.OperatingSystem,
+                    LoginSuccessful = false,
+                    FailureReason = "Contraseña incorrecta",
+                    ApplicationId = command.ApplicationId
+                });
+            }
+            catch
+            {
+                // Silenciar error del historial, no debe impedir la respuesta al usuario
+            }
+            
             await _authCommandRepository.IncrementFailedLoginAttemptsAsync(user.UserId);
 
             // Verificar si se debe bloquear la cuenta
@@ -129,19 +176,30 @@ public class AuthService
         }
 
         // Login exitoso
-        loginHistory.UserId = user.UserId;
-        loginHistory.LoginSuccessful = true;
-        loginHistory.ApplicationId = null; // En el login inicial no hay aplicación seleccionada
-        
         try
         {
-            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
+            await _authCommandRepository.RecordLoginAttemptAsync(new UserLoginHistory
+            {
+                UserId = user.UserId,
+                LoginDate = DateTimeService.GetCostaRicaNow(),
+                IPAddress = command.IPAddress ?? "Unknown",
+                Location = command.Location,
+                Country = command.Country,
+                City = command.City,
+                Region = command.Region,
+                UserAgent = command.UserAgent,
+                DeviceType = command.DeviceType,
+                Browser = command.Browser,
+                OperatingSystem = command.OperatingSystem,
+                LoginSuccessful = true,
+                FailureReason = null,
+                ApplicationId = command.ApplicationId
+            });
         }
         catch (Exception ex)
         {
             // Si falla el registro del historial, continuar con el login pero loguear el error
             // No queremos que un error en el historial impida el login
-            // En producción, aquí deberías loguear el error
             System.Diagnostics.Debug.WriteLine($"Error al registrar historial de login: {ex.Message}");
         }
         

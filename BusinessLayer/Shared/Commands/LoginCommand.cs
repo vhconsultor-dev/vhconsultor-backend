@@ -7,6 +7,7 @@ public class LoginCommand
 {
     public string UsernameOrEmail { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
+    public int? ApplicationId { get; set; }
     public string? IPAddress { get; set; }
     public string? UserAgent { get; set; }
     public string? Location { get; set; }
