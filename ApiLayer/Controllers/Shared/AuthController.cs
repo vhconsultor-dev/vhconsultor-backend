@@ -190,6 +190,52 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Resetea la contraseña de un usuario (solo para administradores)
+    /// Genera una contraseña aleatoria segura y la retorna
+    /// </summary>
+    /// <param name="command">Datos para resetear contraseña</param>
+    /// <returns>Nueva contraseña generada</returns>
+    [HttpPost("admin/reset-password")]
+    [Authorize]
+    public async Task<IActionResult> AdminResetPassword([FromBody] AdminResetPasswordCommand command)
+    {
+        // Validación usando FluentValidation
+        var validationResult = await _validationService.ValidateAsync(command);
+        if (!validationResult.IsValid)
+        {
+            var errorResponse = ResponseStructure<object>.ValidationError(
+                string.Join(", ", validationResult.Errors));
+            return BadRequest(errorResponse);
+        }
+
+        try
+        {
+            var result = await _authService.AdminResetPasswordAsync(command);
+
+            if (!result.Success)
+            {
+                var errorResponse = ResponseStructure<object>.BadRequest(result.Message);
+                return BadRequest(errorResponse);
+            }
+
+            var response = ResponseStructure<object>.Success(
+                new 
+                { 
+                    message = result.Message,
+                    newPassword = result.NewPassword,
+                    userId = command.UserId
+                },
+                result.Message);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error($"Error al resetear la contraseña: {ex.Message}");
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    /// <summary>
     /// Bloquea una cuenta de usuario manualmente
     /// </summary>
     /// <param name="command">Datos para bloquear cuenta</param>
