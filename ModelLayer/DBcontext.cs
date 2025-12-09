@@ -117,9 +117,10 @@ public class DBcontext : DbContext
         {
             entity.ToTable("Contracts", "Corporate");
             entity.HasKey(e => e.ContractId);
-            entity.Property(e => e.ContractId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ContractId).ValueGeneratedOnAdd(); // INT IDENTITY(1,1)
             entity.Property(e => e.CustomerId).IsRequired();
             entity.Property(e => e.ContractNumber).HasMaxLength(100).IsRequired();
+            entity.HasIndex(e => e.ContractNumber).IsUnique().HasDatabaseName("UQ_Contracts_ContractNumber"); // UNIQUE constraint
             entity.Property(e => e.ClientLegalName).HasMaxLength(255);
             entity.Property(e => e.ClientTaxId).HasMaxLength(50);
             entity.Property(e => e.ClientNationality).HasMaxLength(100);
@@ -195,7 +196,7 @@ public class DBcontext : DbContext
             entity.ToTable("ContractServices", "Corporate");
             entity.HasKey(e => e.ContractServiceId);
             entity.Property(e => e.ContractServiceId).ValueGeneratedOnAdd();
-            entity.Property(e => e.ContractId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ContractId).IsRequired(); // Ahora es INT (sin HasMaxLength)
             entity.Property(e => e.ServiceId);
             entity.Property(e => e.ServiceDescription);
             entity.Property(e => e.Regions);

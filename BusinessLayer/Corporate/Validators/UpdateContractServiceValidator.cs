@@ -11,8 +11,7 @@ public class UpdateContractServiceValidator : AbstractValidator<UpdateContractSe
     public UpdateContractServiceValidator()
     {
         RuleFor(x => x.ContractId)
-            .NotEmpty().WithMessage("El ID del contrato es requerido")
-            .MaximumLength(50).WithMessage("El ID del contrato no puede exceder 50 caracteres");
+            .GreaterThan(0).WithMessage("El ID del contrato debe ser mayor a 0"); // Ahora es int, solo validamos que sea > 0
 
         RuleFor(x => x.UnitPrice)
             .GreaterThanOrEqualTo(0).WithMessage("El precio unitario debe ser mayor o igual a 0")

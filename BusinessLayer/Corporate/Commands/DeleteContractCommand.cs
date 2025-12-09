@@ -22,7 +22,7 @@ public class DeleteContractCommand
     /// <param name="contractId">ID del contrato a eliminar</param>
     /// <param name="deletedBy">Usuario que elimina el contrato</param>
     /// <returns>True si se eliminó correctamente, False si no se encontró</returns>
-    public async Task<bool> ExecuteAsync(string contractId, string? deletedBy = null)
+    public async Task<bool> ExecuteAsync(int contractId, string? deletedBy = null) // Ahora es int
     {
         var contract = await _context.Contracts.FindAsync(contractId);
         

@@ -9,3 +9,4 @@ public class AdminResetPasswordCommand
     public int? ResetByUserId { get; set; } // ID del administrador que resetea la contraseña
 }
 
+

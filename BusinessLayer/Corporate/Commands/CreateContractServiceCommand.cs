@@ -51,7 +51,7 @@ public class CreateContractServiceCommand
 /// </summary>
 public class CreateContractServiceRequest
 {
-    public string ContractId { get; set; } = string.Empty;
+    public int ContractId { get; set; } // Ahora es int
     public int? ServiceId { get; set; }
     public string? ServiceDescription { get; set; }
     public string? Regions { get; set; }

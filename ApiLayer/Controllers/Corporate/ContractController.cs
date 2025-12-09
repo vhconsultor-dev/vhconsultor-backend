@@ -47,28 +47,35 @@ public class ContractController : ControllerBase
 
         try
         {
-            // Verificar si ya existe un contrato con el mismo ID
-            var existingContract = await _contractService.GetContractByIdAsync(request.ContractId);
-            if (existingContract != null)
-            {
-                var response = ResponseStructure<object>.ValidationError(
-                    $"Ya existe un contrato con el ID {request.ContractId}");
-                return BadRequest(response);
-            }
-
+            // ContractId y ContractNumber se generan automáticamente
             var contractId = await _contractService.CreateContractAsync(request);
             
-            var successResponse = ResponseStructure<string>.Success(
+            var successResponse = ResponseStructure<int>.Success( // Ahora retorna int
                 contractId, 
                 "Contrato creado exitosamente");
             
             return Ok(successResponse);
         }
+        catch (ArgumentException ex)
+        {
+            // Errores de validación de datos o referencias
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Errores de operación (duplicados, etc)
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
+        }
         catch (Exception ex)
         {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"Error al crear el contrato: {ex.Message}", 
-                500);
+            var errorMessage = $"Error inesperado al crear el contrato: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorMessage += $" | Detalles: {ex.InnerException.Message}";
+            }
+            var errorResponse = ResponseStructure<object>.Error(errorMessage, 500);
             return StatusCode(500, errorResponse);
         }
     }
@@ -83,8 +90,8 @@ public class ContractController : ControllerBase
     /// <param name="contractId">ID del contrato a actualizar</param>
     /// <param name="request">Datos actualizados del contrato</param>
     /// <returns>Resultado de la operación</returns>
-    [HttpPut("{contractId}")]
-    public async Task<IActionResult> UpdateContract(string contractId, [FromBody] UpdateContractRequest request)
+    [HttpPut("{contractId:int}")] // Ahora es int
+    public async Task<IActionResult> UpdateContract(int contractId, [FromBody] UpdateContractRequest request) // Ahora es int
     {
         // Validación usando FluentValidation
         var validationResult = await _validationService.ValidateAsync(request);
@@ -124,11 +131,26 @@ public class ContractController : ControllerBase
                 return StatusCode(500, errorResponse);
             }
         }
+        catch (ArgumentException ex)
+        {
+            // Errores de validación de datos o referencias
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Errores de operación (duplicados, etc)
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
+        }
         catch (Exception ex)
         {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"Error al actualizar el contrato: {ex.Message}", 
-                500);
+            var errorMessage = $"Error inesperado al actualizar el contrato: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                errorMessage += $" | Detalles: {ex.InnerException.Message}";
+            }
+            var errorResponse = ResponseStructure<object>.Error(errorMessage, 500);
             return StatusCode(500, errorResponse);
         }
     }
@@ -143,8 +165,8 @@ public class ContractController : ControllerBase
     /// <param name="contractId">ID del contrato a eliminar</param>
     /// <param name="deletedBy">Usuario que elimina (opcional)</param>
     /// <returns>Resultado de la operación</returns>
-    [HttpDelete("{contractId}")]
-    public async Task<IActionResult> DeleteContract(string contractId, [FromQuery] string? deletedBy = null)
+    [HttpDelete("{contractId:int}")] // Ahora es int
+    public async Task<IActionResult> DeleteContract(int contractId, [FromQuery] string? deletedBy = null) // Ahora es int
     {
         try
         {
@@ -204,7 +226,7 @@ public class ContractController : ControllerBase
     /// <returns>Lista de contracts que coinciden con los criterios</returns>
     [HttpGet]
     public async Task<IActionResult> GetContracts(
-        [FromQuery] string? contractId = null,
+        [FromQuery] int? contractId = null, // Ahora es int
         [FromQuery] int? customerId = null,
         [FromQuery] string? contractNumber = null,
         [FromQuery] string? status = null,
@@ -218,9 +240,9 @@ public class ContractController : ControllerBase
         try
         {
             // Si se especifica ID, devolver solo ese contrato
-            if (!string.IsNullOrEmpty(contractId))
+            if (contractId.HasValue)
             {
-                var contract = await _contractService.GetContractByIdAsync(contractId);
+                var contract = await _contractService.GetContractByIdAsync(contractId.Value);
                 
                 if (contract == null)
                 {
@@ -235,6 +257,20 @@ public class ContractController : ControllerBase
                     "Contrato obtenido exitosamente");
                 
                 return Ok(singleResponse);
+            }
+
+            // Si se especifica contractNumber, buscar por ese número
+            if (!string.IsNullOrEmpty(contractNumber) && !contractNumber.Contains("%"))
+            {
+                var contract = await _contractService.GetContractByContractNumberAsync(contractNumber);
+                
+                if (contract != null)
+                {
+                    var singleResponse = ResponseStructure<ModelLayer.Corporate.Entities.Contract>.Success(
+                        contract, 
+                        "Contrato obtenido exitosamente");
+                    return Ok(singleResponse);
+                }
             }
 
             // Si se especifica customerId, obtener contratos del customer

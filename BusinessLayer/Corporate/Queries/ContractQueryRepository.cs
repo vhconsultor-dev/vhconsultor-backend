@@ -21,7 +21,7 @@ public class ContractQueryRepository
     /// Obtiene contracts con filtros opcionales
     /// </summary>
     public async Task<IEnumerable<Contract>> GetContractsAsync(
-        string? contractId = null,
+        int? contractId = null, // Ahora es int
         int? customerId = null,
         string? contractNumber = null,
         string? status = null,
@@ -51,10 +51,10 @@ public class ContractQueryRepository
 
         var parameters = new DynamicParameters();
 
-        if (!string.IsNullOrEmpty(contractId))
+        if (contractId.HasValue)
         {
             sql += " AND ContractId = @ContractId";
-            parameters.Add("ContractId", contractId);
+            parameters.Add("ContractId", contractId.Value);
         }
 
         if (customerId.HasValue)
@@ -119,7 +119,7 @@ public class ContractQueryRepository
     /// <summary>
     /// Obtiene un contract por su ID
     /// </summary>
-    public async Task<Contract?> GetByIdAsync(string contractId)
+    public async Task<Contract?> GetByIdAsync(int contractId) // Ahora es int
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
@@ -139,6 +139,31 @@ public class ContractQueryRepository
             WHERE ContractId = @ContractId";
 
         return await connection.QueryFirstOrDefaultAsync<Contract>(sql, new { ContractId = contractId });
+    }
+
+    /// <summary>
+    /// Obtiene un contract por su ContractNumber
+    /// </summary>
+    public async Task<Contract?> GetByContractNumberAsync(string contractNumber)
+    {
+        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        const string sql = @"
+            SELECT 
+                ContractId, CustomerId, ContractNumber, ClientLegalName, ClientTaxId,
+                ClientNationality, ClientAddress, ClientPrimaryContact, ClientEmail, ClientPhone,
+                ContractTypeId, ServiceDescription, FeeTypeId, FeeAmount, FeeDescription,
+                CurrencyCode, ContractTerm, PaymentFrequency, PaymentDay, PaymentMethodId,
+                SignedDate, EffectiveDate, StartDate, EndDate, AutoRenewal, RenewalTerm,
+                RenewalNoticeDays, NoticePeriodDays, Status, GoverningLaw, DisputeResolution,
+                ContractualDomicile, Jurisdiction, Notes, CreatedAt, UpdatedAt, LastModifiedBy,
+                DocumentUrl, SignedDocumentUrl
+            FROM [Corporate].[Contracts]
+            WHERE ContractNumber = @ContractNumber";
+
+        return await connection.QueryFirstOrDefaultAsync<Contract>(sql, new { ContractNumber = contractNumber });
     }
 
     /// <summary>
@@ -191,6 +216,33 @@ public class ContractQueryRepository
             ORDER BY CreatedAt DESC";
 
         return await connection.QueryAsync<Contract>(sql);
+    }
+
+    /// <summary>
+    /// Genera el siguiente número de contrato consecutivo profesional
+    /// Formato: CTR-000001, CTR-000002, etc.
+    /// </summary>
+    /// <returns>Siguiente ContractNumber</returns>
+    public async Task<string> GenerateContractNumberAsync(int? year = null)
+    {
+        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        // Buscar el último número consecutivo global (sin filtrar por año)
+        const string sql = @"
+            SELECT TOP 1 
+                CAST(SUBSTRING(ContractNumber, CHARINDEX('-', ContractNumber) + 1, LEN(ContractNumber)) AS INT) AS LastNumber
+            FROM [Corporate].[Contracts]
+            WHERE ContractNumber LIKE 'CTR-%'
+            ORDER BY 
+                CAST(SUBSTRING(ContractNumber, CHARINDEX('-', ContractNumber) + 1, LEN(ContractNumber)) AS INT) DESC";
+
+        var lastNumber = await connection.QueryFirstOrDefaultAsync<int?>(sql);
+
+        var nextNumber = (lastNumber ?? 0) + 1;
+        
+        return $"CTR-{nextNumber:D6}"; // Formato: CTR-000001
     }
 }
 
