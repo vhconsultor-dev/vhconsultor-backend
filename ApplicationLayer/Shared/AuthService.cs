@@ -15,18 +15,15 @@ public class AuthService
     private readonly UserQueryRepository _userQueryRepository;
     private readonly UserLoginHistoryQueryRepository _loginHistoryQueryRepository;
     private readonly UserAuthCommandRepository _authCommandRepository;
-    private readonly RBACQueryRepository _rbacQueryRepository;
 
     public AuthService(
         UserQueryRepository userQueryRepository,
         UserLoginHistoryQueryRepository loginHistoryQueryRepository,
-        UserAuthCommandRepository authCommandRepository,
-        RBACQueryRepository rbacQueryRepository)
+        UserAuthCommandRepository authCommandRepository)
     {
         _userQueryRepository = userQueryRepository;
         _loginHistoryQueryRepository = loginHistoryQueryRepository;
         _authCommandRepository = authCommandRepository;
-        _rbacQueryRepository = rbacQueryRepository;
     }
 
     #region Login
@@ -39,10 +36,29 @@ public class AuthService
         // Buscar usuario por username o email
         var user = await _userQueryRepository.GetByUsernameOrEmailAsync(command.UsernameOrEmail);
 
+        // Registrar intento de login
+        var loginHistory = new UserLoginHistory
+        {
+            UserId = user?.UserId ?? 0,
+            LoginDate = DateTimeService.GetCostaRicaNow(),
+            IPAddress = command.IPAddress ?? "Unknown",
+            Location = command.Location,
+            Country = command.Country,
+            City = command.City,
+            Region = command.Region,
+            UserAgent = command.UserAgent,
+            DeviceType = command.DeviceType,
+            Browser = command.Browser,
+            OperatingSystem = command.OperatingSystem,
+            LoginSuccessful = false,
+            FailureReason = null
+        };
+
         // Validar si el usuario existe
         if (user == null)
         {
-            // No registrar historial si el usuario no existe (para evitar problemas de FK)
+            loginHistory.FailureReason = "Usuario no encontrado";
+            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
             return new LoginResult
             {
                 Success = false,
@@ -54,35 +70,9 @@ public class AuthService
         // Verificar si la cuenta está activa
         if (!user.IsActive)
         {
-            // Solo registrar historial si ApplicationId está presente
-            if (command.ApplicationId.HasValue)
-            {
-                try
-                {
-                    await _authCommandRepository.RecordLoginAttemptAsync(new UserLoginHistory
-                    {
-                        UserId = user.UserId,
-                        LoginDate = DateTimeService.GetCostaRicaNow(),
-                        IPAddress = command.IPAddress ?? "Unknown",
-                        Location = command.Location,
-                        Country = command.Country,
-                        City = command.City,
-                        Region = command.Region,
-                        UserAgent = command.UserAgent,
-                        DeviceType = command.DeviceType,
-                        Browser = command.Browser,
-                        OperatingSystem = command.OperatingSystem,
-                        LoginSuccessful = false,
-                        FailureReason = "Cuenta inactiva",
-                        ApplicationId = command.ApplicationId
-                    });
-                }
-                catch
-                {
-                    // Silenciar error del historial, no debe impedir mostrar el mensaje
-                }
-            }
-            
+            loginHistory.UserId = user.UserId;
+            loginHistory.FailureReason = "Cuenta inactiva";
+            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
             return new LoginResult
             {
                 Success = false,
@@ -94,31 +84,9 @@ public class AuthService
         // Verificar si la cuenta está bloqueada
         if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTimeService.GetCostaRicaNow())
         {
-            try
-            {
-                await _authCommandRepository.RecordLoginAttemptAsync(new UserLoginHistory
-                {
-                    UserId = user.UserId,
-                    LoginDate = DateTimeService.GetCostaRicaNow(),
-                    IPAddress = command.IPAddress ?? "Unknown",
-                    Location = command.Location,
-                    Country = command.Country,
-                    City = command.City,
-                    Region = command.Region,
-                    UserAgent = command.UserAgent,
-                    DeviceType = command.DeviceType,
-                    Browser = command.Browser,
-                    OperatingSystem = command.OperatingSystem,
-                    LoginSuccessful = false,
-                    FailureReason = "Cuenta bloqueada",
-                    ApplicationId = command.ApplicationId
-                });
-            }
-            catch
-            {
-                // Silenciar error del historial, no debe impedir mostrar el mensaje
-            }
-            
+            loginHistory.UserId = user.UserId;
+            loginHistory.FailureReason = "Cuenta bloqueada";
+            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
             return new LoginResult
             {
                 Success = false,
@@ -132,31 +100,9 @@ public class AuthService
         var passwordHash = HashPassword(command.Password);
         if (user.PasswordHash != passwordHash)
         {
-            try
-            {
-                await _authCommandRepository.RecordLoginAttemptAsync(new UserLoginHistory
-                {
-                    UserId = user.UserId,
-                    LoginDate = DateTimeService.GetCostaRicaNow(),
-                    IPAddress = command.IPAddress ?? "Unknown",
-                    Location = command.Location,
-                    Country = command.Country,
-                    City = command.City,
-                    Region = command.Region,
-                    UserAgent = command.UserAgent,
-                    DeviceType = command.DeviceType,
-                    Browser = command.Browser,
-                    OperatingSystem = command.OperatingSystem,
-                    LoginSuccessful = false,
-                    FailureReason = "Contraseña incorrecta",
-                    ApplicationId = command.ApplicationId
-                });
-            }
-            catch
-            {
-                // Silenciar error del historial, no debe impedir la respuesta al usuario
-            }
-            
+            loginHistory.UserId = user.UserId;
+            loginHistory.FailureReason = "Contraseña incorrecta";
+            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
             await _authCommandRepository.IncrementFailedLoginAttemptsAsync(user.UserId);
 
             // Verificar si se debe bloquear la cuenta
@@ -180,51 +126,16 @@ public class AuthService
         }
 
         // Login exitoso
-        try
-        {
-            await _authCommandRepository.RecordLoginAttemptAsync(new UserLoginHistory
-            {
-                UserId = user.UserId,
-                LoginDate = DateTimeService.GetCostaRicaNow(),
-                IPAddress = command.IPAddress ?? "Unknown",
-                Location = command.Location,
-                Country = command.Country,
-                City = command.City,
-                Region = command.Region,
-                UserAgent = command.UserAgent,
-                DeviceType = command.DeviceType,
-                Browser = command.Browser,
-                OperatingSystem = command.OperatingSystem,
-                LoginSuccessful = true,
-                FailureReason = null,
-                ApplicationId = command.ApplicationId
-            });
-        }
-        catch (Exception ex)
-        {
-            // Si falla el registro del historial, continuar con el login pero loguear el error
-            // No queremos que un error en el historial impida el login
-            System.Diagnostics.Debug.WriteLine($"Error al registrar historial de login: {ex.Message}");
-        }
-        
-        try
-        {
-            await _authCommandRepository.UpdateLastLoginInfoAsync(
-                user.UserId, 
-                command.IPAddress ?? "Unknown", 
-                command.Location, 
-                command.Country, 
-                command.City, 
-                command.UserAgent);
-        }
-        catch (Exception ex)
-        {
-            // Si falla la actualización de último login, continuar con el login
-            System.Diagnostics.Debug.WriteLine($"Error al actualizar último login: {ex.Message}");
-        }
-
-        // Obtener aplicaciones disponibles para el usuario
-        var applications = await _rbacQueryRepository.GetUserApplicationsAsync(user.UserId);
+        loginHistory.UserId = user.UserId;
+        loginHistory.LoginSuccessful = true;
+        await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
+        await _authCommandRepository.UpdateLastLoginInfoAsync(
+            user.UserId, 
+            command.IPAddress ?? "Unknown", 
+            command.Location, 
+            command.Country, 
+            command.City, 
+            command.UserAgent);
 
         // Ocultar información sensible
         user.PasswordHash = string.Empty;
@@ -233,8 +144,7 @@ public class AuthService
         {
             Success = true,
             Message = "Inicio de sesión exitoso",
-            User = user,
-            Applications = applications.ToList()
+            User = user
         };
     }
 
@@ -286,49 +196,6 @@ public class AuthService
         {
             Success = false,
             Message = "Error al cambiar la contraseña"
-        };
-    }
-
-    /// <summary>
-    /// Resetea la contraseña de un usuario (solo para administradores)
-    /// Genera una contraseña aleatoria segura y la retorna
-    /// </summary>
-    public async Task<AdminResetPasswordResult> AdminResetPasswordAsync(AdminResetPasswordCommand command)
-    {
-        // Obtener usuario
-        var user = await _userQueryRepository.GetByIdAsync(command.UserId);
-        if (user == null)
-        {
-            return new AdminResetPasswordResult
-            {
-                Success = false,
-                Message = "Usuario no encontrado",
-                NewPassword = null
-            };
-        }
-
-        // Generar contraseña aleatoria segura
-        var newPassword = GenerateSecureRandomPassword();
-
-        // Cambiar contraseña
-        var newPasswordHash = HashPassword(newPassword);
-        var success = await _authCommandRepository.ChangePasswordAsync(command.UserId, newPasswordHash);
-
-        if (success)
-        {
-            return new AdminResetPasswordResult
-            {
-                Success = true,
-                Message = "Contraseña reseteada exitosamente",
-                NewPassword = newPassword
-            };
-        }
-
-        return new AdminResetPasswordResult
-        {
-            Success = false,
-            Message = "Error al resetear la contraseña",
-            NewPassword = null
         };
     }
 
@@ -545,48 +412,6 @@ public class AuthService
         return Convert.ToBase64String(hash);
     }
 
-    /// <summary>
-    /// Genera una contraseña aleatoria segura que cumple con los requisitos:
-    /// - Mínimo 12 caracteres
-    /// - Al menos una letra mayúscula
-    /// - Al menos una letra minúscula
-    /// - Al menos un número
-    /// - Al menos un carácter especial
-    /// </summary>
-    private string GenerateSecureRandomPassword()
-    {
-        const string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        const string lowercase = "abcdefghijklmnopqrstuvwxyz";
-        const string numbers = "0123456789";
-        const string special = "!@#$%^&*()_+-=[]{}|;:,.<>?";
-        const string allChars = uppercase + lowercase + numbers + special;
-
-        var random = new Random();
-        var password = new System.Text.StringBuilder();
-
-        // Asegurar al menos un carácter de cada tipo
-        password.Append(uppercase[random.Next(uppercase.Length)]);
-        password.Append(lowercase[random.Next(lowercase.Length)]);
-        password.Append(numbers[random.Next(numbers.Length)]);
-        password.Append(special[random.Next(special.Length)]);
-
-        // Completar hasta 12 caracteres con caracteres aleatorios
-        for (int i = password.Length; i < 12; i++)
-        {
-            password.Append(allChars[random.Next(allChars.Length)]);
-        }
-
-        // Mezclar los caracteres para que no siempre estén en el mismo orden
-        var passwordArray = password.ToString().ToCharArray();
-        for (int i = passwordArray.Length - 1; i > 0; i--)
-        {
-            int j = random.Next(i + 1);
-            (passwordArray[i], passwordArray[j]) = (passwordArray[j], passwordArray[i]);
-        }
-
-        return new string(passwordArray);
-    }
-
     #endregion
 }
 
@@ -598,7 +423,6 @@ public class LoginResult
     public string Message { get; set; } = string.Empty;
     public User? User { get; set; }
     public DateTime? LockedUntil { get; set; }
-    public List<Application> Applications { get; set; } = new();
 }
 
 public class ChangePasswordResult
@@ -620,13 +444,6 @@ public class CreateUserResult
     public string Message { get; set; } = string.Empty;
     public User? User { get; set; }
     public int? UserId { get; set; }
-}
-
-public class AdminResetPasswordResult
-{
-    public bool Success { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public string? NewPassword { get; set; }
 }
 
 #endregion

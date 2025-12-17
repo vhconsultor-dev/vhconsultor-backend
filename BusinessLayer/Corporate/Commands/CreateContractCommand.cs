@@ -1,8 +1,6 @@
 using ModelLayer;
 using ModelLayer.Corporate.Entities;
 using ModelLayer.Shared;
-using BusinessLayer.Corporate.Queries;
-using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLayer.Corporate.Commands;
 
@@ -12,12 +10,10 @@ namespace BusinessLayer.Corporate.Commands;
 public class CreateContractCommand
 {
     private readonly DBcontext _context;
-    private readonly ContractQueryRepository _contractQueryRepository;
 
-    public CreateContractCommand(DBcontext context, ContractQueryRepository contractQueryRepository)
+    public CreateContractCommand(DBcontext context)
     {
         _context = context;
-        _contractQueryRepository = contractQueryRepository;
     }
 
     /// <summary>
@@ -25,23 +21,13 @@ public class CreateContractCommand
     /// </summary>
     /// <param name="request">Datos del contrato</param>
     /// <returns>ID del contrato creado</returns>
-    public async Task<int> ExecuteAsync(CreateContractRequest request)
+    public async Task<string> ExecuteAsync(CreateContractRequest request)
     {
-        // Generar automáticamente ContractNumber consecutivo
-        var contractNumber = await _contractQueryRepository.GenerateContractNumberAsync();
-
-        // Validar que ContractNumber no exista (por seguridad, aunque tiene UNIQUE constraint)
-        var exists = await _context.Contracts.AnyAsync(c => c.ContractNumber == contractNumber);
-        if (exists)
-        {
-            throw new InvalidOperationException($"El número de contrato {contractNumber} ya existe");
-        }
-
         var contract = new Contract
         {
-            // ContractId se genera automáticamente (IDENTITY)
+            ContractId = request.ContractId,
             CustomerId = request.CustomerId,
-            ContractNumber = contractNumber, // Generado automáticamente
+            ContractNumber = request.ContractNumber,
             ClientLegalName = request.ClientLegalName,
             ClientTaxId = request.ClientTaxId,
             ClientNationality = request.ClientNationality,
@@ -82,7 +68,7 @@ public class CreateContractCommand
         _context.Contracts.Add(contract);
         await _context.SaveChangesAsync();
         
-        return contract.ContractId; // Ahora retorna int
+        return contract.ContractId;
     }
 }
 
@@ -91,8 +77,9 @@ public class CreateContractCommand
 /// </summary>
 public class CreateContractRequest
 {
-    // ContractId y ContractNumber se generan automáticamente, ya no se piden
+    public string ContractId { get; set; } = string.Empty;
     public int CustomerId { get; set; }
+    public string ContractNumber { get; set; } = string.Empty;
     public string? ClientLegalName { get; set; }
     public string? ClientTaxId { get; set; }
     public string? ClientNationality { get; set; }

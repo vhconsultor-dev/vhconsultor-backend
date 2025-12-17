@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
 using ModelLayer;
 using ModelLayer.Shared;
 using ModelLayer.Shared.Entities;
@@ -23,58 +22,9 @@ public class UserAuthCommandRepository
     /// </summary>
     public async Task<int> RecordLoginAttemptAsync(UserLoginHistory loginHistory)
     {
-        try
-        {
-            _context.UserLoginHistory.Add(loginHistory);
-            await _context.SaveChangesAsync();
-            return loginHistory.LoginHistoryId;
-        }
-        catch (DbUpdateException ex)
-        {
-            // Capturar errores específicos de base de datos
-            var innerException = ex.InnerException as SqlException;
-            
-            if (innerException != null)
-            {
-                // Error 547: Violación de constraint FOREIGN KEY
-                if (innerException.Number == 547)
-                {
-                    var errorMessage = innerException.Message.ToLower();
-                    if (errorMessage.Contains("userid") || errorMessage.Contains("user"))
-                    {
-                        throw new ArgumentException($"El usuario con ID {loginHistory.UserId} no existe en la base de datos");
-                    }
-                    if (errorMessage.Contains("applicationid") || errorMessage.Contains("application"))
-                    {
-                        throw new ArgumentException($"La aplicación con ID {loginHistory.ApplicationId} no existe en la base de datos");
-                    }
-                    throw new InvalidOperationException($"Error de integridad referencial al registrar login: {innerException.Message}");
-                }
-                
-                // Error 515: Cannot insert NULL en columna que no permite NULL
-                if (innerException.Number == 515)
-                {
-                    var errorMessage = innerException.Message.ToLower();
-                    if (errorMessage.Contains("applicationid"))
-                    {
-                        throw new InvalidOperationException("ApplicationId es requerido en UserLoginHistory. Verifique la estructura de la base de datos.");
-                    }
-                    throw new InvalidOperationException($"Error al registrar login: Campo requerido faltante. {innerException.Message}");
-                }
-                
-                // Otros errores de SQL Server
-                throw new InvalidOperationException(
-                    $"Error de base de datos al registrar login: {innerException.Message}", ex);
-            }
-            
-            // Si no es SqlException, re-lanzar la excepción original
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(
-                $"Error inesperado al registrar intento de login: {ex.Message}", ex);
-        }
+        _context.UserLoginHistory.Add(loginHistory);
+        await _context.SaveChangesAsync();
+        return loginHistory.LoginHistoryId;
     }
 
     /// <summary>

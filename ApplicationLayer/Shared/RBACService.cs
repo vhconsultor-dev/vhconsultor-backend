@@ -12,16 +12,13 @@ public class RBACService
 {
     private readonly RBACCommandRepository _commandRepository;
     private readonly RBACQueryRepository _queryRepository;
-    private readonly UserQueryRepository _userQueryRepository;
 
     public RBACService(
         RBACCommandRepository commandRepository,
-        RBACQueryRepository queryRepository,
-        UserQueryRepository userQueryRepository)
+        RBACQueryRepository queryRepository)
     {
         _commandRepository = commandRepository;
         _queryRepository = queryRepository;
-        _userQueryRepository = userQueryRepository;
     }
 
     #region Resources
@@ -31,32 +28,13 @@ public class RBACService
         string? resourceName = null,
         string? resourceKey = null,
         string? module = null,
-        bool? isActive = true,
-        int? applicationId = null,
-        string? applicationKey = null)
+        bool? isActive = true)
     {
-        return await _queryRepository.GetResourcesAsync(resourceId, resourceName, resourceKey, module, isActive, applicationId, applicationKey);
+        return await _queryRepository.GetResourcesAsync(resourceId, resourceName, resourceKey, module, isActive);
     }
 
-    public async Task<int> CreateResourceAsync(Resource resource, string? applicationKey = null)
+    public async Task<int> CreateResourceAsync(Resource resource)
     {
-        // Si se proporciona applicationKey pero no applicationId, convertir
-        if (!string.IsNullOrEmpty(applicationKey) && resource.ApplicationId <= 0)
-        {
-            var appId = await _commandRepository.GetApplicationIdByKeyAsync(applicationKey);
-            if (!appId.HasValue)
-            {
-                throw new ArgumentException($"ApplicationKey '{applicationKey}' no encontrado o inactivo");
-            }
-            resource.ApplicationId = appId.Value;
-        }
-
-        // Validar que ApplicationId esté presente
-        if (resource.ApplicationId <= 0)
-        {
-            throw new ArgumentException("ApplicationId o ApplicationKey es requerido para crear un Resource");
-        }
-
         resource.CreatedAt = DateTimeService.GetCostaRicaNow();
         resource.IsActive = true;
         return await _commandRepository.CreateResourceAsync(resource);
@@ -132,32 +110,13 @@ public class RBACService
         string? roleName = null,
         string? roleKey = null,
         bool? isSystemRole = null,
-        bool? isActive = true,
-        int? applicationId = null,
-        string? applicationKey = null)
+        bool? isActive = true)
     {
-        return await _queryRepository.GetRolesAsync(roleId, roleName, roleKey, isSystemRole, isActive, applicationId, applicationKey);
+        return await _queryRepository.GetRolesAsync(roleId, roleName, roleKey, isSystemRole, isActive);
     }
 
-    public async Task<int> CreateRoleAsync(Role role, string? applicationKey = null)
+    public async Task<int> CreateRoleAsync(Role role)
     {
-        // Si se proporciona applicationKey pero no applicationId, convertir
-        if (!string.IsNullOrEmpty(applicationKey) && role.ApplicationId <= 0)
-        {
-            var appId = await _commandRepository.GetApplicationIdByKeyAsync(applicationKey);
-            if (!appId.HasValue)
-            {
-                throw new ArgumentException($"ApplicationKey '{applicationKey}' no encontrado o inactivo");
-            }
-            role.ApplicationId = appId.Value;
-        }
-
-        // Validar que ApplicationId esté presente
-        if (role.ApplicationId <= 0)
-        {
-            throw new ArgumentException("ApplicationId o ApplicationKey es requerido para crear un Role");
-        }
-
         role.CreatedAt = DateTimeService.GetCostaRicaNow();
         role.IsActive = true;
         return await _commandRepository.CreateRoleAsync(role);
@@ -208,72 +167,17 @@ public class RBACService
     public async Task<IEnumerable<UserRole>> GetUserRolesAsync(
         int? userId = null,
         int? roleId = null,
-        bool? isActive = true,
-        int? applicationId = null)
+        bool? isActive = true)
     {
-        return await _queryRepository.GetUserRolesAsync(userId, roleId, isActive, applicationId);
+        return await _queryRepository.GetUserRolesAsync(userId, roleId, isActive);
     }
 
-    public async Task<int> AssignRoleToUserAsync(int userId, int roleId, int applicationId, int? assignedBy = null, DateTime? expiresAt = null)
+    public async Task<int> AssignRoleToUserAsync(int userId, int roleId, int? assignedBy = null, DateTime? expiresAt = null)
     {
-        // Validar que el usuario tiene acceso a la aplicación
-        var hasApplicationAccess = await _queryRepository.ValidateUserApplicationAccessAsync(userId, applicationId);
-        if (!hasApplicationAccess)
-        {
-            throw new ArgumentException($"El usuario con ID {userId} no tiene acceso a la aplicación con ID {applicationId}");
-        }
-
-        // Validar que el usuario existe
-        var user = await _userQueryRepository.GetByIdAsync(userId);
-        if (user == null)
-        {
-            throw new ArgumentException($"El usuario con ID {userId} no existe");
-        }
-
-        if (!user.IsActive)
-        {
-            throw new ArgumentException($"El usuario con ID {userId} está inactivo");
-        }
-
-        // Validar que el rol existe y pertenece a la aplicación
-        var roles = await _queryRepository.GetRolesAsync(roleId: roleId, isActive: true, applicationId: applicationId);
-        var role = roles.FirstOrDefault();
-        if (role == null)
-        {
-            throw new ArgumentException($"El rol con ID {roleId} no existe, está inactivo o no pertenece a la aplicación con ID {applicationId}");
-        }
-
-        // Validar que no existe una asignación activa duplicada (mismo UserId, RoleId, ApplicationId)
-        var existingActiveUserRoles = await _queryRepository.GetUserRolesAsync(
-            userId: userId, 
-            roleId: roleId, 
-            isActive: true, 
-            applicationId: applicationId);
-        if (existingActiveUserRoles.Any())
-        {
-            throw new InvalidOperationException($"El rol con ID {roleId} ya está asignado al usuario con ID {userId} en la aplicación con ID {applicationId}");
-        }
-
-        // Verificar si existe un registro inactivo para reactivarlo
-        var existingInactiveUserRoles = await _queryRepository.GetUserRolesAsync(
-            userId: userId, 
-            roleId: roleId, 
-            isActive: false, 
-            applicationId: applicationId);
-        var inactiveUserRole = existingInactiveUserRoles.FirstOrDefault();
-        
-        if (inactiveUserRole != null)
-        {
-            // Reactivar el registro existente en lugar de crear uno nuevo
-            return await _commandRepository.ReactivateUserRoleAsync(inactiveUserRole.UserRoleId, assignedBy, expiresAt);
-        }
-
-        // Crear un nuevo registro
         var userRole = new UserRole
         {
             UserId = userId,
             RoleId = roleId,
-            ApplicationId = applicationId,
             AssignedBy = assignedBy,
             AssignedAt = DateTimeService.GetCostaRicaNow(),
             ExpiresAt = expiresAt,
@@ -282,9 +186,9 @@ public class RBACService
         return await _commandRepository.AssignRoleToUserAsync(userRole);
     }
 
-    public async Task<bool> RemoveRoleFromUserAsync(int userId, int roleId, int applicationId)
+    public async Task<bool> RemoveRoleFromUserAsync(int userId, int roleId)
     {
-        return await _commandRepository.RemoveRoleFromUserAsync(userId, roleId, applicationId);
+        return await _commandRepository.RemoveRoleFromUserAsync(userId, roleId);
     }
 
     #endregion
@@ -353,9 +257,9 @@ public class RBACService
 
     #region Helper Methods
 
-    public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId, string? applicationKey = null)
+    public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId)
     {
-        return await _queryRepository.GetEffectiveUserPermissionsAsync(userId, applicationKey);
+        return await _queryRepository.GetEffectiveUserPermissionsAsync(userId);
     }
 
     #endregion

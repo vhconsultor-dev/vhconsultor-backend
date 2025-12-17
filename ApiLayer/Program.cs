@@ -81,6 +81,9 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CalculatePercentageCommand>, BusinessLayer.Corporate.Validators.CalculatePercentageCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CalculateFixedCommand>, BusinessLayer.Corporate.Validators.CalculateFixedCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CalculatePricingCommand>, BusinessLayer.Corporate.Validators.CalculatePricingCommandValidator>();
+// Invoice Validators
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.GenerateInvoicesRequest>, BusinessLayer.Corporate.Validators.GenerateInvoicesValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkInvoiceAsPaidRequest>, BusinessLayer.Corporate.Validators.MarkInvoiceAsPaidValidator>();
 #endregion
 
 #region JWT Configuration
@@ -143,6 +146,7 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.PricingService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.PricingServiceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.BusinessTypeService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.PlatformService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.InvoiceService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -171,6 +175,8 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteContractComman
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateContractServiceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateContractServiceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteContractServiceCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.GenerateInvoicesCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.MarkInvoiceAsPaidCommand>();
 // Queries
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CustomerQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CountryQueryRepository>();
@@ -187,6 +193,7 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PricingQueryRepositor
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PricingServiceQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.BusinessTypeQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PlatformQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.InvoiceQueryRepository>();
 #endregion
 
 #region SwaggerConfig

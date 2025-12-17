@@ -24,72 +24,50 @@ public class RBACQueryRepository
         string? resourceName = null,
         string? resourceKey = null,
         string? module = null,
-        bool? isActive = true,
-        int? applicationId = null,
-        string? applicationKey = null)
+        bool? isActive = true)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
         var sql = @"
-            SELECT r.ResourceId, r.ApplicationId, r.ResourceName, r.ResourceKey, r.Description, r.Module, r.IsActive, r.CreatedAt, r.UpdatedAt
-            FROM [Global].[Resources] r";
+            SELECT ResourceId, ResourceName, ResourceKey, Description, Module, IsActive, CreatedAt, UpdatedAt
+            FROM [Global].[Resources]
+            WHERE 1=1";
 
         var parameters = new DynamicParameters();
 
-        // Si se proporciona applicationKey, hacer JOIN con Applications
-        if (!string.IsNullOrEmpty(applicationKey))
-        {
-            sql += @"
-            INNER JOIN [Global].[Applications] a ON r.ApplicationId = a.ApplicationId";
-        }
-
-        sql += " WHERE 1=1";
-
         if (resourceId.HasValue)
         {
-            sql += " AND r.ResourceId = @ResourceId";
+            sql += " AND ResourceId = @ResourceId";
             parameters.Add("ResourceId", resourceId.Value);
         }
 
         if (!string.IsNullOrEmpty(resourceName))
         {
-            sql += " AND r.ResourceName LIKE '%' + @ResourceName + '%'";
+            sql += " AND ResourceName LIKE '%' + @ResourceName + '%'";
             parameters.Add("ResourceName", resourceName);
         }
 
         if (!string.IsNullOrEmpty(resourceKey))
         {
-            sql += " AND r.ResourceKey = @ResourceKey";
+            sql += " AND ResourceKey = @ResourceKey";
             parameters.Add("ResourceKey", resourceKey);
         }
 
         if (!string.IsNullOrEmpty(module))
         {
-            sql += " AND r.Module = @Module";
+            sql += " AND Module = @Module";
             parameters.Add("Module", module);
         }
 
         if (isActive.HasValue)
         {
-            sql += " AND r.IsActive = @IsActive";
+            sql += " AND IsActive = @IsActive";
             parameters.Add("IsActive", isActive.Value);
         }
 
-        // Filtros por aplicación (REQUERIDO según documentación)
-        if (applicationId.HasValue)
-        {
-            sql += " AND r.ApplicationId = @ApplicationId";
-            parameters.Add("ApplicationId", applicationId.Value);
-        }
-        else if (!string.IsNullOrEmpty(applicationKey))
-        {
-            sql += " AND a.ApplicationKey = @ApplicationKey";
-            parameters.Add("ApplicationKey", applicationKey);
-        }
-
-        sql += " ORDER BY r.ResourceName";
+        sql += " ORDER BY ResourceName";
 
         return await connection.QueryAsync<Resource>(sql, parameters);
     }
@@ -210,72 +188,50 @@ public class RBACQueryRepository
         string? roleName = null,
         string? roleKey = null,
         bool? isSystemRole = null,
-        bool? isActive = true,
-        int? applicationId = null,
-        string? applicationKey = null)
+        bool? isActive = true)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
         var sql = @"
-            SELECT ro.RoleId, ro.ApplicationId, ro.RoleName, ro.RoleKey, ro.Description, ro.IsSystemRole, ro.IsActive, ro.CreatedAt, ro.UpdatedAt
-            FROM [Global].[Roles] ro";
+            SELECT RoleId, RoleName, RoleKey, Description, IsSystemRole, IsActive, CreatedAt, UpdatedAt
+            FROM [Global].[Roles]
+            WHERE 1=1";
 
         var parameters = new DynamicParameters();
 
-        // Si se proporciona applicationKey, hacer JOIN con Applications
-        if (!string.IsNullOrEmpty(applicationKey))
-        {
-            sql += @"
-            INNER JOIN [Global].[Applications] a ON ro.ApplicationId = a.ApplicationId";
-        }
-
-        sql += " WHERE 1=1";
-
         if (roleId.HasValue)
         {
-            sql += " AND ro.RoleId = @RoleId";
+            sql += " AND RoleId = @RoleId";
             parameters.Add("RoleId", roleId.Value);
         }
 
         if (!string.IsNullOrEmpty(roleName))
         {
-            sql += " AND ro.RoleName LIKE '%' + @RoleName + '%'";
+            sql += " AND RoleName LIKE '%' + @RoleName + '%'";
             parameters.Add("RoleName", roleName);
         }
 
         if (!string.IsNullOrEmpty(roleKey))
         {
-            sql += " AND ro.RoleKey = @RoleKey";
+            sql += " AND RoleKey = @RoleKey";
             parameters.Add("RoleKey", roleKey);
         }
 
         if (isSystemRole.HasValue)
         {
-            sql += " AND ro.IsSystemRole = @IsSystemRole";
+            sql += " AND IsSystemRole = @IsSystemRole";
             parameters.Add("IsSystemRole", isSystemRole.Value);
         }
 
         if (isActive.HasValue)
         {
-            sql += " AND ro.IsActive = @IsActive";
+            sql += " AND IsActive = @IsActive";
             parameters.Add("IsActive", isActive.Value);
         }
 
-        // Filtros por aplicación (REQUERIDO según documentación)
-        if (applicationId.HasValue)
-        {
-            sql += " AND ro.ApplicationId = @ApplicationId";
-            parameters.Add("ApplicationId", applicationId.Value);
-        }
-        else if (!string.IsNullOrEmpty(applicationKey))
-        {
-            sql += " AND a.ApplicationKey = @ApplicationKey";
-            parameters.Add("ApplicationKey", applicationKey);
-        }
-
-        sql += " ORDER BY ro.RoleName";
+        sql += " ORDER BY RoleName";
 
         return await connection.QueryAsync<Role>(sql, parameters);
     }
@@ -323,15 +279,14 @@ public class RBACQueryRepository
     public async Task<IEnumerable<UserRole>> GetUserRolesAsync(
         int? userId = null,
         int? roleId = null,
-        bool? isActive = true,
-        int? applicationId = null)
+        bool? isActive = true)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
         var sql = @"
-            SELECT UserRoleId, UserId, RoleId, ApplicationId, AssignedBy, AssignedAt, ExpiresAt, IsActive
+            SELECT UserRoleId, UserId, RoleId, AssignedBy, AssignedAt, ExpiresAt, IsActive
             FROM [Global].[UserRoles]
             WHERE 1=1";
 
@@ -353,12 +308,6 @@ public class RBACQueryRepository
         {
             sql += " AND IsActive = @IsActive";
             parameters.Add("IsActive", isActive.Value);
-        }
-
-        if (applicationId.HasValue)
-        {
-            sql += " AND ApplicationId = @ApplicationId";
-            parameters.Add("ApplicationId", applicationId.Value);
         }
 
         sql += " ORDER BY AssignedAt DESC";
@@ -454,87 +403,20 @@ public class RBACQueryRepository
 
     #endregion
 
-    #region UserApplications
-
-    /// <summary>
-    /// Obtiene las aplicaciones disponibles para un usuario
-    /// </summary>
-    public async Task<IEnumerable<Application>> GetUserApplicationsAsync(int userId)
-    {
-        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
-        using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync();
-
-        var sql = @"
-            SELECT 
-                a.ApplicationId,
-                a.ApplicationKey,
-                a.ApplicationName,
-                a.Description,
-                a.IsActive,
-                a.CreatedAt,
-                a.UpdatedAt
-            FROM [Global].[Applications] a
-            INNER JOIN [Global].[UserApplications] ua ON a.ApplicationId = ua.ApplicationId
-            WHERE ua.UserId = @UserId 
-              AND ua.IsActive = 1
-              AND a.IsActive = 1
-            ORDER BY a.ApplicationName";
-
-        return await connection.QueryAsync<Application>(sql, new { UserId = userId });
-    }
-
-    /// <summary>
-    /// Valida si un usuario tiene acceso a una aplicación
-    /// </summary>
-    public async Task<bool> ValidateUserApplicationAccessAsync(int userId, int applicationId)
-    {
-        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
-        using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync();
-
-        var sql = @"
-            SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END AS HasAccess
-            FROM [Global].[UserApplications]
-            WHERE UserId = @UserId 
-              AND ApplicationId = @ApplicationId 
-              AND IsActive = 1";
-
-        var hasAccess = await connection.QueryFirstOrDefaultAsync<int>(sql, new { UserId = userId, ApplicationId = applicationId });
-        return hasAccess > 0;
-    }
-
-    #endregion
-
     #region Helper Methods
 
     /// <summary>
     /// Obtiene todos los permisos efectivos de un usuario (roles + permisos directos - denegaciones)
-    /// Filtrado por aplicación si se proporciona applicationKey
     /// </summary>
-    public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId, string? applicationKey = null)
+    public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
-        var sql = @"
-            SELECT DISTINCT 
-                p.PermissionId, p.ResourceId, p.ActionId, p.PermissionName, p.PermissionKey, p.Description, p.IsActive, p.CreatedAt, p.UpdatedAt
+        const string sql = @"
+            SELECT DISTINCT p.PermissionId, p.ResourceId, p.ActionId, p.PermissionName, p.PermissionKey, p.Description, p.IsActive, p.CreatedAt, p.UpdatedAt
             FROM [Global].[Permissions] p
-            INNER JOIN [Global].[Resources] r ON p.ResourceId = r.ResourceId";
-
-        var parameters = new DynamicParameters();
-        parameters.Add("UserId", userId);
-
-        // Si se proporciona applicationKey, hacer JOIN con Applications y filtrar
-        if (!string.IsNullOrEmpty(applicationKey))
-        {
-            sql += @"
-            INNER JOIN [Global].[Applications] app ON r.ApplicationId = app.ApplicationId";
-        }
-
-        sql += @"
             WHERE p.IsActive = 1
             AND (
                 -- Permisos desde roles
@@ -561,18 +443,10 @@ public class RBACQueryRepository
                 FROM [Global].[UserPermissionDenials] upd
                 WHERE upd.UserId = @UserId 
                 AND upd.IsActive = 1
-            )";
+            )
+            ORDER BY p.PermissionName";
 
-        // Filtrar por aplicación si se proporciona
-        if (!string.IsNullOrEmpty(applicationKey))
-        {
-            sql += " AND app.ApplicationKey = @ApplicationKey";
-            parameters.Add("ApplicationKey", applicationKey);
-        }
-
-        sql += " ORDER BY p.PermissionName";
-
-        return await connection.QueryAsync<Permission>(sql, parameters);
+        return await connection.QueryAsync<Permission>(sql, new { UserId = userId });
     }
 
     #endregion

@@ -5,9 +5,9 @@ namespace ModelLayer.Corporate.Entities;
 /// </summary>
 public class Contract
 {
-    public int ContractId { get; set; } // Ahora es INT IDENTITY
+    public string ContractId { get; set; } = string.Empty;
     public int CustomerId { get; set; }
-    public string ContractNumber { get; set; } = string.Empty; // Ahora tiene UNIQUE constraint
+    public string ContractNumber { get; set; } = string.Empty;
     public string? ClientLegalName { get; set; }
     public string? ClientTaxId { get; set; }
     public string? ClientNationality { get; set; }

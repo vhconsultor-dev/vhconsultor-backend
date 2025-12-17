@@ -22,6 +22,9 @@ public class DBcontext : DbContext
     public DbSet<ContractService> ContractServices { get; set; }
     public DbSet<ServiceBudgetRange> ServiceBudgetRanges { get; set; }
     public DbSet<ServiceAdBudgetRange> ServiceAdBudgetRanges { get; set; }
+    public DbSet<Invoice> Invoices { get; set; }
+    public DbSet<InvoiceItem> InvoiceItems { get; set; }
+    public DbSet<InvoiceAttachment> InvoiceAttachments { get; set; }
     
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
@@ -30,7 +33,6 @@ public class DBcontext : DbContext
     public DbSet<ErrorLog> ErrorLogs { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<UserLoginHistory> UserLoginHistory { get; set; }
-    public DbSet<Application> Applications { get; set; }
     public DbSet<Resource> Resources { get; set; }
     public DbSet<ModelLayer.Shared.Entities.Action> Actions { get; set; }
     public DbSet<Permission> Permissions { get; set; }
@@ -117,10 +119,9 @@ public class DBcontext : DbContext
         {
             entity.ToTable("Contracts", "Corporate");
             entity.HasKey(e => e.ContractId);
-            entity.Property(e => e.ContractId).ValueGeneratedOnAdd(); // INT IDENTITY(1,1)
+            entity.Property(e => e.ContractId).HasMaxLength(50).IsRequired();
             entity.Property(e => e.CustomerId).IsRequired();
             entity.Property(e => e.ContractNumber).HasMaxLength(100).IsRequired();
-            entity.HasIndex(e => e.ContractNumber).IsUnique().HasDatabaseName("UQ_Contracts_ContractNumber"); // UNIQUE constraint
             entity.Property(e => e.ClientLegalName).HasMaxLength(255);
             entity.Property(e => e.ClientTaxId).HasMaxLength(50);
             entity.Property(e => e.ClientNationality).HasMaxLength(100);
@@ -196,7 +197,7 @@ public class DBcontext : DbContext
             entity.ToTable("ContractServices", "Corporate");
             entity.HasKey(e => e.ContractServiceId);
             entity.Property(e => e.ContractServiceId).ValueGeneratedOnAdd();
-            entity.Property(e => e.ContractId).IsRequired(); // Ahora es INT (sin HasMaxLength)
+            entity.Property(e => e.ContractId).HasMaxLength(50).IsRequired();
             entity.Property(e => e.ServiceId);
             entity.Property(e => e.ServiceDescription);
             entity.Property(e => e.Regions);
@@ -296,7 +297,6 @@ public class DBcontext : DbContext
             entity.HasKey(e => e.LoginHistoryId);
             entity.Property(e => e.LoginHistoryId).ValueGeneratedOnAdd();
             entity.Property(e => e.UserId).IsRequired();
-            entity.Property(e => e.ApplicationId);
             entity.Property(e => e.LoginDate).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.IPAddress).HasMaxLength(45).IsRequired();
             entity.Property(e => e.Location).HasMaxLength(255);
@@ -312,27 +312,12 @@ public class DBcontext : DbContext
             entity.Property(e => e.SessionId).HasMaxLength(255);
         });
 
-        // Configuración de Application
-        modelBuilder.Entity<Application>(entity =>
-        {
-            entity.ToTable("Applications", "Global");
-            entity.HasKey(e => e.ApplicationId);
-            entity.Property(e => e.ApplicationId).ValueGeneratedOnAdd();
-            entity.Property(e => e.ApplicationName).HasMaxLength(100).IsRequired();
-            entity.Property(e => e.ApplicationKey).HasMaxLength(50).IsRequired();
-            entity.Property(e => e.Description).HasMaxLength(500);
-            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
-            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
-            entity.Property(e => e.UpdatedAt);
-        });
-
         // Configuración de Resource
         modelBuilder.Entity<Resource>(entity =>
         {
             entity.ToTable("Resources", "Global");
             entity.HasKey(e => e.ResourceId);
             entity.Property(e => e.ResourceId).ValueGeneratedOnAdd();
-            entity.Property(e => e.ApplicationId).IsRequired();
             entity.Property(e => e.ResourceName).HasMaxLength(100).IsRequired();
             entity.Property(e => e.ResourceKey).HasMaxLength(50).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(500);
@@ -340,12 +325,6 @@ public class DBcontext : DbContext
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.UpdatedAt);
-            
-            // Foreign Key a Applications
-            entity.HasOne<Application>()
-                .WithMany()
-                .HasForeignKey(e => e.ApplicationId)
-                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuración de Action
@@ -383,7 +362,6 @@ public class DBcontext : DbContext
             entity.ToTable("Roles", "Global");
             entity.HasKey(e => e.RoleId);
             entity.Property(e => e.RoleId).ValueGeneratedOnAdd();
-            entity.Property(e => e.ApplicationId).IsRequired();
             entity.Property(e => e.RoleName).HasMaxLength(100).IsRequired();
             entity.Property(e => e.RoleKey).HasMaxLength(50).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(500);
@@ -391,12 +369,6 @@ public class DBcontext : DbContext
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.UpdatedAt);
-            
-            // Foreign Key a Applications
-            entity.HasOne<Application>()
-                .WithMany()
-                .HasForeignKey(e => e.ApplicationId)
-                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuración de RolePermission
@@ -419,7 +391,6 @@ public class DBcontext : DbContext
             entity.Property(e => e.UserRoleId).ValueGeneratedOnAdd();
             entity.Property(e => e.UserId).IsRequired();
             entity.Property(e => e.RoleId).IsRequired();
-            entity.Property(e => e.ApplicationId).IsRequired();
             entity.Property(e => e.AssignedBy);
             entity.Property(e => e.AssignedAt).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.ExpiresAt);
@@ -486,6 +457,93 @@ public class DBcontext : DbContext
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.UpdatedAt);
+        });
+        
+        // Configuración de Invoice (Corporate)
+        modelBuilder.Entity<Invoice>(entity =>
+        {
+            entity.ToTable("Invoices", "Corporate");
+            entity.HasKey(e => e.InvoiceId);
+            entity.Property(e => e.InvoiceId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ContractId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.InvoiceNumber).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.InvoiceDate).IsRequired();
+            entity.Property(e => e.DueDate).IsRequired();
+            entity.Property(e => e.SubTotal).HasColumnType("decimal(15,2)").IsRequired();
+            entity.Property(e => e.Tax).HasColumnType("decimal(15,2)").IsRequired().HasDefaultValue(0);
+            entity.Property(e => e.Total).HasColumnType("decimal(15,2)").IsRequired();
+            entity.Property(e => e.CurrencyCode).HasMaxLength(3).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(50).IsRequired().HasDefaultValue("Draft");
+            entity.Property(e => e.PaymentStatus).HasMaxLength(50).IsRequired().HasDefaultValue("Unpaid");
+            entity.Property(e => e.PaidDate);
+            entity.Property(e => e.PaidBy);
+            entity.Property(e => e.PaymentMethodId);
+            entity.Property(e => e.PaymentReference).HasMaxLength(255);
+            entity.Property(e => e.DepositNumber).HasMaxLength(255);
+            entity.Property(e => e.TransferNumber).HasMaxLength(255);
+            entity.Property(e => e.Notes);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+            entity.Property(e => e.UpdatedAt);
+            entity.Property(e => e.LastModifiedBy).HasMaxLength(255);
+            
+            // Índice único para InvoiceNumber
+            entity.HasIndex(e => e.InvoiceNumber).IsUnique();
+            
+            // Relación con Contract
+            entity.HasOne(e => e.Contract)
+                .WithMany()
+                .HasForeignKey(e => e.ContractId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        
+        // Configuración de InvoiceItem (Corporate)
+        modelBuilder.Entity<InvoiceItem>(entity =>
+        {
+            entity.ToTable("InvoiceItems", "Corporate");
+            entity.HasKey(e => e.InvoiceItemId);
+            entity.Property(e => e.InvoiceItemId).ValueGeneratedOnAdd();
+            entity.Property(e => e.InvoiceId).IsRequired();
+            entity.Property(e => e.ContractServiceId);
+            entity.Property(e => e.Description).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.Quantity).HasColumnType("decimal(10,2)").IsRequired().HasDefaultValue(1);
+            entity.Property(e => e.UnitPrice).HasColumnType("decimal(15,2)").IsRequired();
+            entity.Property(e => e.Discount).HasColumnType("decimal(15,2)").IsRequired().HasDefaultValue(0);
+            entity.Property(e => e.LineTotal).HasColumnType("decimal(15,2)").IsRequired();
+            entity.Property(e => e.ServiceOrder);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+            
+            // Relación con Invoice
+            entity.HasOne(e => e.Invoice)
+                .WithMany(i => i.InvoiceItems)
+                .HasForeignKey(e => e.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+                
+            // Relación con ContractService
+            entity.HasOne(e => e.ContractService)
+                .WithMany()
+                .HasForeignKey(e => e.ContractServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        
+        // Configuración de InvoiceAttachment (Corporate)
+        modelBuilder.Entity<InvoiceAttachment>(entity =>
+        {
+            entity.ToTable("InvoiceAttachments", "Corporate");
+            entity.HasKey(e => e.InvoiceAttachmentId);
+            entity.Property(e => e.InvoiceAttachmentId).ValueGeneratedOnAdd();
+            entity.Property(e => e.InvoiceId).IsRequired();
+            entity.Property(e => e.FileUrl).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.FileName).HasMaxLength(255);
+            entity.Property(e => e.FileType).HasMaxLength(100);
+            entity.Property(e => e.FileSize);
+            entity.Property(e => e.UploadedBy);
+            entity.Property(e => e.UploadedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+            
+            // Relación con Invoice
+            entity.HasOne(e => e.Invoice)
+                .WithMany(i => i.InvoiceAttachments)
+                .HasForeignKey(e => e.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 } 

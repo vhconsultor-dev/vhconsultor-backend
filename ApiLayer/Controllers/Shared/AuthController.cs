@@ -62,44 +62,14 @@ public class AuthController : ControllerBase
                 new
                 {
                     user = result.User,
-                    applications = result.Applications.Select(a => new
-                    {
-                        applicationId = a.ApplicationId,
-                        applicationKey = a.ApplicationKey,
-                        applicationName = a.ApplicationName,
-                        description = a.Description
-                    }),
                     message = result.Message
                 },
                 result.Message);
             return Ok(response);
         }
-        catch (ArgumentException ex)
-        {
-            // Errores de validación (usuario no existe, etc.)
-            var errorResponse = ResponseStructure<object>.Error(ex.Message);
-            return BadRequest(errorResponse);
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Errores de lógica de negocio o base de datos
-            var errorMessage = ex.Message;
-            if (ex.InnerException != null)
-            {
-                errorMessage += $" Detalles: {ex.InnerException.Message}";
-            }
-            var errorResponse = ResponseStructure<object>.Error(errorMessage);
-            return BadRequest(errorResponse);
-        }
         catch (Exception ex)
         {
-            // Errores inesperados
-            var errorMessage = $"Error inesperado al procesar el login: {ex.Message}";
-            if (ex.InnerException != null)
-            {
-                errorMessage += $" Detalles: {ex.InnerException.Message}";
-            }
-            var errorResponse = ResponseStructure<object>.Error(errorMessage);
+            var errorResponse = ResponseStructure<object>.Error($"Error al procesar el login: {ex.Message}");
             return StatusCode(500, errorResponse);
         }
     }
@@ -185,52 +155,6 @@ public class AuthController : ControllerBase
         catch (Exception ex)
         {
             var errorResponse = ResponseStructure<object>.Error($"Error al cambiar la contraseña: {ex.Message}");
-            return StatusCode(500, errorResponse);
-        }
-    }
-
-    /// <summary>
-    /// Resetea la contraseña de un usuario (solo para administradores)
-    /// Genera una contraseña aleatoria segura y la retorna
-    /// </summary>
-    /// <param name="command">Datos para resetear contraseña</param>
-    /// <returns>Nueva contraseña generada</returns>
-    [HttpPost("admin/reset-password")]
-    [Authorize]
-    public async Task<IActionResult> AdminResetPassword([FromBody] AdminResetPasswordCommand command)
-    {
-        // Validación usando FluentValidation
-        var validationResult = await _validationService.ValidateAsync(command);
-        if (!validationResult.IsValid)
-        {
-            var errorResponse = ResponseStructure<object>.ValidationError(
-                string.Join(", ", validationResult.Errors));
-            return BadRequest(errorResponse);
-        }
-
-        try
-        {
-            var result = await _authService.AdminResetPasswordAsync(command);
-
-            if (!result.Success)
-            {
-                var errorResponse = ResponseStructure<object>.BadRequest(result.Message);
-                return BadRequest(errorResponse);
-            }
-
-            var response = ResponseStructure<object>.Success(
-                new 
-                { 
-                    message = result.Message,
-                    newPassword = result.NewPassword,
-                    userId = command.UserId
-                },
-                result.Message);
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            var errorResponse = ResponseStructure<object>.Error($"Error al resetear la contraseña: {ex.Message}");
             return StatusCode(500, errorResponse);
         }
     }

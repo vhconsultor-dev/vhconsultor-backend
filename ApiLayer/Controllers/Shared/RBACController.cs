@@ -32,13 +32,11 @@ public class RBACController : ControllerBase
         [FromQuery] string? resourceName = null,
         [FromQuery] string? resourceKey = null,
         [FromQuery] string? module = null,
-        [FromQuery] bool? isActive = true,
-        [FromQuery] int? applicationId = null,
-        [FromQuery] string? applicationKey = null)
+        [FromQuery] bool? isActive = true)
     {
         try
         {
-            var resources = await _rbacService.GetResourcesAsync(resourceId, resourceName, resourceKey, module, isActive, applicationId, applicationKey);
+            var resources = await _rbacService.GetResourcesAsync(resourceId, resourceName, resourceKey, module, isActive);
             var resourcesList = resources.ToList();
 
             if (!resourcesList.Any())
@@ -147,13 +145,11 @@ public class RBACController : ControllerBase
         [FromQuery] string? roleName = null,
         [FromQuery] string? roleKey = null,
         [FromQuery] bool? isSystemRole = null,
-        [FromQuery] bool? isActive = true,
-        [FromQuery] int? applicationId = null,
-        [FromQuery] string? applicationKey = null)
+        [FromQuery] bool? isActive = true)
     {
         try
         {
-            var roles = await _rbacService.GetRolesAsync(roleId, roleName, roleKey, isSystemRole, isActive, applicationId, applicationKey);
+            var roles = await _rbacService.GetRolesAsync(roleId, roleName, roleKey, isSystemRole, isActive);
             var rolesList = roles.ToList();
 
             if (!rolesList.Any())
@@ -214,12 +210,11 @@ public class RBACController : ControllerBase
     public async Task<IActionResult> GetUserRoles(
         [FromQuery] int? userId = null,
         [FromQuery] int? roleId = null,
-        [FromQuery] bool? isActive = true,
-        [FromQuery] int? applicationId = null)
+        [FromQuery] bool? isActive = true)
     {
         try
         {
-            var userRoles = await _rbacService.GetUserRolesAsync(userId, roleId, isActive, applicationId);
+            var userRoles = await _rbacService.GetUserRolesAsync(userId, roleId, isActive);
             var userRolesList = userRoles.ToList();
 
             if (!userRolesList.Any())
@@ -302,13 +297,11 @@ public class RBACController : ControllerBase
     /// Obtiene todos los permisos efectivos de un usuario (roles + permisos directos - denegaciones)
     /// </summary>
     [HttpGet("user-effective-permissions/{userId}")]
-    public async Task<IActionResult> GetEffectiveUserPermissions(
-        int userId,
-        [FromQuery] string? applicationKey = null)
+    public async Task<IActionResult> GetEffectiveUserPermissions(int userId)
     {
         try
         {
-            var permissions = await _rbacService.GetEffectiveUserPermissionsAsync(userId, applicationKey);
+            var permissions = await _rbacService.GetEffectiveUserPermissionsAsync(userId);
             var permissionsList = permissions.ToList();
 
             var response = ResponseStructure<object>.Success(permissionsList, $"{permissionsList.Count} permiso(s) efectivo(s) encontrado(s)");
@@ -329,20 +322,11 @@ public class RBACController : ControllerBase
     /// Crea un nuevo recurso
     /// </summary>
     [HttpPost("resources")]
-    public async Task<IActionResult> CreateResource([FromBody] CreateResourceRequest request)
+    public async Task<IActionResult> CreateResource([FromBody] Resource resource)
     {
         try
         {
-            var resource = new Resource
-            {
-                ApplicationId = request.ApplicationId ?? 0,
-                ResourceName = request.ResourceName,
-                ResourceKey = request.ResourceKey,
-                Description = request.Description,
-                Module = request.Module
-            };
-
-            var resourceId = await _rbacService.CreateResourceAsync(resource, request.ApplicationKey);
+            var resourceId = await _rbacService.CreateResourceAsync(resource);
             var response = ResponseStructure<object>.Success(new { resourceId }, "Recurso creado exitosamente");
             return Ok(response);
         }
@@ -395,20 +379,11 @@ public class RBACController : ControllerBase
     /// Crea un nuevo rol
     /// </summary>
     [HttpPost("roles")]
-    public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequest request)
+    public async Task<IActionResult> CreateRole([FromBody] Role role)
     {
         try
         {
-            var role = new Role
-            {
-                ApplicationId = request.ApplicationId ?? 0,
-                RoleName = request.RoleName,
-                RoleKey = request.RoleKey,
-                Description = request.Description,
-                IsSystemRole = request.IsSystemRole
-            };
-
-            var roleId = await _rbacService.CreateRoleAsync(role, request.ApplicationKey);
+            var roleId = await _rbacService.CreateRoleAsync(role);
             var response = ResponseStructure<object>.Success(new { roleId }, "Rol creado exitosamente");
             return Ok(response);
         }
@@ -446,36 +421,13 @@ public class RBACController : ControllerBase
     {
         try
         {
-            var userRoleId = await _rbacService.AssignRoleToUserAsync(
-                request.UserId, 
-                request.RoleId, 
-                request.ApplicationId, 
-                request.AssignedBy, 
-                request.ExpiresAt);
+            var userRoleId = await _rbacService.AssignRoleToUserAsync(request.UserId, request.RoleId, request.AssignedBy, request.ExpiresAt);
             var response = ResponseStructure<object>.Success(new { userRoleId }, "Rol asignado al usuario exitosamente");
             return Ok(response);
         }
-        catch (ArgumentException ex)
-        {
-            // Errores de validación (usuario/rol no existe, etc.)
-            var errorResponse = ResponseStructure<object>.Error(ex.Message);
-            return BadRequest(errorResponse);
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Errores de lógica de negocio (duplicado, etc.)
-            var errorResponse = ResponseStructure<object>.Error(ex.Message);
-            return BadRequest(errorResponse);
-        }
         catch (Exception ex)
         {
-            // Errores inesperados
-            var errorMessage = $"Error inesperado al asignar rol al usuario: {ex.Message}";
-            if (ex.InnerException != null)
-            {
-                errorMessage += $" Detalles: {ex.InnerException.Message}";
-            }
-            var errorResponse = ResponseStructure<object>.Error(errorMessage);
+            var errorResponse = ResponseStructure<object>.Error($"Error al asignar rol al usuario: {ex.Message}");
             return StatusCode(500, errorResponse);
         }
     }
@@ -715,11 +667,11 @@ public class RBACController : ControllerBase
     /// Remueve un rol de un usuario
     /// </summary>
     [HttpDelete("user-roles")]
-    public async Task<IActionResult> RemoveRoleFromUser([FromQuery] int userId, [FromQuery] int roleId, [FromQuery] int applicationId)
+    public async Task<IActionResult> RemoveRoleFromUser([FromQuery] int userId, [FromQuery] int roleId)
     {
         try
         {
-            var success = await _rbacService.RemoveRoleFromUserAsync(userId, roleId, applicationId);
+            var success = await _rbacService.RemoveRoleFromUserAsync(userId, roleId);
             
             if (!success)
             {
@@ -805,7 +757,6 @@ public class AssignRoleToUserRequest
 {
     public int UserId { get; set; }
     public int RoleId { get; set; }
-    public int ApplicationId { get; set; }
     public int? AssignedBy { get; set; }
     public DateTime? ExpiresAt { get; set; }
 }
@@ -824,26 +775,6 @@ public class DenyPermissionToUserRequest
     public int PermissionId { get; set; }
     public int? DeniedBy { get; set; }
     public string? Reason { get; set; }
-}
-
-public class CreateResourceRequest
-{
-    public int? ApplicationId { get; set; }
-    public string? ApplicationKey { get; set; }
-    public string ResourceName { get; set; } = string.Empty;
-    public string ResourceKey { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public string? Module { get; set; }
-}
-
-public class CreateRoleRequest
-{
-    public int? ApplicationId { get; set; }
-    public string? ApplicationKey { get; set; }
-    public string RoleName { get; set; } = string.Empty;
-    public string RoleKey { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public bool IsSystemRole { get; set; }
 }
 
 #endregion
