@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ApiLayer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cdb94bc6046ad1d419753b886e75588c937f62ab")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d19495d0ee40fcd61cb85e65deb043210054f8e5")]
 [assembly: System.Reflection.AssemblyProductAttribute("ApiLayer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ApiLayer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

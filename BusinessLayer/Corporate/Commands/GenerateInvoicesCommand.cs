@@ -26,12 +26,18 @@ public class GenerateInvoicesCommand
     {
         // 1. Obtener contrato con sus servicios
         // Convertir ContractId a string para evitar problemas de conversión
-        string contractIdStr = request.ContractId.ToString();
+        string contractIdStr = request.ContractId?.ToString() ?? string.Empty;
+        
+        // Buscar el contrato sin tracking para evitar problemas de conversión en relaciones
         var contract = await _context.Contracts
+            .AsNoTracking() // No trackear para evitar problemas de conversión
             .FirstOrDefaultAsync(c => c.ContractId == contractIdStr);
 
         if (contract == null)
             throw new KeyNotFoundException($"Contrato con ID {request.ContractId} no encontrado");
+        
+        // Asegurar que contractIdStr sea el valor correcto del contrato encontrado (convertido a string)
+        contractIdStr = contract.ContractId?.ToString() ?? contractIdStr;
 
         // 2. Verificar si ya existen facturas
         var existingInvoices = await _context.Invoices
@@ -104,7 +110,7 @@ public class GenerateInvoicesCommand
             // Crear factura
             var invoice = new Invoice
             {
-                ContractId = contractIdStr,
+                ContractId = contractIdStr, // Usar el string convertido explícitamente
                 InvoiceNumber = invoiceNumber,
                 InvoiceDate = invoiceDate,
                 DueDate = dueDate,
@@ -116,6 +122,9 @@ public class GenerateInvoicesCommand
                 PaymentStatus = "Unpaid",
                 CreatedAt = DateTimeService.GetCostaRicaNow()
             };
+            
+            // NO establecer la relación Contract para evitar problemas de conversión
+            // Entity Framework establecerá la relación automáticamente si es necesario
 
             // Crear items de la factura
             CreateInvoiceItems(invoice, contract, contractServices, invoiceAmount);
@@ -124,6 +133,15 @@ public class GenerateInvoicesCommand
         }
 
         // 9. Guardar todas las facturas
+        // Asegurar que cada invoice tenga ContractId como string explícitamente
+        foreach (var invoice in invoices)
+        {
+            // Forzar ContractId a string para evitar problemas de conversión
+            invoice.ContractId = contractIdStr;
+            // NO establecer la relación Contract para evitar que EF intente convertir tipos
+            invoice.Contract = null;
+        }
+        
         await _context.Invoices.AddRangeAsync(invoices);
         await _context.SaveChangesAsync();
 
