@@ -25,15 +25,17 @@ public class GenerateInvoicesCommand
     public async Task<GenerateInvoicesResponse> ExecuteAsync(GenerateInvoicesRequest request)
     {
         // 1. Obtener contrato con sus servicios
+        // Convertir ContractId a string para evitar problemas de conversión
+        string contractIdStr = request.ContractId.ToString();
         var contract = await _context.Contracts
-            .FirstOrDefaultAsync(c => c.ContractId == request.ContractId);
+            .FirstOrDefaultAsync(c => c.ContractId == contractIdStr);
 
         if (contract == null)
             throw new KeyNotFoundException($"Contrato con ID {request.ContractId} no encontrado");
 
         // 2. Verificar si ya existen facturas
         var existingInvoices = await _context.Invoices
-            .Where(i => i.ContractId == request.ContractId)
+            .Where(i => i.ContractId == contractIdStr)
             .ToListAsync();
 
         if (existingInvoices.Any())
@@ -48,11 +50,11 @@ public class GenerateInvoicesCommand
         }
 
         // 3. Validar campos requeridos
-        ValidateContractForInvoiceGeneration(contract);
+        await ValidateContractForInvoiceGenerationAsync(contract, contractIdStr);
 
         // 4. Obtener servicios del contrato
         var contractServices = await _context.ContractServices
-            .Where(cs => cs.ContractId == request.ContractId && cs.IsActive)
+            .Where(cs => cs.ContractId == contractIdStr && cs.IsActive)
             .OrderBy(cs => cs.ServiceOrder)
             .ToListAsync();
 
@@ -102,7 +104,7 @@ public class GenerateInvoicesCommand
             // Crear factura
             var invoice = new Invoice
             {
-                ContractId = request.ContractId,
+                ContractId = contractIdStr,
                 InvoiceNumber = invoiceNumber,
                 InvoiceDate = invoiceDate,
                 DueDate = dueDate,
@@ -135,7 +137,7 @@ public class GenerateInvoicesCommand
         };
     }
 
-    private void ValidateContractForInvoiceGeneration(Contract contract)
+    private async Task ValidateContractForInvoiceGenerationAsync(Contract contract, string contractIdStr)
     {
         var errors = new List<string>();
 
@@ -153,8 +155,8 @@ public class GenerateInvoicesCommand
 
         if (!contract.FeeAmount.HasValue)
         {
-            var hasActiveServices = _context.ContractServices
-                .Any(cs => cs.ContractId == contract.ContractId && cs.IsActive && cs.FinalPrice.HasValue);
+            var hasActiveServices = await _context.ContractServices
+                .AnyAsync(cs => cs.ContractId == contractIdStr && cs.IsActive && cs.FinalPrice.HasValue);
             
             if (!hasActiveServices)
                 errors.Add("El contrato debe tener FeeAmount o ContractServices activos con FinalPrice");
