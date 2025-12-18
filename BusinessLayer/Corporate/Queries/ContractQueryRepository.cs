@@ -21,7 +21,7 @@ public class ContractQueryRepository
     /// Obtiene contracts con filtros opcionales
     /// </summary>
     public async Task<IEnumerable<Contract>> GetContractsAsync(
-        string? contractId = null,
+        int? contractId = null,
         int? customerId = null,
         string? contractNumber = null,
         string? status = null,
@@ -51,10 +51,10 @@ public class ContractQueryRepository
 
         var parameters = new DynamicParameters();
 
-        if (!string.IsNullOrEmpty(contractId))
+        if (contractId.HasValue)
         {
             sql += " AND ContractId = @ContractId";
-            parameters.Add("ContractId", contractId);
+            parameters.Add("ContractId", contractId.Value);
         }
 
         if (customerId.HasValue)
@@ -119,7 +119,7 @@ public class ContractQueryRepository
     /// <summary>
     /// Obtiene un contract por su ID
     /// </summary>
-    public async Task<Contract?> GetByIdAsync(string contractId)
+    public async Task<Contract?> GetByIdAsync(int contractId)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);

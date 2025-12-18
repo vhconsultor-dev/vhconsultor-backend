@@ -22,7 +22,7 @@ public class UpdateContractCommand
     /// <param name="contractId">ID del contrato a actualizar</param>
     /// <param name="request">Datos actualizados del contrato</param>
     /// <returns>True si se actualizó correctamente, False si no se encontró</returns>
-    public async Task<bool> ExecuteAsync(string contractId, UpdateContractRequest request)
+    public async Task<bool> ExecuteAsync(int contractId, UpdateContractRequest request)
     {
         var contract = await _context.Contracts.FindAsync(contractId);
         

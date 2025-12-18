@@ -46,10 +46,10 @@ public class InvoiceQueryRepository
         }
 
         // Filtro por ID de contrato
-        if (!string.IsNullOrEmpty(filter.ContractId))
+        if (filter.ContractId.HasValue)
         {
             sql += " AND i.ContractId = @ContractId";
-            parameters.Add("ContractId", filter.ContractId);
+            parameters.Add("ContractId", filter.ContractId.Value);
         }
 
         // Filtro por número de factura
@@ -142,7 +142,7 @@ public class InvoiceQueryRepository
         // Aplicar los mismos filtros para el conteo
         if (filter.InvoiceId.HasValue)
             countSql += " AND i.InvoiceId = @InvoiceId";
-        if (!string.IsNullOrEmpty(filter.ContractId))
+        if (filter.ContractId.HasValue)
             countSql += " AND i.ContractId = @ContractId";
         if (!string.IsNullOrEmpty(filter.InvoiceNumber))
             countSql += " AND i.InvoiceNumber LIKE @InvoiceNumber";
@@ -229,7 +229,7 @@ public class InvoiceQueryRepository
     /// <summary>
     /// Obtiene resumen de facturas por contrato
     /// </summary>
-    public async Task<InvoiceSummaryDto> GetInvoiceSummaryByContractAsync(string contractId)
+    public async Task<InvoiceSummaryDto> GetInvoiceSummaryByContractAsync(int contractId)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
@@ -259,7 +259,7 @@ public class InvoiceQueryRepository
 public class InvoiceQueryFilter
 {
     public int? InvoiceId { get; set; }
-    public string? ContractId { get; set; }
+    public int? ContractId { get; set; }
     public string? InvoiceNumber { get; set; }
     public string? Status { get; set; }
     public string? PaymentStatus { get; set; }

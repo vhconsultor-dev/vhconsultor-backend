@@ -22,7 +22,7 @@ public class ContractServiceQueryRepository
     /// </summary>
     public async Task<IEnumerable<ContractService>> GetContractServicesAsync(
         int? contractServiceId = null,
-        string? contractId = null,
+        int? contractId = null,
         int? serviceId = null,
         bool? isActive = true)
     {
@@ -46,10 +46,10 @@ public class ContractServiceQueryRepository
             parameters.Add("ContractServiceId", contractServiceId.Value);
         }
 
-        if (!string.IsNullOrEmpty(contractId))
+        if (contractId.HasValue)
         {
             sql += " AND ContractId = @ContractId";
-            parameters.Add("ContractId", contractId);
+            parameters.Add("ContractId", contractId.Value);
         }
 
         if (serviceId.HasValue)
@@ -92,7 +92,7 @@ public class ContractServiceQueryRepository
     /// <summary>
     /// Obtiene contract services por contract ID
     /// </summary>
-    public async Task<IEnumerable<ContractService>> GetByContractIdAsync(string contractId, bool? isActive = true)
+    public async Task<IEnumerable<ContractService>> GetByContractIdAsync(int contractId, bool? isActive = true)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
@@ -144,7 +144,7 @@ public class ContractServiceQueryRepository
     /// <summary>
     /// Calcula el total de servicios de un contrato
     /// </summary>
-    public async Task<decimal> GetContractTotalAsync(string contractId)
+    public async Task<decimal> GetContractTotalAsync(int contractId)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);

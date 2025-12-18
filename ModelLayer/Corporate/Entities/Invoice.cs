@@ -6,7 +6,7 @@ namespace ModelLayer.Corporate.Entities;
 public class Invoice
 {
     public int InvoiceId { get; set; }
-    public string ContractId { get; set; } = string.Empty;
+    public int ContractId { get; set; }
     public string InvoiceNumber { get; set; } = string.Empty;
     public DateTime InvoiceDate { get; set; }
     public DateTime DueDate { get; set; }

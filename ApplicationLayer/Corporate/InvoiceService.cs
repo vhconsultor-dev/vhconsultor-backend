@@ -64,7 +64,7 @@ public class InvoiceService
     /// <summary>
     /// Obtiene el resumen de facturas de un contrato
     /// </summary>
-    public async Task<InvoiceSummaryDto> GetInvoiceSummaryByContractAsync(string contractId)
+    public async Task<InvoiceSummaryDto> GetInvoiceSummaryByContractAsync(int contractId)
     {
         return await _invoiceQueryRepository.GetInvoiceSummaryByContractAsync(contractId);
     }

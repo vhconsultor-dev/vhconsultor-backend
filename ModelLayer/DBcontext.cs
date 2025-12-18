@@ -119,7 +119,7 @@ public class DBcontext : DbContext
         {
             entity.ToTable("Contracts", "Corporate");
             entity.HasKey(e => e.ContractId);
-            entity.Property(e => e.ContractId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ContractId).ValueGeneratedOnAdd(); // INT IDENTITY(1,1)
             entity.Property(e => e.CustomerId).IsRequired();
             entity.Property(e => e.ContractNumber).HasMaxLength(100).IsRequired();
             entity.Property(e => e.ClientLegalName).HasMaxLength(255);
@@ -197,7 +197,7 @@ public class DBcontext : DbContext
             entity.ToTable("ContractServices", "Corporate");
             entity.HasKey(e => e.ContractServiceId);
             entity.Property(e => e.ContractServiceId).ValueGeneratedOnAdd();
-            entity.Property(e => e.ContractId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ContractId).IsRequired();
             entity.Property(e => e.ServiceId);
             entity.Property(e => e.ServiceDescription);
             entity.Property(e => e.Regions);
@@ -465,7 +465,7 @@ public class DBcontext : DbContext
             entity.ToTable("Invoices", "Corporate");
             entity.HasKey(e => e.InvoiceId);
             entity.Property(e => e.InvoiceId).ValueGeneratedOnAdd();
-            entity.Property(e => e.ContractId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ContractId).IsRequired();
             entity.Property(e => e.InvoiceNumber).HasMaxLength(100).IsRequired();
             entity.Property(e => e.InvoiceDate).IsRequired();
             entity.Property(e => e.DueDate).IsRequired();

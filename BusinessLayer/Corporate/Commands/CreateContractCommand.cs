@@ -21,11 +21,11 @@ public class CreateContractCommand
     /// </summary>
     /// <param name="request">Datos del contrato</param>
     /// <returns>ID del contrato creado</returns>
-    public async Task<string> ExecuteAsync(CreateContractRequest request)
+    public async Task<int> ExecuteAsync(CreateContractRequest request)
     {
         var contract = new Contract
         {
-            ContractId = request.ContractId,
+            // ContractId es auto-generado (IDENTITY), no se asigna
             CustomerId = request.CustomerId,
             ContractNumber = request.ContractNumber,
             ClientLegalName = request.ClientLegalName,
@@ -68,7 +68,7 @@ public class CreateContractCommand
         _context.Contracts.Add(contract);
         await _context.SaveChangesAsync();
         
-        return contract.ContractId;
+        return contract.ContractId; // Retorna el ID auto-generado
     }
 }
 
@@ -77,7 +77,7 @@ public class CreateContractCommand
 /// </summary>
 public class CreateContractRequest
 {
-    public string ContractId { get; set; } = string.Empty;
+    // ContractId es auto-generado (IDENTITY), no se incluye en el request
     public int CustomerId { get; set; }
     public string ContractNumber { get; set; } = string.Empty;
     public string? ClientLegalName { get; set; }

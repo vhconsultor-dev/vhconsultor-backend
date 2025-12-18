@@ -61,7 +61,7 @@ public class ContractServiceService
     /// </summary>
     public async Task<IEnumerable<ModelLayer.Corporate.Entities.ContractService>> GetContractServicesAsync(
         int? contractServiceId = null,
-        string? contractId = null,
+        int? contractId = null,
         int? serviceId = null,
         bool? isActive = true)
     {
@@ -80,7 +80,7 @@ public class ContractServiceService
     /// <summary>
     /// Obtiene contract services por contract ID
     /// </summary>
-    public async Task<IEnumerable<ModelLayer.Corporate.Entities.ContractService>> GetContractServicesByContractIdAsync(string contractId, bool? isActive = true)
+    public async Task<IEnumerable<ModelLayer.Corporate.Entities.ContractService>> GetContractServicesByContractIdAsync(int contractId, bool? isActive = true)
     {
         return await _contractServiceQueryRepository.GetByContractIdAsync(contractId, isActive);
     }
@@ -96,7 +96,7 @@ public class ContractServiceService
     /// <summary>
     /// Calcula el total de servicios de un contrato
     /// </summary>
-    public async Task<decimal> GetContractTotalAsync(string contractId)
+    public async Task<decimal> GetContractTotalAsync(int contractId)
     {
         return await _contractServiceQueryRepository.GetContractTotalAsync(contractId);
     }

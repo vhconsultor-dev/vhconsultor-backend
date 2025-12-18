@@ -41,7 +41,7 @@ public class InvoiceController : ControllerBase
     /// Si no existen, genera todas las facturas en estado Draft.
     /// </remarks>
     [HttpPost("generate/{contractId}")]
-    public async Task<IActionResult> GenerateInvoices(string contractId)
+    public async Task<IActionResult> GenerateInvoices(int contractId)
     {
         var request = new GenerateInvoicesRequest { ContractId = contractId };
 
@@ -188,7 +188,7 @@ public class InvoiceController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetInvoices(
         [FromQuery] int? invoiceId = null,
-        [FromQuery] string? contractId = null,
+        [FromQuery] int? contractId = null,
         [FromQuery] string? invoiceNumber = null,
         [FromQuery] string? status = null,
         [FromQuery] string? paymentStatus = null,
@@ -285,7 +285,7 @@ public class InvoiceController : ControllerBase
     /// <param name="contractId">ID del contrato</param>
     /// <returns>Resumen de facturas (totales, pagadas, pendientes, vencidas)</returns>
     [HttpGet("summary/{contractId}")]
-    public async Task<IActionResult> GetInvoiceSummaryByContract(string contractId)
+    public async Task<IActionResult> GetInvoiceSummaryByContract(int contractId)
     {
         try
         {

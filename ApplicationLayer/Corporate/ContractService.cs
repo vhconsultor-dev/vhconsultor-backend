@@ -31,7 +31,7 @@ public class ContractService
     /// <summary>
     /// Crea un nuevo contract
     /// </summary>
-    public async Task<string> CreateContractAsync(CreateContractRequest request)
+    public async Task<int> CreateContractAsync(CreateContractRequest request)
     {
         return await _createContractCommand.ExecuteAsync(request);
     }
@@ -39,7 +39,7 @@ public class ContractService
     /// <summary>
     /// Actualiza un contract existente
     /// </summary>
-    public async Task<bool> UpdateContractAsync(string contractId, UpdateContractRequest request)
+    public async Task<bool> UpdateContractAsync(int contractId, UpdateContractRequest request)
     {
         return await _updateContractCommand.ExecuteAsync(contractId, request);
     }
@@ -47,7 +47,7 @@ public class ContractService
     /// <summary>
     /// Elimina (soft delete) un contract
     /// </summary>
-    public async Task<bool> DeleteContractAsync(string contractId, string? deletedBy = null)
+    public async Task<bool> DeleteContractAsync(int contractId, string? deletedBy = null)
     {
         return await _deleteContractCommand.ExecuteAsync(contractId, deletedBy);
     }
@@ -60,7 +60,7 @@ public class ContractService
     /// Obtiene contracts con filtros opcionales
     /// </summary>
     public async Task<IEnumerable<Contract>> GetContractsAsync(
-        string? contractId = null,
+        int? contractId = null,
         int? customerId = null,
         string? contractNumber = null,
         string? status = null,
@@ -79,7 +79,7 @@ public class ContractService
     /// <summary>
     /// Obtiene un contract por su ID
     /// </summary>
-    public async Task<Contract?> GetContractByIdAsync(string contractId)
+    public async Task<Contract?> GetContractByIdAsync(int contractId)
     {
         return await _contractQueryRepository.GetByIdAsync(contractId);
     }

@@ -10,9 +10,7 @@ public class CreateContractValidator : AbstractValidator<CreateContractRequest>
 {
     public CreateContractValidator()
     {
-        RuleFor(x => x.ContractId)
-            .NotEmpty().WithMessage("El ID del contrato es requerido")
-            .MaximumLength(50).WithMessage("El ID del contrato no puede exceder 50 caracteres");
+        // ContractId es auto-generado (IDENTITY), no se valida en la creación
 
         RuleFor(x => x.CustomerId)
             .GreaterThan(0).WithMessage("El ID del customer debe ser mayor a 0");

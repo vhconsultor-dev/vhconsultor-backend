@@ -5,7 +5,7 @@ namespace ModelLayer.Corporate.Entities;
 /// </summary>
 public class Contract
 {
-    public string ContractId { get; set; } = string.Empty;
+    public int ContractId { get; set; }
     public int CustomerId { get; set; }
     public string ContractNumber { get; set; } = string.Empty;
     public string? ClientLegalName { get; set; }

@@ -189,7 +189,7 @@ public class ContractServiceController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetContractServices(
         [FromQuery] int? contractServiceId = null,
-        [FromQuery] string? contractId = null,
+        [FromQuery] int? contractId = null,
         [FromQuery] int? serviceId = null,
         [FromQuery] bool? isActive = true)
     {
@@ -215,10 +215,9 @@ public class ContractServiceController : ControllerBase
                 return Ok(singleResponse);
             }
 
-            // Si se especifica contractId, obtener servicios del contrato
-            if (!string.IsNullOrEmpty(contractId))
+            if (contractId.HasValue)
             {
-                var contractServices = await _contractServiceService.GetContractServicesByContractIdAsync(contractId, isActive);
+                var contractServices = await _contractServiceService.GetContractServicesByContractIdAsync(contractId.Value, isActive);
                 
                 var contractResponse = ResponseStructure<IEnumerable<ModelLayer.Corporate.Entities.ContractService>>.Success(
                     contractServices, 
@@ -256,7 +255,7 @@ public class ContractServiceController : ControllerBase
     /// <param name="contractId">ID del contrato</param>
     /// <returns>Total de servicios del contrato</returns>
     [HttpGet("total/{contractId}")]
-    public async Task<IActionResult> GetContractTotal(string contractId)
+    public async Task<IActionResult> GetContractTotal(int contractId)
     {
         try
         {

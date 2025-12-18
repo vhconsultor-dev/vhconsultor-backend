@@ -25,23 +25,19 @@ public class GenerateInvoicesCommand
     public async Task<GenerateInvoicesResponse> ExecuteAsync(GenerateInvoicesRequest request)
     {
         // 1. Obtener contrato con sus servicios
-        // Convertir ContractId a string para evitar problemas de conversión
-        string contractIdStr = request.ContractId?.ToString() ?? string.Empty;
+        int contractId = request.ContractId;
         
         // Buscar el contrato sin tracking para evitar problemas de conversión en relaciones
         var contract = await _context.Contracts
-            .AsNoTracking() // No trackear para evitar problemas de conversión
-            .FirstOrDefaultAsync(c => c.ContractId == contractIdStr);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.ContractId == contractId);
 
         if (contract == null)
-            throw new KeyNotFoundException($"Contrato con ID {request.ContractId} no encontrado");
-        
-        // Asegurar que contractIdStr sea el valor correcto del contrato encontrado (convertido a string)
-        contractIdStr = contract.ContractId?.ToString() ?? contractIdStr;
+            throw new KeyNotFoundException($"Contrato con ID {contractId} no encontrado");
 
         // 2. Verificar si ya existen facturas
         var existingInvoices = await _context.Invoices
-            .Where(i => i.ContractId == contractIdStr)
+            .Where(i => i.ContractId == contractId)
             .ToListAsync();
 
         if (existingInvoices.Any())
@@ -56,11 +52,11 @@ public class GenerateInvoicesCommand
         }
 
         // 3. Validar campos requeridos
-        await ValidateContractForInvoiceGenerationAsync(contract, contractIdStr);
+        await ValidateContractForInvoiceGenerationAsync(contract, contractId);
 
         // 4. Obtener servicios del contrato
         var contractServices = await _context.ContractServices
-            .Where(cs => cs.ContractId == contractIdStr && cs.IsActive)
+            .Where(cs => cs.ContractId == contractId && cs.IsActive)
             .OrderBy(cs => cs.ServiceOrder)
             .ToListAsync();
 
@@ -110,7 +106,7 @@ public class GenerateInvoicesCommand
             // Crear factura
             var invoice = new Invoice
             {
-                ContractId = contractIdStr, // Usar el string convertido explícitamente
+                ContractId = contractId,
                 InvoiceNumber = invoiceNumber,
                 InvoiceDate = invoiceDate,
                 DueDate = dueDate,
@@ -133,11 +129,10 @@ public class GenerateInvoicesCommand
         }
 
         // 9. Guardar todas las facturas
-        // Asegurar que cada invoice tenga ContractId como string explícitamente
+        // Asegurar que cada invoice tenga ContractId correctamente asignado
         foreach (var invoice in invoices)
         {
-            // Forzar ContractId a string para evitar problemas de conversión
-            invoice.ContractId = contractIdStr;
+            invoice.ContractId = contractId;
             // NO establecer la relación Contract para evitar que EF intente convertir tipos
             invoice.Contract = null;
         }
@@ -155,7 +150,7 @@ public class GenerateInvoicesCommand
         };
     }
 
-    private async Task ValidateContractForInvoiceGenerationAsync(Contract contract, string contractIdStr)
+    private async Task ValidateContractForInvoiceGenerationAsync(Contract contract, int contractId)
     {
         var errors = new List<string>();
 
@@ -174,7 +169,7 @@ public class GenerateInvoicesCommand
         if (!contract.FeeAmount.HasValue)
         {
             var hasActiveServices = await _context.ContractServices
-                .AnyAsync(cs => cs.ContractId == contractIdStr && cs.IsActive && cs.FinalPrice.HasValue);
+                .AnyAsync(cs => cs.ContractId == contractId && cs.IsActive && cs.FinalPrice.HasValue);
             
             if (!hasActiveServices)
                 errors.Add("El contrato debe tener FeeAmount o ContractServices activos con FinalPrice");
@@ -321,7 +316,7 @@ public class GenerateInvoicesCommand
 /// </summary>
 public class GenerateInvoicesRequest
 {
-    public string ContractId { get; set; } = string.Empty;
+    public int ContractId { get; set; }
 }
 
 /// <summary>

@@ -47,18 +47,10 @@ public class ContractController : ControllerBase
 
         try
         {
-            // Verificar si ya existe un contrato con el mismo ID
-            var existingContract = await _contractService.GetContractByIdAsync(request.ContractId);
-            if (existingContract != null)
-            {
-                var response = ResponseStructure<object>.ValidationError(
-                    $"Ya existe un contrato con el ID {request.ContractId}");
-                return BadRequest(response);
-            }
-
+            // ContractId es auto-generado (IDENTITY), no se valida existencia previa
             var contractId = await _contractService.CreateContractAsync(request);
             
-            var successResponse = ResponseStructure<string>.Success(
+            var successResponse = ResponseStructure<int>.Success(
                 contractId, 
                 "Contrato creado exitosamente");
             
@@ -84,7 +76,7 @@ public class ContractController : ControllerBase
     /// <param name="request">Datos actualizados del contrato</param>
     /// <returns>Resultado de la operación</returns>
     [HttpPut("{contractId}")]
-    public async Task<IActionResult> UpdateContract(string contractId, [FromBody] UpdateContractRequest request)
+    public async Task<IActionResult> UpdateContract(int contractId, [FromBody] UpdateContractRequest request)
     {
         // Validación usando FluentValidation
         var validationResult = await _validationService.ValidateAsync(request);
@@ -144,7 +136,7 @@ public class ContractController : ControllerBase
     /// <param name="deletedBy">Usuario que elimina (opcional)</param>
     /// <returns>Resultado de la operación</returns>
     [HttpDelete("{contractId}")]
-    public async Task<IActionResult> DeleteContract(string contractId, [FromQuery] string? deletedBy = null)
+    public async Task<IActionResult> DeleteContract(int contractId, [FromQuery] string? deletedBy = null)
     {
         try
         {
@@ -204,7 +196,7 @@ public class ContractController : ControllerBase
     /// <returns>Lista de contracts que coinciden con los criterios</returns>
     [HttpGet]
     public async Task<IActionResult> GetContracts(
-        [FromQuery] string? contractId = null,
+        [FromQuery] int? contractId = null,
         [FromQuery] int? customerId = null,
         [FromQuery] string? contractNumber = null,
         [FromQuery] string? status = null,
@@ -218,9 +210,9 @@ public class ContractController : ControllerBase
         try
         {
             // Si se especifica ID, devolver solo ese contrato
-            if (!string.IsNullOrEmpty(contractId))
+            if (contractId.HasValue)
             {
-                var contract = await _contractService.GetContractByIdAsync(contractId);
+                var contract = await _contractService.GetContractByIdAsync(contractId.Value);
                 
                 if (contract == null)
                 {
