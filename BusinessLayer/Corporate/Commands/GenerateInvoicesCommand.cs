@@ -54,6 +54,16 @@ public class GenerateInvoicesCommand
         // 3. Validar campos requeridos
         await ValidateContractForInvoiceGenerationAsync(contract, contractId);
 
+        // 3.5. Validar coherencia entre frecuencia y duración del contrato
+        int contractMonths = CalculateContractMonths(contract.StartDate!.Value, contract.EndDate!.Value);
+        int monthsInFrequency = GetMonthsForFrequency(contract.PaymentFrequency!);
+        
+        if (monthsInFrequency > contractMonths)
+        {
+            // Advertir pero permitir: se generará solo 1 factura
+            // Esto es válido para contratos cortos con frecuencia larga
+        }
+
         // 4. Obtener servicios del contrato
         var contractServices = await _context.ContractServices
             .Where(cs => cs.ContractId == contractId && cs.IsActive)
@@ -75,7 +85,11 @@ public class GenerateInvoicesCommand
         );
 
         if (numberOfInvoices <= 0)
-            throw new InvalidOperationException("No se pueden generar facturas con el período especificado");
+        {
+            throw new InvalidOperationException(
+                $"No se pueden generar facturas. La frecuencia de pago ({monthsInFrequency} meses) es mayor que la duración del contrato ({contractMonths} meses). " +
+                $"Ajuste la frecuencia o la duración del contrato.");
+        }
 
         // 7. Calcular monto por factura
         decimal amountPerInvoice = totalAmount / numberOfInvoices;
@@ -140,10 +154,17 @@ public class GenerateInvoicesCommand
         await _context.Invoices.AddRangeAsync(invoices);
         await _context.SaveChangesAsync();
 
+        // Construir mensaje informativo
+        string message = $"Se generaron {numberOfInvoices} factura(s) exitosamente";
+        if (numberOfInvoices == 1 && monthsInFrequency > contractMonths)
+        {
+            message += $". Nota: Se generó 1 factura porque la frecuencia de pago ({monthsInFrequency} meses) es mayor que la duración del contrato ({contractMonths} meses)";
+        }
+
         return new GenerateInvoicesResponse
         {
             Success = true,
-            Message = $"Se generaron {numberOfInvoices} facturas exitosamente",
+            Message = message,
             InvoicesGenerated = numberOfInvoices,
             TotalAmount = totalAmount,
             InvoiceIds = invoices.Select(i => i.InvoiceId).ToList()
@@ -179,22 +200,46 @@ public class GenerateInvoicesCommand
             throw new InvalidOperationException($"Validación fallida: {string.Join(", ", errors)}");
     }
 
-    private int CalculateNumberOfInvoices(DateTime startDate, DateTime endDate, string paymentFrequency)
+    /// <summary>
+    /// Calcula el número de meses entre dos fechas de forma precisa
+    /// </summary>
+    private int CalculateContractMonths(DateTime startDate, DateTime endDate)
     {
         int months = ((endDate.Year - startDate.Year) * 12) + (endDate.Month - startDate.Month);
         
-        // Ajustar si el día final es mayor o igual al día inicial
+        // Si el día final es mayor o igual al día inicial, contar ese mes completo
         if (endDate.Day >= startDate.Day)
             months++;
+        
+        return months;
+    }
 
-        return paymentFrequency switch
+    /// <summary>
+    /// Calcula cuántas facturas se deben generar según la frecuencia de pago
+    /// </summary>
+    private int CalculateNumberOfInvoices(DateTime startDate, DateTime endDate, string paymentFrequency)
+    {
+        int contractMonths = CalculateContractMonths(startDate, endDate);
+        int monthsInFrequency = GetMonthsForFrequency(paymentFrequency);
+
+        // Si la frecuencia es mayor que la duración del contrato, solo generar 1 factura
+        if (monthsInFrequency > contractMonths)
         {
-            "Monthly" => months,
-            "Quarterly" => (int)Math.Ceiling(months / 3.0),
-            "SemiAnnual" => (int)Math.Ceiling(months / 6.0),
-            "Annual" => (int)Math.Ceiling(months / 12.0),
+            return 1; // Una sola factura al inicio
+        }
+
+        // Calcular número de facturas según la frecuencia
+        int numberOfInvoices = paymentFrequency switch
+        {
+            "Monthly" => contractMonths,
+            "Quarterly" => (int)Math.Ceiling(contractMonths / 3.0),
+            "SemiAnnual" => (int)Math.Ceiling(contractMonths / 6.0),
+            "Annual" => (int)Math.Ceiling(contractMonths / 12.0),
             _ => throw new ArgumentException($"Frecuencia de pago no válida: {paymentFrequency}")
         };
+
+        // Asegurar que siempre sea al menos 1 factura
+        return Math.Max(1, numberOfInvoices);
     }
 
     private int GetMonthsForFrequency(string paymentFrequency)
