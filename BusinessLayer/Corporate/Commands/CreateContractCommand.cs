@@ -1,6 +1,7 @@
 using ModelLayer;
 using ModelLayer.Corporate.Entities;
 using ModelLayer.Shared;
+using Microsoft.EntityFrameworkCore;
 
 namespace BusinessLayer.Corporate.Commands;
 
@@ -23,11 +24,35 @@ public class CreateContractCommand
     /// <returns>ID del contrato creado</returns>
     public async Task<int> ExecuteAsync(CreateContractRequest request)
     {
+        // Generar ContractNumber automáticamente si no se proporciona
+        string contractNumber;
+        if (string.IsNullOrWhiteSpace(request.ContractNumber))
+        {
+            // Generar automáticamente
+            contractNumber = await GenerateContractNumberAsync();
+        }
+        else
+        {
+            // Usar el proporcionado, pero verificar que sea único
+            bool exists = await _context.Contracts
+                .AnyAsync(c => c.ContractNumber == request.ContractNumber);
+            
+            if (exists)
+            {
+                // Si el número proporcionado ya existe, generar uno nuevo automáticamente
+                contractNumber = await GenerateContractNumberAsync();
+            }
+            else
+            {
+                contractNumber = request.ContractNumber;
+            }
+        }
+
         var contract = new Contract
         {
             // ContractId es auto-generado (IDENTITY), no se asigna
             CustomerId = request.CustomerId,
-            ContractNumber = request.ContractNumber,
+            ContractNumber = contractNumber,
             ClientLegalName = request.ClientLegalName,
             ClientTaxId = request.ClientTaxId,
             ClientNationality = request.ClientNationality,
@@ -70,6 +95,30 @@ public class CreateContractCommand
         
         return contract.ContractId; // Retorna el ID auto-generado
     }
+
+    /// <summary>
+    /// Genera un número de contrato único en formato CON-{YEAR}-{CONSECUTIVE}
+    /// </summary>
+    private async Task<string> GenerateContractNumberAsync()
+    {
+        var year = DateTime.Now.Year;
+        var lastContract = await _context.Contracts
+            .Where(c => c.ContractNumber.StartsWith($"CON-{year}-"))
+            .OrderByDescending(c => c.ContractNumber)
+            .FirstOrDefaultAsync();
+
+        int nextNumber = 1;
+        if (lastContract != null)
+        {
+            var parts = lastContract.ContractNumber.Split('-');
+            if (parts.Length == 3 && int.TryParse(parts[2], out int lastNumber))
+            {
+                nextNumber = lastNumber + 1;
+            }
+        }
+
+        return $"CON-{year}-{nextNumber:D3}";
+    }
 }
 
 /// <summary>
@@ -79,7 +128,8 @@ public class CreateContractRequest
 {
     // ContractId es auto-generado (IDENTITY), no se incluye en el request
     public int CustomerId { get; set; }
-    public string ContractNumber { get; set; } = string.Empty;
+    // ContractNumber es opcional: si no se proporciona, se genera automáticamente
+    public string? ContractNumber { get; set; }
     public string? ClientLegalName { get; set; }
     public string? ClientTaxId { get; set; }
     public string? ClientNationality { get; set; }

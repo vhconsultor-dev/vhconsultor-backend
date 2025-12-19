@@ -15,9 +15,10 @@ public class CreateContractValidator : AbstractValidator<CreateContractRequest>
         RuleFor(x => x.CustomerId)
             .GreaterThan(0).WithMessage("El ID del customer debe ser mayor a 0");
 
+        // ContractNumber es opcional: si se proporciona, validar formato
         RuleFor(x => x.ContractNumber)
-            .NotEmpty().WithMessage("El número de contrato es requerido")
-            .MaximumLength(100).WithMessage("El número de contrato no puede exceder 100 caracteres");
+            .MaximumLength(100).WithMessage("El número de contrato no puede exceder 100 caracteres")
+            .When(x => !string.IsNullOrEmpty(x.ContractNumber));
 
         RuleFor(x => x.ClientEmail)
             .EmailAddress().WithMessage("El email del cliente no es válido")
