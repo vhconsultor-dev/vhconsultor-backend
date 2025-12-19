@@ -83,10 +83,23 @@ public class InvoiceController : ControllerBase
             var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
             return BadRequest(errorResponse);
         }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            // Capturar el inner exception para más detalles
+            var innerMessage = ex.InnerException?.Message ?? ex.Message;
+            var fullMessage = $"Error al guardar en la base de datos: {innerMessage}";
+            
+            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            return StatusCode(500, errorResponse);
+        }
         catch (Exception ex)
         {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"Error al generar facturas: {ex.Message}", 500);
+            var innerMessage = ex.InnerException?.Message ?? string.Empty;
+            var fullMessage = $"Error al generar facturas: {ex.Message}";
+            if (!string.IsNullOrEmpty(innerMessage))
+                fullMessage += $" | Inner: {innerMessage}";
+                
+            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
             return StatusCode(500, errorResponse);
         }
     }
