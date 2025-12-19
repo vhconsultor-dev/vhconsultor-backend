@@ -99,14 +99,14 @@ public class GenerateInvoicesCommand
         DateTime currentDate = contract.StartDate!.Value;
         int monthsIncrement = GetMonthsForFrequency(contract.PaymentFrequency!);
 
+        // Generar todos los números de factura de una vez para evitar duplicados
+        var invoiceNumbers = await GenerateInvoiceNumbersAsync(numberOfInvoices);
+
         for (int i = 0; i < numberOfInvoices; i++)
         {
             // Calcular fechas
             DateTime invoiceDate = i == 0 ? currentDate : currentDate.AddMonths(i * monthsIncrement);
             DateTime dueDate = CalculateDueDate(invoiceDate, contract.PaymentDay);
-
-            // Generar número de factura
-            string invoiceNumber = await GenerateInvoiceNumberAsync();
 
             // Ajustar última factura por redondeo
             decimal invoiceAmount = amountPerInvoice;
@@ -121,7 +121,7 @@ public class GenerateInvoicesCommand
             var invoice = new Invoice
             {
                 ContractId = contractId,
-                InvoiceNumber = invoiceNumber,
+                InvoiceNumber = invoiceNumbers[i], // Usar número pre-generado
                 InvoiceDate = invoiceDate,
                 DueDate = dueDate,
                 SubTotal = invoiceAmount,
@@ -271,6 +271,43 @@ public class GenerateInvoicesCommand
         return dueDate;
     }
 
+    /// <summary>
+    /// Genera múltiples números de factura únicos secuencialmente
+    /// </summary>
+    private async Task<List<string>> GenerateInvoiceNumbersAsync(int count)
+    {
+        var year = DateTime.Now.Year;
+        
+        // Obtener el último número usado del año actual
+        var lastInvoice = await _context.Invoices
+            .Where(i => i.InvoiceNumber.StartsWith($"INV-{year}-"))
+            .OrderByDescending(i => i.InvoiceNumber)
+            .FirstOrDefaultAsync();
+
+        int nextNumber = 1;
+        if (lastInvoice != null)
+        {
+            var parts = lastInvoice.InvoiceNumber.Split('-');
+            if (parts.Length == 3 && int.TryParse(parts[2], out int lastNumber))
+            {
+                nextNumber = lastNumber + 1;
+            }
+        }
+
+        // Generar todos los números de factura secuencialmente
+        var invoiceNumbers = new List<string>();
+        for (int i = 0; i < count; i++)
+        {
+            invoiceNumbers.Add($"INV-{year}-{(nextNumber + i):D3}");
+        }
+
+        return invoiceNumbers;
+    }
+
+    /// <summary>
+    /// Genera un número de factura único en formato INV-{YEAR}-{CONSECUTIVE}
+    /// (OBSOLETO: Usar GenerateInvoiceNumbersAsync para múltiples facturas)
+    /// </summary>
     private async Task<string> GenerateInvoiceNumberAsync()
     {
         var year = DateTime.Now.Year;
