@@ -145,7 +145,7 @@ public class ContractController : ControllerBase
             if (existingContract == null)
             {
                 var response = ResponseStructure<object>.Error(
-                    $"No se encontró el contrato con ID {contractId}", 
+                    $"Contract with ID {contractId} not found", 
                     404);
                 return NotFound(response);
             }
@@ -156,21 +156,28 @@ public class ContractController : ControllerBase
             {
                 var successResponse = ResponseStructure<bool>.Success(
                     true, 
-                    "Contrato cancelado exitosamente");
+                    $"Contract '{existingContract.ContractNumber}' has been successfully cancelled");
                 return Ok(successResponse);
             }
             else
             {
                 var errorResponse = ResponseStructure<object>.Error(
-                    "No se pudo cancelar el contrato", 
+                    "Unable to cancel the contract", 
                     500);
                 return StatusCode(500, errorResponse);
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            // Error de validación de negocio (ej: tiene facturas asociadas)
+            var errorResponse = ResponseStructure<object>.ValidationError(
+                ex.Message);
+            return BadRequest(errorResponse);
+        }
         catch (Exception ex)
         {
             var errorResponse = ResponseStructure<object>.Error(
-                $"Error al cancelar el contrato: {ex.Message}", 
+                $"An unexpected error occurred while cancelling the contract: {ex.Message}", 
                 500);
             return StatusCode(500, errorResponse);
         }

@@ -162,7 +162,7 @@ public class CustomerController : ControllerBase
             if (existingCustomer == null)
             {
                 var response = ResponseStructure<object>.Error(
-                    $"No se encontró el cliente con ID {customerId}", 
+                    $"Customer with ID {customerId} not found", 
                     404);
                 return NotFound(response);
             }
@@ -173,13 +173,13 @@ public class CustomerController : ControllerBase
             {
                 var successResponse = ResponseStructure<bool>.Success(
                     true, 
-                    $"Cliente '{existingCustomer.CompanyName}' eliminado exitosamente");
+                    $"Customer '{existingCustomer.CompanyName}' has been successfully deleted");
                 return Ok(successResponse);
             }
             else
             {
                 var errorResponse = ResponseStructure<object>.Error(
-                    "No se pudo eliminar el cliente", 
+                    "Unable to delete the customer", 
                     500);
                 return StatusCode(500, errorResponse);
             }
@@ -194,7 +194,7 @@ public class CustomerController : ControllerBase
         catch (Exception ex)
         {
             var errorResponse = ResponseStructure<object>.Error(
-                $"Error inesperado al eliminar el cliente: {ex.Message}", 
+                $"An unexpected error occurred while deleting the customer: {ex.Message}", 
                 500);
             return StatusCode(500, errorResponse);
         }

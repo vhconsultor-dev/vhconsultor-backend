@@ -39,11 +39,11 @@ public class DeleteCustomerCommand
         {
             // Crear mensaje amigable con los números de contratos
             var contractList = string.Join(", ", contracts);
-            var contractWord = contracts.Count == 1 ? "contrato" : "contratos";
+            var contractWord = contracts.Count == 1 ? "contract" : "contracts";
             
             throw new InvalidOperationException(
-                $"No se puede eliminar el cliente porque tiene {contracts.Count} {contractWord} asociado(s): {contractList}. " +
-                "Por favor, elimine o cancele estos contratos antes de eliminar el cliente.");
+                $"Cannot delete the customer because it has {contracts.Count} associated {contractWord}: {contractList}. " +
+                "Please delete or cancel these contracts first before deleting the customer.");
         }
 
         // Soft delete: marcar como inactivo
