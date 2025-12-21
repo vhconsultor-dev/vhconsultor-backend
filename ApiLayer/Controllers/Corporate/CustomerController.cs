@@ -162,7 +162,7 @@ public class CustomerController : ControllerBase
             if (existingCustomer == null)
             {
                 var response = ResponseStructure<object>.Error(
-                    $"No se encontró el customer con ID {customerId}", 
+                    $"No se encontró el cliente con ID {customerId}", 
                     404);
                 return NotFound(response);
             }
@@ -173,21 +173,28 @@ public class CustomerController : ControllerBase
             {
                 var successResponse = ResponseStructure<bool>.Success(
                     true, 
-                    "Customer eliminado exitosamente");
+                    $"Cliente '{existingCustomer.CompanyName}' eliminado exitosamente");
                 return Ok(successResponse);
             }
             else
             {
                 var errorResponse = ResponseStructure<object>.Error(
-                    "No se pudo eliminar el customer", 
+                    "No se pudo eliminar el cliente", 
                     500);
                 return StatusCode(500, errorResponse);
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            // Error de validación de negocio (ej: tiene contratos asociados)
+            var errorResponse = ResponseStructure<object>.ValidationError(
+                ex.Message);
+            return BadRequest(errorResponse);
+        }
         catch (Exception ex)
         {
             var errorResponse = ResponseStructure<object>.Error(
-                $"Error al eliminar el Customer: {ex.Message}", 
+                $"Error inesperado al eliminar el cliente: {ex.Message}", 
                 500);
             return StatusCode(500, errorResponse);
         }
