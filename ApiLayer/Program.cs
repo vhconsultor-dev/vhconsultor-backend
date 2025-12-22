@@ -177,6 +177,7 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateContractServic
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteContractServiceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.GenerateInvoicesCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.MarkInvoiceAsPaidCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteInvoicesCommand>();
 // Queries
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CustomerQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CountryQueryRepository>();

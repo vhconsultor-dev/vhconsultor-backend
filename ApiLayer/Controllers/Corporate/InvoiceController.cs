@@ -319,5 +319,88 @@ public class InvoiceController : ControllerBase
     }
 
     #endregion
+
+    #region DELETE - Delete Invoices
+
+    /// <summary>
+    /// Deletes a single invoice or all invoices from a contract
+    /// </summary>
+    /// <param name="invoiceId">ID of the specific invoice to delete (optional)</param>
+    /// <param name="contractId">ID of the contract to delete all invoices from (optional)</param>
+    /// <returns>Result of the operation</returns>
+    /// <remarks>
+    /// You must provide either invoiceId OR contractId, not both.
+    /// - invoiceId: Deletes a specific invoice
+    /// - contractId: Deletes ALL invoices from a contract
+    /// 
+    /// Validations:
+    /// - Invoice(s) must not be paid (PaymentStatus != "Paid")
+    /// - Invoice(s) must not have attachments
+    /// </remarks>
+    [HttpDelete]
+    public async Task<IActionResult> DeleteInvoices(
+        [FromQuery] int? invoiceId = null,
+        [FromQuery] int? contractId = null)
+    {
+        try
+        {
+            // Validar que se proporcione uno y solo uno de los parámetros
+            if (!invoiceId.HasValue && !contractId.HasValue)
+            {
+                var validationResponse = ResponseStructure<object>.ValidationError(
+                    "You must provide either 'invoiceId' to delete a specific invoice or 'contractId' to delete all invoices from a contract");
+                return BadRequest(validationResponse);
+            }
+
+            if (invoiceId.HasValue && contractId.HasValue)
+            {
+                var validationResponse = ResponseStructure<object>.ValidationError(
+                    "You cannot provide both 'invoiceId' and 'contractId'. Please provide only one parameter");
+                return BadRequest(validationResponse);
+            }
+
+            DeleteInvoicesResponse result;
+
+            // Eliminar una factura específica
+            if (invoiceId.HasValue)
+            {
+                result = await _invoiceService.DeleteSingleInvoiceAsync(invoiceId.Value);
+            }
+            // Eliminar todas las facturas de un contrato
+            else
+            {
+                result = await _invoiceService.DeleteAllContractInvoicesAsync(contractId!.Value);
+            }
+
+            var successResponse = ResponseStructure<DeleteInvoicesResponse>.Success(
+                result,
+                result.Message);
+
+            return Ok(successResponse);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(
+                ex.Message,
+                404);
+            return NotFound(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Error de validación de negocio (factura pagada o con adjuntos)
+            var errorResponse = ResponseStructure<object>.ValidationError(
+                ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(
+                $"An unexpected error occurred while deleting invoice(s): {ex.Message}",
+                500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
 }
 

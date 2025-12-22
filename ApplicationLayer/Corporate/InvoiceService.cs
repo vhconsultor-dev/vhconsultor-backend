@@ -11,15 +11,18 @@ public class InvoiceService
 {
     private readonly GenerateInvoicesCommand _generateInvoicesCommand;
     private readonly MarkInvoiceAsPaidCommand _markInvoiceAsPaidCommand;
+    private readonly DeleteInvoicesCommand _deleteInvoicesCommand;
     private readonly InvoiceQueryRepository _invoiceQueryRepository;
 
     public InvoiceService(
         GenerateInvoicesCommand generateInvoicesCommand,
         MarkInvoiceAsPaidCommand markInvoiceAsPaidCommand,
+        DeleteInvoicesCommand deleteInvoicesCommand,
         InvoiceQueryRepository invoiceQueryRepository)
     {
         _generateInvoicesCommand = generateInvoicesCommand;
         _markInvoiceAsPaidCommand = markInvoiceAsPaidCommand;
+        _deleteInvoicesCommand = deleteInvoicesCommand;
         _invoiceQueryRepository = invoiceQueryRepository;
     }
 
@@ -39,6 +42,22 @@ public class InvoiceService
     public async Task<MarkInvoiceAsPaidResponse> MarkInvoiceAsPaidAsync(int invoiceId, MarkInvoiceAsPaidRequest request, int userId)
     {
         return await _markInvoiceAsPaidCommand.ExecuteAsync(invoiceId, request, userId);
+    }
+
+    /// <summary>
+    /// Elimina una factura específica
+    /// </summary>
+    public async Task<DeleteInvoicesResponse> DeleteSingleInvoiceAsync(int invoiceId)
+    {
+        return await _deleteInvoicesCommand.DeleteSingleInvoiceAsync(invoiceId);
+    }
+
+    /// <summary>
+    /// Elimina todas las facturas de un contrato
+    /// </summary>
+    public async Task<DeleteInvoicesResponse> DeleteAllContractInvoicesAsync(int contractId)
+    {
+        return await _deleteInvoicesCommand.DeleteAllContractInvoicesAsync(contractId);
     }
 
     #endregion
