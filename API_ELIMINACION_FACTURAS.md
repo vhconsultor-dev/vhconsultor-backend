@@ -1,16 +1,14 @@
 # API: Invoice Deletion
 
-## Endpoints
+## Endpoint
 
-### Delete Single Invoice
 ```
-DELETE https://vh-apimanagement.azure-api.net/corporate-vh/api/corporate/Invoice?invoiceId={invoiceId}
+DELETE https://vh-apimanagement.azure-api.net/corporate-vh/api/corporate/Invoice
 ```
 
-### Delete All Contract Invoices
-```
-DELETE https://vh-apimanagement.azure-api.net/corporate-vh/api/corporate/Invoice?contractId={contractId}
-```
+This single endpoint supports two modes of operation based on query parameters:
+- **Single Invoice Deletion**: Use `?invoiceId={invoiceId}`
+- **Bulk Deletion (All Contract Invoices)**: Use `?contractId={contractId}`
 
 ## Description
 
@@ -58,6 +56,8 @@ DELETE https://vh-apimanagement.azure-api.net/corporate-vh/api/corporate/Invoice
 ```
 DELETE https://vh-apimanagement.azure-api.net/corporate-vh/api/corporate/Invoice?contractId=45
 ```
+
+**Important Security Note:** When using `contractId`, the system **ONLY** deletes invoices that belong to that specific contract. The query uses `WHERE ContractId = @contractId`, ensuring no invoices from other contracts can be affected.
 
 ---
 
@@ -366,22 +366,31 @@ All responses follow this standard structure:
 
 #### For Bulk Deletion (All Contract Invoices):
 
-1. **Paid Invoices Check**
-   - Validates ALL invoices in the contract
+1. **Contract-Specific Query (Security Validation)**
+   - **CRITICAL SECURITY FEATURE**: The database query explicitly filters by contract ID
+   - Code implementation: `.Where(i => i.ContractId == contractId)`
+   - **ONLY** invoices where `ContractId` exactly matches the provided `contractId` are retrieved
+   - **ZERO** invoices from other contracts can be accessed or deleted
+   - This is enforced at the database query level, not just application logic
+   - **Verified**: The query uses parameterized SQL to prevent SQL injection
+   - This ensures complete isolation and security - you can only delete invoices from the contract you specify
+
+2. **Paid Invoices Check**
+   - Validates ALL invoices in the specified contract
    - If ANY invoice is paid, returns `400 Bad Request`
-   - Lists ALL paid invoice numbers
+   - Lists ALL paid invoice numbers from that contract only
    - NO invoices are deleted if any are paid
 
-2. **Attachments Check**
-   - Validates ALL invoices in the contract
+3. **Attachments Check**
+   - Validates ALL invoices in the specified contract
    - If ANY invoice has attachments, returns `400 Bad Request`
-   - Lists ALL invoices with attachments and their counts
+   - Lists ALL invoices with attachments and their counts (from that contract only)
    - NO invoices are deleted if any have attachments
 
-3. **All-or-Nothing**
-   - Either ALL invoices pass validation and are deleted
+4. **All-or-Nothing**
+   - Either ALL invoices from the contract pass validation and are deleted
    - Or NO invoices are deleted if any fail validation
-   - This ensures data consistency
+   - This ensures data consistency within the contract scope
 
 ### Input Validations
 
@@ -435,6 +444,8 @@ DELETE https://vh-apimanagement.azure-api.net/corporate-vh/api/corporate/Invoice
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
+**Note:** This deletes only the specific invoice with ID 123, regardless of which contract it belongs to.
+
 **Response (200 OK):**
 ```json
 {
@@ -460,6 +471,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 DELETE https://vh-apimanagement.azure-api.net/corporate-vh/api/corporate/Invoice?contractId=45
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
+
+**Security Note:** This operation **ONLY** affects invoices where `ContractId = 45`. The database query explicitly filters by contract ID, ensuring no invoices from other contracts can be deleted.
 
 **Response (200 OK):**
 ```json
@@ -699,13 +712,22 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 4. **Bulk Deletion Safety**: When deleting all contract invoices, the system validates ALL invoices first. If ANY fail validation, NO invoices are deleted.
 
-5. **User-Friendly Messages**: All error messages provide specific details about what prevented the deletion and how to resolve it.
+5. **Contract Isolation (Security)**: 
+   - **CRITICAL**: When using `contractId`, the system uses a parameterized database query: `WHERE ContractId = @contractId`
+   - **ONLY** invoices belonging to the specified contract are retrieved and can be deleted
+   - **ZERO** invoices from other contracts can be affected
+   - This is enforced at the database query level using Entity Framework Core's parameterized queries
+   - The implementation code: `.Where(i => i.ContractId == contractId)` ensures complete isolation
+   - **Verified**: SQL injection is prevented through parameterized queries
+   - You can be confident that only invoices from the contract you specify will be affected
 
-6. **Authentication Required**: This endpoint requires a valid JWT token. Without authentication, it will return `401 Unauthorized`.
+6. **User-Friendly Messages**: All error messages provide specific details about what prevented the deletion and how to resolve it.
 
-7. **Timezone**: All timestamps are in Costa Rica timezone (UTC-6).
+7. **Authentication Required**: This endpoint requires a valid JWT token. Without authentication, it will return `401 Unauthorized`.
 
-8. **Cascade Behavior**: Invoice items are automatically deleted with their parent invoice, but attachments must be manually deleted first.
+8. **Timezone**: All timestamps are in Costa Rica timezone (UTC-6).
+
+9. **Cascade Behavior**: Invoice items are automatically deleted with their parent invoice, but attachments must be manually deleted first.
 
 ---
 
