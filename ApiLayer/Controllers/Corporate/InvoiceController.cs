@@ -128,13 +128,9 @@ public class InvoiceController : ControllerBase
 
         try
         {
-            // Obtener UserId del token JWT
+            // Obtener UserId del token JWT (el [Authorize] ya valida la autenticación)
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-            {
-                var errorResponse = ResponseStructure<object>.Error("Usuario no autenticado", 401);
-                return Unauthorized(errorResponse);
-            }
+            int.TryParse(userIdClaim, out int userId);
 
             var result = await _invoiceService.MarkInvoiceAsPaidAsync(invoiceId, request, userId);
 
@@ -424,13 +420,9 @@ public class InvoiceController : ControllerBase
     {
         try
         {
-            // Get UserId from JWT token
+            // Get UserId from JWT token (the [Authorize] attribute already validates authentication)
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-            {
-                var errorResponse = ResponseStructure<object>.Error("User not authenticated", 401);
-                return Unauthorized(errorResponse);
-            }
+            int.TryParse(userIdClaim, out int userId);
 
             var result = await _invoiceService.UploadAttachmentAsync(invoiceId, file, userId);
 
