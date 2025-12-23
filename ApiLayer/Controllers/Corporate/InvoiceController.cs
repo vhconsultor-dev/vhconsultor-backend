@@ -150,10 +150,24 @@ public class InvoiceController : ControllerBase
             var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
             return BadRequest(errorResponse);
         }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            // Capturar el inner exception para más detalles
+            var innerMessage = ex.InnerException?.Message ?? ex.Message;
+            var fullMessage = $"Database error while marking invoice as paid. InvoiceId: {invoiceId}. Error: {innerMessage}";
+            
+            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            return StatusCode(500, errorResponse);
+        }
         catch (Exception ex)
         {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"Error al marcar factura como pagada: {ex.Message}", 500);
+            // Capturar el inner exception para más detalles
+            var innerMessage = ex.InnerException?.Message ?? string.Empty;
+            var fullMessage = $"Error al marcar factura como pagada. InvoiceId: {invoiceId}. Error: {ex.Message}";
+            if (!string.IsNullOrEmpty(innerMessage))
+                fullMessage += $" | Inner exception: {innerMessage}";
+            
+            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
             return StatusCode(500, errorResponse);
         }
     }

@@ -53,7 +53,24 @@ public class MarkInvoiceAsPaidCommand
         invoice.UpdatedAt = DateTimeService.GetCostaRicaNow();
         invoice.LastModifiedBy = userId.ToString();
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? ex.Message;
+            throw new InvalidOperationException(
+                $"Failed to save invoice payment status to database. Invoice: '{invoice.InvoiceNumber}' (ID: {invoiceId}), " +
+                $"PaymentMethodId: {request.PaymentMethodId}, PaidDate: {request.PaidDate?.ToString("yyyy-MM-dd") ?? "today"}. " +
+                $"Database error: {innerMessage}", ex);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"An unexpected error occurred while saving invoice payment status. Invoice: '{invoice.InvoiceNumber}' (ID: {invoiceId}). " +
+                $"Error: {ex.Message}", ex);
+        }
 
         return new MarkInvoiceAsPaidResponse
         {
