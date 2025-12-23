@@ -128,9 +128,24 @@ public class InvoiceController : ControllerBase
 
         try
         {
-            // Obtener UserId del token JWT (el [Authorize] ya valida la autenticación)
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int.TryParse(userIdClaim, out int userId);
+            // Obtener UserId: primero del request, si no del token JWT
+            int userId = 0;
+            
+            if (request.UserId.HasValue && request.UserId.Value > 0)
+            {
+                userId = request.UserId.Value;
+            }
+            else
+            {
+                // Intentar obtener del token JWT
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out userId) || userId <= 0)
+                {
+                    var errorResponse = ResponseStructure<object>.ValidationError(
+                        "User ID is required. Please provide 'userId' in the request body or ensure your authentication token includes a valid user ID.");
+                    return BadRequest(errorResponse);
+                }
+            }
 
             var result = await _invoiceService.MarkInvoiceAsPaidAsync(invoiceId, request, userId);
 
@@ -420,6 +435,7 @@ public class InvoiceController : ControllerBase
     /// </summary>
     /// <param name="invoiceId">ID of the invoice</param>
     /// <param name="file">File to upload</param>
+    /// <param name="userId">User ID (optional, if not provided will try to get from JWT token)</param>
     /// <returns>Result of the upload operation</returns>
     /// <remarks>
     /// Allowed file types: PDF, JPG, JPEG, PNG, GIF, DOC, DOCX, XLS, XLSX, TXT, CSV
@@ -430,7 +446,7 @@ public class InvoiceController : ControllerBase
     [DisableRequestSizeLimit]
     [RequestFormLimits(MultipartBodyLengthLimit = 10485760)]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadAttachment(int invoiceId, [FromForm] IFormFile file)
+    public async Task<IActionResult> UploadAttachment(int invoiceId, [FromForm] IFormFile file, [FromQuery] int? userId = null)
     {
         try
         {
@@ -442,11 +458,26 @@ public class InvoiceController : ControllerBase
                 return BadRequest(validationResponse);
             }
 
-            // Get UserId from JWT token (the [Authorize] attribute already validates authentication)
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            int.TryParse(userIdClaim, out int userId);
+            // Obtener UserId: primero del query parameter, si no del token JWT
+            int finalUserId = 0;
+            
+            if (userId.HasValue && userId.Value > 0)
+            {
+                finalUserId = userId.Value;
+            }
+            else
+            {
+                // Intentar obtener del token JWT
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out finalUserId) || finalUserId <= 0)
+                {
+                    var errorResponse = ResponseStructure<object>.ValidationError(
+                        "User ID is required. Please provide 'userId' as a query parameter (?userId=123) or ensure your authentication token includes a valid user ID.");
+                    return BadRequest(errorResponse);
+                }
+            }
 
-            var result = await _invoiceService.UploadAttachmentAsync(invoiceId, file, userId);
+            var result = await _invoiceService.UploadAttachmentAsync(invoiceId, file, finalUserId);
 
             var successResponse = ResponseStructure<UploadInvoiceAttachmentResponse>.Success(
                 result,

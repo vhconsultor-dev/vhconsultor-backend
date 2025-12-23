@@ -31,6 +31,23 @@ public class MarkInvoiceAsPaidCommand
         if (invoice == null)
             throw new KeyNotFoundException($"Invoice with ID {invoiceId} not found");
 
+        // Validar userId
+        if (userId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Invalid user ID: {userId}. The user ID must be a valid positive integer.");
+        }
+
+        // Verificar que el usuario existe en la base de datos
+        var userExists = await _context.Users
+            .AnyAsync(u => u.UserId == userId);
+        
+        if (!userExists)
+        {
+            throw new InvalidOperationException(
+                $"User with ID {userId} does not exist in the database. Cannot mark invoice as paid.");
+        }
+
         // Validations
         if (invoice.PaymentStatus == "Paid")
             throw new InvalidOperationException($"Invoice '{invoice.InvoiceNumber}' is already marked as paid");
@@ -93,6 +110,7 @@ public class MarkInvoiceAsPaidRequest
     public string? PaymentReference { get; set; }
     public string? DepositNumber { get; set; }
     public string? TransferNumber { get; set; }
+    public int? UserId { get; set; } // Opcional: si no viene, se obtiene del token JWT
 }
 
 /// <summary>
