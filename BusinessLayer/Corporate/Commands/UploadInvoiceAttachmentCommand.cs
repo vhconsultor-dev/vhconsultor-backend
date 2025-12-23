@@ -88,6 +88,22 @@ public class UploadInvoiceAttachmentCommand
                     $"Invoice: '{invoice.InvoiceNumber}'. Error: {ex.Message}", ex);
             }
 
+            // Validate uploadedBy
+            if (uploadedBy <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Invalid user ID for upload. UploadedBy: {uploadedBy}. " +
+                    $"The user ID must be a valid positive integer.");
+            }
+
+            // Validate FileUrl length (max 500 characters)
+            if (fileUrl.Length > 500)
+            {
+                throw new InvalidOperationException(
+                    $"File URL exceeds maximum length of 500 characters. " +
+                    $"Current length: {fileUrl.Length}, URL: {fileUrl.Substring(0, 100)}...");
+            }
+
             // Create attachment record in database
             var attachment = new InvoiceAttachment
             {
@@ -103,10 +119,47 @@ public class UploadInvoiceAttachmentCommand
             {
                 await _context.SaveChangesAsync();
             }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+            {
+                // Capturar el inner exception para obtener detalles específicos de SQL Server
+                var innerMessage = ex.InnerException?.Message ?? ex.Message;
+                
+                var errorDetails = $"Failed to save attachment record to database. " +
+                    $"File: '{file.FileName}', InvoiceId: {invoiceId}, UploadedBy: {uploadedBy}, " +
+                    $"FileUrl length: {fileUrl.Length} characters. " +
+                    $"Database error: {innerMessage}";
+                
+                // Intentar obtener detalles adicionales de SqlException si está disponible
+                if (ex.InnerException != null)
+                {
+                    var innerType = ex.InnerException.GetType();
+                    if (innerType.Name == "SqlException")
+                    {
+                        try
+                        {
+                            var number = innerType.GetProperty("Number")?.GetValue(ex.InnerException);
+                            var state = innerType.GetProperty("State")?.GetValue(ex.InnerException);
+                            if (number != null)
+                            {
+                                errorDetails += $" | SQL Error Number: {number}";
+                                if (state != null)
+                                    errorDetails += $", SQL State: {state}";
+                            }
+                        }
+                        catch
+                        {
+                            // Si no podemos acceder a las propiedades, continuamos con el mensaje base
+                        }
+                    }
+                }
+                
+                throw new InvalidOperationException(errorDetails, ex);
+            }
             catch (Exception ex)
             {
                 throw new InvalidOperationException(
-                    $"Failed to save attachment record to database. File: '{file.FileName}', " +
+                    $"An unexpected error occurred while saving attachment to database. " +
+                    $"File: '{file.FileName}', InvoiceId: {invoiceId}, UploadedBy: {uploadedBy}, " +
                     $"FileUrl: '{fileUrl}'. Error: {ex.Message}", ex);
             }
 
