@@ -258,6 +258,7 @@ builder.Services.AddSwaggerGen(c =>
             new string[] {}
         }
     });
+
 });
 var app = builder.Build();
 
@@ -285,9 +286,17 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 
 #region MiddleWares
 app.UseCors(builder => builder
-    .WithOrigins( "https://localhost:5001", "http://localhost:5009")
+    .WithOrigins(
+        "https://localhost:5001", 
+        "http://localhost:5009",
+        "https://vhcorporate.com",
+        "http://vhcorporate.com",
+        "https://www.vhcorporate.com",
+        "http://www.vhcorporate.com"
+    )
     .AllowAnyMethod()
     .AllowAnyHeader()
+    .AllowCredentials()
 );
 
 app.UseHttpsRedirection();

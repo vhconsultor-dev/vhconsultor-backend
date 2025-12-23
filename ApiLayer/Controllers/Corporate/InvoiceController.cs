@@ -417,6 +417,8 @@ public class InvoiceController : ControllerBase
     /// Files are stored in Azure Blob Storage under: InvoicesAttachment/{InvoiceNumber}/
     /// </remarks>
     [HttpPost("{invoiceId}/attachments")]
+    [DisableRequestSizeLimit]
+    [RequestFormLimits(MultipartBodyLengthLimit = 10485760)]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadAttachment(int invoiceId, [FromForm] IFormFile file)
     {
