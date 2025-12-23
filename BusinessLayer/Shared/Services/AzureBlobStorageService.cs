@@ -31,6 +31,14 @@ public class AzureBlobStorageService
     {
         try
         {
+            // Validar que el connection string esté configurado
+            if (string.IsNullOrEmpty(_settings.ConnectionString))
+            {
+                throw new InvalidOperationException(
+                    "Azure Storage Connection String is not configured. " +
+                    "Please set the 'AzureStorage:ConnectionString' configuration value or environment variable.");
+            }
+
             // Get or create container
             var containerClient = _blobServiceClient.GetBlobContainerClient(_settings.ContainerName);
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
@@ -54,9 +62,22 @@ public class AzureBlobStorageService
             // Return the blob URL
             return blobClient.Uri.ToString();
         }
+        catch (InvalidOperationException)
+        {
+            throw; // Re-throw configuration errors as is
+        }
+        catch (Azure.RequestFailedException ex)
+        {
+            throw new InvalidOperationException(
+                $"Azure Storage request failed while uploading '{fileName}'. " +
+                $"Status: {ex.Status}, Error Code: {ex.ErrorCode}, Message: {ex.Message}", ex);
+        }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Failed to upload file '{fileName}' to Azure Blob Storage: {ex.Message}", ex);
+            throw new InvalidOperationException(
+                $"Failed to upload file '{fileName}' to Azure Blob Storage. " +
+                $"Container: '{_settings.ContainerName}', Path: '{_settings.InvoiceAttachmentsFolder}/{invoiceNumber}'. " +
+                $"Error: {ex.Message}", ex);
         }
     }
 

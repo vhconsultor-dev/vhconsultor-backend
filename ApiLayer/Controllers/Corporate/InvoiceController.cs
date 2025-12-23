@@ -420,6 +420,14 @@ public class InvoiceController : ControllerBase
     {
         try
         {
+            // Validación temprana del archivo
+            if (file == null || file.Length == 0)
+            {
+                var validationResponse = ResponseStructure<object>.ValidationError(
+                    "No file was provided or the file is empty");
+                return BadRequest(validationResponse);
+            }
+
             // Get UserId from JWT token (the [Authorize] attribute already validates authentication)
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             int.TryParse(userIdClaim, out int userId);
@@ -442,11 +450,23 @@ public class InvoiceController : ControllerBase
             var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
             return BadRequest(errorResponse);
         }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? ex.Message;
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Database error while saving attachment: {innerMessage}",
+                500);
+            return StatusCode(500, errorResponse);
+        }
         catch (Exception ex)
         {
-            var errorResponse = ResponseStructure<object>.Error(
-                $"An unexpected error occurred while uploading the attachment: {ex.Message}",
-                500);
+            // Capturar el inner exception para más detalles
+            var innerMessage = ex.InnerException?.Message ?? string.Empty;
+            var fullMessage = $"An unexpected error occurred while uploading the attachment: {ex.Message}";
+            if (!string.IsNullOrEmpty(innerMessage))
+                fullMessage += $" | Inner exception: {innerMessage}";
+            
+            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
             return StatusCode(500, errorResponse);
         }
     }

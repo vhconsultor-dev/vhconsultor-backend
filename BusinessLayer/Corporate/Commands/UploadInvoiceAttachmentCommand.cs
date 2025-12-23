@@ -31,52 +31,61 @@ public class UploadInvoiceAttachmentCommand
     /// <exception cref="InvalidOperationException">If validation fails</exception>
     public async Task<UploadInvoiceAttachmentResponse> ExecuteAsync(int invoiceId, IFormFile file, int uploadedBy)
     {
-        // Validate invoice exists
-        var invoice = await _context.Invoices
-            .AsNoTracking()
-            .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
-
-        if (invoice == null)
-            throw new KeyNotFoundException($"Invoice with ID {invoiceId} not found");
-
-        // Validate file
-        if (file == null || file.Length == 0)
-            throw new InvalidOperationException("No file was provided or the file is empty");
-
-        // Validate file extension
-        if (!_blobStorageService.IsFileExtensionAllowed(file.FileName))
-        {
-            var allowedExtensions = string.Join(", ", _blobStorageService.GetAllowedExtensions());
-            throw new InvalidOperationException(
-                $"File type not allowed. The file '{file.FileName}' has an unsupported extension. " +
-                $"Allowed types are: {allowedExtensions}");
-        }
-
-        // Validate file size
-        if (!_blobStorageService.IsFileSizeAllowed(file.Length))
-        {
-            var maxSizeMB = _blobStorageService.GetMaxFileSizeMB();
-            var fileSizeMB = Math.Round(file.Length / (1024.0 * 1024.0), 2);
-            throw new InvalidOperationException(
-                $"File size exceeds the maximum allowed limit. " +
-                $"The file '{file.FileName}' is {fileSizeMB} MB, but the maximum allowed size is {maxSizeMB} MB");
-        }
-
         try
         {
+            // Validate invoice exists
+            var invoice = await _context.Invoices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
+
+            if (invoice == null)
+                throw new KeyNotFoundException($"Invoice with ID {invoiceId} not found");
+
+            // Validate file
+            if (file == null || file.Length == 0)
+                throw new InvalidOperationException("No file was provided or the file is empty");
+
+            // Validate file extension
+            if (!_blobStorageService.IsFileExtensionAllowed(file.FileName))
+            {
+                var allowedExtensions = string.Join(", ", _blobStorageService.GetAllowedExtensions());
+                throw new InvalidOperationException(
+                    $"File type not allowed. The file '{file.FileName}' has an unsupported extension. " +
+                    $"Allowed types are: {allowedExtensions}");
+            }
+
+            // Validate file size
+            if (!_blobStorageService.IsFileSizeAllowed(file.Length))
+            {
+                var maxSizeMB = _blobStorageService.GetMaxFileSizeMB();
+                var fileSizeMB = Math.Round(file.Length / (1024.0 * 1024.0), 2);
+                throw new InvalidOperationException(
+                    $"File size exceeds the maximum allowed limit. " +
+                    $"The file '{file.FileName}' is {fileSizeMB} MB, but the maximum allowed size is {maxSizeMB} MB");
+            }
+
             // Generate unique file name to avoid conflicts
             var fileExtension = Path.GetExtension(file.FileName);
             var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
 
             // Upload file to Azure Blob Storage
             string fileUrl;
-            using (var stream = file.OpenReadStream())
+            try
             {
-                fileUrl = await _blobStorageService.UploadFileAsync(
-                    stream,
-                    uniqueFileName,
-                    invoice.InvoiceNumber,
-                    file.ContentType);
+                using (var stream = file.OpenReadStream())
+                {
+                    fileUrl = await _blobStorageService.UploadFileAsync(
+                        stream,
+                        uniqueFileName,
+                        invoice.InvoiceNumber,
+                        file.ContentType);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to upload file to Azure Blob Storage. File: '{file.FileName}', " +
+                    $"Invoice: '{invoice.InvoiceNumber}'. Error: {ex.Message}", ex);
             }
 
             // Create attachment record in database
@@ -89,29 +98,43 @@ public class UploadInvoiceAttachmentCommand
             };
 
             _context.InvoiceAttachments.Add(attachment);
-            await _context.SaveChangesAsync();
+            
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to save attachment record to database. File: '{file.FileName}', " +
+                    $"FileUrl: '{fileUrl}'. Error: {ex.Message}", ex);
+            }
 
             return new UploadInvoiceAttachmentResponse
             {
                 Success = true,
                 Message = $"File '{file.FileName}' has been successfully uploaded to invoice '{invoice.InvoiceNumber}'",
                 AttachmentId = attachment.InvoiceAttachmentId,
-                FileName = file.FileName, // Original file name from upload
+                FileName = file.FileName,
                 FileUrl = attachment.FileUrl,
-                FileSize = file.Length, // File size from upload
+                FileSize = file.Length,
                 UploadedAt = attachment.UploadedAt
             };
         }
-        catch (InvalidOperationException ex)
+        catch (KeyNotFoundException)
         {
-            // Re-throw blob storage exceptions
-            throw new InvalidOperationException(
-                $"Failed to upload file '{file.FileName}': {ex.Message}", ex);
+            throw; // Re-throw as is
+        }
+        catch (InvalidOperationException)
+        {
+            throw; // Re-throw as is
         }
         catch (Exception ex)
         {
             throw new InvalidOperationException(
-                $"An unexpected error occurred while uploading the file '{file.FileName}': {ex.Message}", ex);
+                $"An unexpected error occurred while processing the file upload. " +
+                $"File: '{file?.FileName ?? "unknown"}', InvoiceId: {invoiceId}. " +
+                $"Error: {ex.Message}", ex);
         }
     }
 }
