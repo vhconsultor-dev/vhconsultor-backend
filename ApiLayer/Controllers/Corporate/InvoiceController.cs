@@ -412,12 +412,13 @@ public class InvoiceController : ControllerBase
     /// <param name="file">File to upload</param>
     /// <returns>Result of the upload operation</returns>
     /// <remarks>
-    /// Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, XLSX
+    /// Allowed file types: PDF, JPG, JPEG, PNG, GIF, DOC, DOCX, XLS, XLSX, TXT, CSV
     /// Maximum file size: 10 MB
     /// Files are stored in Azure Blob Storage under: InvoicesAttachment/{InvoiceNumber}/
     /// </remarks>
     [HttpPost("{invoiceId}/attachments")]
-    public async Task<IActionResult> UploadAttachment(int invoiceId, IFormFile file)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadAttachment(int invoiceId, [FromForm] IFormFile file)
     {
         try
         {
