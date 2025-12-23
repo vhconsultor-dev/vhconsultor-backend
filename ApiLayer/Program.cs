@@ -86,6 +86,12 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkInvoiceAsPaidRequest>, BusinessLayer.Corporate.Validators.MarkInvoiceAsPaidValidator>();
 #endregion
 
+#region Azure Storage Configuration
+// Configurar Azure Storage Settings
+builder.Services.Configure<BusinessLayer.Shared.AzureStorageSettings>(builder.Configuration.GetSection("AzureStorage"));
+builder.Services.AddScoped<BusinessLayer.Shared.Services.AzureBlobStorageService>();
+#endregion
+
 #region JWT Configuration
 // Configurar JWT Settings
 builder.Services.Configure<BusinessLayer.Shared.JwtSettings>(builder.Configuration.GetSection("Jwt"));
@@ -178,6 +184,8 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteContractServic
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.GenerateInvoicesCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.MarkInvoiceAsPaidCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteInvoicesCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UploadInvoiceAttachmentCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteInvoiceAttachmentCommand>();
 // Queries
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CustomerQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CountryQueryRepository>();

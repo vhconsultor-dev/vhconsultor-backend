@@ -29,17 +29,17 @@ public class MarkInvoiceAsPaidCommand
             .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
 
         if (invoice == null)
-            throw new KeyNotFoundException($"Factura con ID {invoiceId} no encontrada");
+            throw new KeyNotFoundException($"Invoice with ID {invoiceId} not found");
 
-        // Validaciones
+        // Validations
         if (invoice.PaymentStatus == "Paid")
-            throw new InvalidOperationException("La factura ya está pagada");
+            throw new InvalidOperationException($"Invoice '{invoice.InvoiceNumber}' is already marked as paid");
 
         if (invoice.Status == "Cancelled")
-            throw new InvalidOperationException("No se puede pagar una factura cancelada");
+            throw new InvalidOperationException($"Cannot mark invoice '{invoice.InvoiceNumber}' as paid because it has been cancelled");
 
         if (request.PaidDate.HasValue && request.PaidDate.Value > DateTime.Now)
-            throw new InvalidOperationException("La fecha de pago no puede ser futura");
+            throw new InvalidOperationException("Payment date cannot be in the future");
 
         // Marcar como pagada
         invoice.PaymentStatus = "Paid";
@@ -58,8 +58,9 @@ public class MarkInvoiceAsPaidCommand
         return new MarkInvoiceAsPaidResponse
         {
             Success = true,
-            Message = "Factura marcada como pagada exitosamente",
+            Message = $"Invoice '{invoice.InvoiceNumber}' has been successfully marked as paid",
             InvoiceId = invoiceId,
+            InvoiceNumber = invoice.InvoiceNumber,
             PaidDate = invoice.PaidDate.Value
         };
     }
@@ -85,7 +86,10 @@ public class MarkInvoiceAsPaidResponse
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public int InvoiceId { get; set; }
+    public string InvoiceNumber { get; set; } = string.Empty;
     public DateTime PaidDate { get; set; }
 }
+
+
 
 

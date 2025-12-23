@@ -1,0 +1,129 @@
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Microsoft.Extensions.Options;
+
+namespace BusinessLayer.Shared.Services;
+
+/// <summary>
+/// Service for managing file uploads and deletions in Azure Blob Storage
+/// </summary>
+public class AzureBlobStorageService
+{
+    private readonly BlobServiceClient _blobServiceClient;
+    private readonly AzureStorageSettings _settings;
+
+    public AzureBlobStorageService(IOptions<AzureStorageSettings> settings)
+    {
+        _settings = settings.Value;
+        _blobServiceClient = new BlobServiceClient(_settings.ConnectionString);
+    }
+
+    /// <summary>
+    /// Uploads a file to Azure Blob Storage
+    /// </summary>
+    /// <param name="fileStream">File stream to upload</param>
+    /// <param name="fileName">Name of the file</param>
+    /// <param name="invoiceNumber">Invoice number for folder organization</param>
+    /// <param name="contentType">MIME type of the file</param>
+    /// <returns>URL of the uploaded file</returns>
+    /// <exception cref="InvalidOperationException">If upload fails</exception>
+    public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string invoiceNumber, string contentType)
+    {
+        try
+        {
+            // Get or create container
+            var containerClient = _blobServiceClient.GetBlobContainerClient(_settings.ContainerName);
+            await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
+
+            // Build blob path: InvoicesAttachment/{InvoiceNumber}/{fileName}
+            var blobPath = $"{_settings.InvoiceAttachmentsFolder}/{invoiceNumber}/{fileName}";
+            var blobClient = containerClient.GetBlobClient(blobPath);
+
+            // Set content type
+            var blobHttpHeaders = new BlobHttpHeaders
+            {
+                ContentType = contentType
+            };
+
+            // Upload file
+            await blobClient.UploadAsync(fileStream, new BlobUploadOptions
+            {
+                HttpHeaders = blobHttpHeaders
+            });
+
+            // Return the blob URL
+            return blobClient.Uri.ToString();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to upload file '{fileName}' to Azure Blob Storage: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Deletes a file from Azure Blob Storage
+    /// </summary>
+    /// <param name="fileUrl">Full URL of the file to delete</param>
+    /// <returns>True if deleted successfully</returns>
+    /// <exception cref="InvalidOperationException">If deletion fails</exception>
+    public async Task<bool> DeleteFileAsync(string fileUrl)
+    {
+        try
+        {
+            // Extract blob name from URL
+            var uri = new Uri(fileUrl);
+            var blobName = uri.AbsolutePath.TrimStart('/');
+            
+            // Remove container name from path if present
+            if (blobName.StartsWith(_settings.ContainerName + "/"))
+            {
+                blobName = blobName.Substring(_settings.ContainerName.Length + 1);
+            }
+
+            var containerClient = _blobServiceClient.GetBlobContainerClient(_settings.ContainerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
+
+            // Delete the blob
+            var response = await blobClient.DeleteIfExistsAsync();
+            
+            return response.Value;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to delete file from Azure Blob Storage: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Validates if a file extension is allowed
+    /// </summary>
+    /// <param name="fileName">Name of the file</param>
+    /// <returns>True if extension is allowed</returns>
+    public bool IsFileExtensionAllowed(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        return _settings.AllowedFileExtensions.Contains(extension);
+    }
+
+    /// <summary>
+    /// Validates if file size is within allowed limit
+    /// </summary>
+    /// <param name="fileSizeBytes">File size in bytes</param>
+    /// <returns>True if size is within limit</returns>
+    public bool IsFileSizeAllowed(long fileSizeBytes)
+    {
+        var maxSizeBytes = _settings.MaxFileSizeMB * 1024 * 1024;
+        return fileSizeBytes <= maxSizeBytes;
+    }
+
+    /// <summary>
+    /// Gets the maximum allowed file size in MB
+    /// </summary>
+    public int GetMaxFileSizeMB() => _settings.MaxFileSizeMB;
+
+    /// <summary>
+    /// Gets the list of allowed file extensions
+    /// </summary>
+    public List<string> GetAllowedExtensions() => _settings.AllowedFileExtensions;
+}
+

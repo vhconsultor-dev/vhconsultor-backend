@@ -11,25 +11,27 @@ public class MarkInvoiceAsPaidValidator : AbstractValidator<MarkInvoiceAsPaidReq
     public MarkInvoiceAsPaidValidator()
     {
         RuleFor(x => x.PaidDate)
-            .LessThanOrEqualTo(DateTime.Now).WithMessage("La fecha de pago no puede ser futura")
+            .LessThanOrEqualTo(DateTime.Now).WithMessage("Payment date cannot be in the future")
             .When(x => x.PaidDate.HasValue);
 
         RuleFor(x => x.PaymentMethodId)
-            .GreaterThan(0).WithMessage("El método de pago debe ser válido")
+            .GreaterThan(0).WithMessage("Payment method must be valid")
             .When(x => x.PaymentMethodId.HasValue);
 
         RuleFor(x => x.PaymentReference)
-            .MaximumLength(255).WithMessage("La referencia de pago no puede exceder 255 caracteres")
+            .MaximumLength(255).WithMessage("Payment reference cannot exceed 255 characters")
             .When(x => !string.IsNullOrEmpty(x.PaymentReference));
 
         RuleFor(x => x.DepositNumber)
-            .MaximumLength(255).WithMessage("El número de depósito no puede exceder 255 caracteres")
+            .MaximumLength(255).WithMessage("Deposit number cannot exceed 255 characters")
             .When(x => !string.IsNullOrEmpty(x.DepositNumber));
 
         RuleFor(x => x.TransferNumber)
-            .MaximumLength(255).WithMessage("El número de transferencia no puede exceder 255 caracteres")
+            .MaximumLength(255).WithMessage("Transfer number cannot exceed 255 characters")
             .When(x => !string.IsNullOrEmpty(x.TransferNumber));
     }
 }
+
+
 
 

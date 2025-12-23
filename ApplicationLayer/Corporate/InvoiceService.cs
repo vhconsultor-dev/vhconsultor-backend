@@ -1,6 +1,7 @@
 using BusinessLayer.Corporate.Commands;
 using BusinessLayer.Corporate.Queries;
 using ModelLayer.Corporate.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace ApplicationLayer.Corporate;
 
@@ -12,17 +13,23 @@ public class InvoiceService
     private readonly GenerateInvoicesCommand _generateInvoicesCommand;
     private readonly MarkInvoiceAsPaidCommand _markInvoiceAsPaidCommand;
     private readonly DeleteInvoicesCommand _deleteInvoicesCommand;
+    private readonly UploadInvoiceAttachmentCommand _uploadInvoiceAttachmentCommand;
+    private readonly DeleteInvoiceAttachmentCommand _deleteInvoiceAttachmentCommand;
     private readonly InvoiceQueryRepository _invoiceQueryRepository;
 
     public InvoiceService(
         GenerateInvoicesCommand generateInvoicesCommand,
         MarkInvoiceAsPaidCommand markInvoiceAsPaidCommand,
         DeleteInvoicesCommand deleteInvoicesCommand,
+        UploadInvoiceAttachmentCommand uploadInvoiceAttachmentCommand,
+        DeleteInvoiceAttachmentCommand deleteInvoiceAttachmentCommand,
         InvoiceQueryRepository invoiceQueryRepository)
     {
         _generateInvoicesCommand = generateInvoicesCommand;
         _markInvoiceAsPaidCommand = markInvoiceAsPaidCommand;
         _deleteInvoicesCommand = deleteInvoicesCommand;
+        _uploadInvoiceAttachmentCommand = uploadInvoiceAttachmentCommand;
+        _deleteInvoiceAttachmentCommand = deleteInvoiceAttachmentCommand;
         _invoiceQueryRepository = invoiceQueryRepository;
     }
 
@@ -58,6 +65,30 @@ public class InvoiceService
     public async Task<DeleteInvoicesResponse> DeleteAllContractInvoicesAsync(int contractId)
     {
         return await _deleteInvoicesCommand.DeleteAllContractInvoicesAsync(contractId);
+    }
+
+    /// <summary>
+    /// Sube un archivo adjunto a una factura
+    /// </summary>
+    public async Task<UploadInvoiceAttachmentResponse> UploadAttachmentAsync(int invoiceId, IFormFile file, int uploadedBy)
+    {
+        return await _uploadInvoiceAttachmentCommand.ExecuteAsync(invoiceId, file, uploadedBy);
+    }
+
+    /// <summary>
+    /// Elimina un adjunto de una factura
+    /// </summary>
+    public async Task<DeleteInvoiceAttachmentResponse> DeleteAttachmentAsync(int attachmentId)
+    {
+        return await _deleteInvoiceAttachmentCommand.ExecuteAsync(attachmentId);
+    }
+
+    /// <summary>
+    /// Elimina todos los adjuntos de una factura
+    /// </summary>
+    public async Task<DeleteInvoiceAttachmentResponse> DeleteAllAttachmentsForInvoiceAsync(int invoiceId)
+    {
+        return await _deleteInvoiceAttachmentCommand.DeleteAllAttachmentsForInvoiceAsync(invoiceId);
     }
 
     #endregion

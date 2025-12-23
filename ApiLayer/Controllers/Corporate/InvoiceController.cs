@@ -402,5 +402,147 @@ public class InvoiceController : ControllerBase
     }
 
     #endregion
+
+    #region POST - Upload Invoice Attachment
+
+    /// <summary>
+    /// Uploads a file attachment to an invoice
+    /// </summary>
+    /// <param name="invoiceId">ID of the invoice</param>
+    /// <param name="file">File to upload</param>
+    /// <returns>Result of the upload operation</returns>
+    /// <remarks>
+    /// Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX, XLS, XLSX
+    /// Maximum file size: 10 MB
+    /// Files are stored in Azure Blob Storage under: InvoicesAttachment/{InvoiceNumber}/
+    /// </remarks>
+    [HttpPost("{invoiceId}/attachments")]
+    public async Task<IActionResult> UploadAttachment(int invoiceId, IFormFile file)
+    {
+        try
+        {
+            // Get UserId from JWT token
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                var errorResponse = ResponseStructure<object>.Error("User not authenticated", 401);
+                return Unauthorized(errorResponse);
+            }
+
+            var result = await _invoiceService.UploadAttachmentAsync(invoiceId, file, userId);
+
+            var successResponse = ResponseStructure<UploadInvoiceAttachmentResponse>.Success(
+                result,
+                result.Message);
+
+            return Ok(successResponse);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message, 404);
+            return NotFound(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(
+                $"An unexpected error occurred while uploading the attachment: {ex.Message}",
+                500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
+    #region DELETE - Delete Invoice Attachment
+
+    /// <summary>
+    /// Deletes a specific attachment from an invoice
+    /// </summary>
+    /// <param name="attachmentId">ID of the attachment to delete</param>
+    /// <returns>Result of the deletion operation</returns>
+    /// <remarks>
+    /// This endpoint deletes the attachment from both the database and Azure Blob Storage.
+    /// The operation is permanent and cannot be undone.
+    /// </remarks>
+    [HttpDelete("attachments/{attachmentId}")]
+    public async Task<IActionResult> DeleteAttachment(int attachmentId)
+    {
+        try
+        {
+            var result = await _invoiceService.DeleteAttachmentAsync(attachmentId);
+
+            var successResponse = ResponseStructure<DeleteInvoiceAttachmentResponse>.Success(
+                result,
+                result.Message);
+
+            return Ok(successResponse);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message, 404);
+            return NotFound(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(
+                $"An unexpected error occurred while deleting the attachment: {ex.Message}",
+                500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    /// <summary>
+    /// Deletes all attachments from a specific invoice
+    /// </summary>
+    /// <param name="invoiceId">ID of the invoice</param>
+    /// <returns>Result of the deletion operation</returns>
+    /// <remarks>
+    /// This endpoint deletes ALL attachments associated with the invoice.
+    /// Files are removed from both the database and Azure Blob Storage.
+    /// The operation is permanent and cannot be undone.
+    /// </remarks>
+    [HttpDelete("{invoiceId}/attachments")]
+    public async Task<IActionResult> DeleteAllAttachmentsForInvoice(int invoiceId)
+    {
+        try
+        {
+            var result = await _invoiceService.DeleteAllAttachmentsForInvoiceAsync(invoiceId);
+
+            var successResponse = ResponseStructure<DeleteInvoiceAttachmentResponse>.Success(
+                result,
+                result.Message);
+
+            return Ok(successResponse);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message, 404);
+            return NotFound(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(
+                $"An unexpected error occurred while deleting attachments: {ex.Message}",
+                500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
 }
 
