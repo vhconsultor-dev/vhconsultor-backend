@@ -12,3 +12,4 @@ public class AzureStorageSettings
     public List<string> AllowedFileExtensions { get; set; } = new();
 }
 
+

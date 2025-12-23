@@ -127,3 +127,4 @@ public class AzureBlobStorageService
     public List<string> GetAllowedExtensions() => _settings.AllowedFileExtensions;
 }
 
+

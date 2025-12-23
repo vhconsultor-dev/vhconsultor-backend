@@ -533,10 +533,7 @@ public class DBcontext : DbContext
             entity.Property(e => e.InvoiceAttachmentId).ValueGeneratedOnAdd();
             entity.Property(e => e.InvoiceId).IsRequired();
             entity.Property(e => e.FileUrl).HasMaxLength(500).IsRequired();
-            entity.Property(e => e.FileName).HasMaxLength(255);
-            entity.Property(e => e.FileType).HasMaxLength(100);
-            entity.Property(e => e.FileSize);
-            entity.Property(e => e.UploadedBy);
+            entity.Property(e => e.UploadedBy).IsRequired();
             entity.Property(e => e.UploadedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
             
             // Relación con Invoice

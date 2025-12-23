@@ -35,7 +35,10 @@ public class DeleteInvoiceAttachmentCommand
         if (attachment == null)
             throw new KeyNotFoundException($"Attachment with ID {attachmentId} not found");
 
-        var fileName = attachment.FileName ?? "Unknown file";
+        // Extract file name from URL if available, otherwise use generic name
+        var fileName = !string.IsNullOrEmpty(attachment.FileUrl) 
+            ? attachment.FileUrl.Split('/').LastOrDefault() ?? "Unknown file"
+            : "Unknown file";
         var invoiceNumber = attachment.Invoice?.InvoiceNumber ?? "Unknown invoice";
 
         try
@@ -121,7 +124,10 @@ public class DeleteInvoiceAttachmentCommand
                 }
                 catch (Exception ex)
                 {
-                    failedDeletions.Add($"{attachment.FileName ?? "Unknown"}: {ex.Message}");
+                    var fileName = !string.IsNullOrEmpty(attachment.FileUrl) 
+                        ? attachment.FileUrl.Split('/').LastOrDefault() ?? "Unknown"
+                        : "Unknown";
+                    failedDeletions.Add($"{fileName}: {ex.Message}");
                 }
             }
 

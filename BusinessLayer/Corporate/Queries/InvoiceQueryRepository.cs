@@ -210,8 +210,7 @@ public class InvoiceQueryRepository
 
         var attachmentsSql = @"
             SELECT 
-                InvoiceAttachmentId, InvoiceId, FileUrl, FileName, FileType,
-                FileSize, UploadedBy, UploadedAt
+                InvoiceAttachmentId, InvoiceId, FileUrl, UploadedBy, UploadedAt
             FROM [Corporate].[InvoiceAttachments]
             WHERE InvoiceId = @InvoiceId
             ORDER BY UploadedAt DESC";

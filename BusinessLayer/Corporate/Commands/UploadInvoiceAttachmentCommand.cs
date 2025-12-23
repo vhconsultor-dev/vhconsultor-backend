@@ -84,9 +84,6 @@ public class UploadInvoiceAttachmentCommand
             {
                 InvoiceId = invoiceId,
                 FileUrl = fileUrl,
-                FileName = file.FileName, // Original file name
-                FileType = file.ContentType,
-                FileSize = file.Length,
                 UploadedBy = uploadedBy,
                 UploadedAt = DateTime.UtcNow.AddHours(-6) // Costa Rica time
             };
@@ -99,9 +96,9 @@ public class UploadInvoiceAttachmentCommand
                 Success = true,
                 Message = $"File '{file.FileName}' has been successfully uploaded to invoice '{invoice.InvoiceNumber}'",
                 AttachmentId = attachment.InvoiceAttachmentId,
-                FileName = attachment.FileName,
+                FileName = file.FileName, // Original file name from upload
                 FileUrl = attachment.FileUrl,
-                FileSize = attachment.FileSize,
+                FileSize = file.Length, // File size from upload
                 UploadedAt = attachment.UploadedAt
             };
         }
