@@ -446,7 +446,7 @@ public class InvoiceController : ControllerBase
     [DisableRequestSizeLimit]
     [RequestFormLimits(MultipartBodyLengthLimit = 10485760)]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadAttachment(int invoiceId, [FromForm] IFormFile file, [FromQuery] int? userId = null)
+    public async Task<IActionResult> UploadAttachment(int invoiceId, IFormFile file, [FromQuery] int? userId = null)
     {
         try
         {
