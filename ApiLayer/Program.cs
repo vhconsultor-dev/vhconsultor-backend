@@ -79,6 +79,10 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Comm
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.LockAccountCommand>, BusinessLayer.Shared.Validators.LockAccountCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.UnlockAccountCommand>, BusinessLayer.Shared.Validators.UnlockAccountCommandValidator>();
 
+// Permission Validators
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.CreatePermissionRequest>, BusinessLayer.Shared.Validators.CreatePermissionValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.UpdatePermissionRequest>, BusinessLayer.Shared.Validators.UpdatePermissionValidator>();
+
 // Corporate Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateCustomerRequest>, BusinessLayer.Corporate.Validators.CreateCustomerValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateCustomerRequest>, BusinessLayer.Corporate.Validators.UpdateCustomerValidator>();
@@ -146,6 +150,7 @@ builder.Services.AddScoped<ApplicationLayer.Shared.IErrorLogService, Application
 builder.Services.AddScoped<ApplicationLayer.Shared.JwtService>();
 builder.Services.AddScoped<ApplicationLayer.Shared.AuthService>();
 builder.Services.AddScoped<ApplicationLayer.Shared.RBACService>();
+builder.Services.AddScoped<ApplicationLayer.Shared.PermissionService>();
 
 // Ecommerce Services
 builder.Services.AddScoped<ApplicationLayer.Ecommerce.CustomerSubmissionService>();
@@ -174,10 +179,14 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.InvoiceService>();
 // Commands
 builder.Services.AddScoped<BusinessLayer.Shared.Commands.UserAuthCommandRepository>();
 builder.Services.AddScoped<BusinessLayer.Shared.Commands.RBACCommandRepository>();
+builder.Services.AddScoped<BusinessLayer.Shared.Commands.CreatePermissionCommand>();
+builder.Services.AddScoped<BusinessLayer.Shared.Commands.UpdatePermissionCommand>();
+builder.Services.AddScoped<BusinessLayer.Shared.Commands.DeletePermissionCommand>();
 // Queries
 builder.Services.AddScoped<BusinessLayer.Shared.Queries.UserQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Shared.Queries.UserLoginHistoryQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Shared.Queries.RBACQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Shared.Queries.PermissionQueryRepository>();
 
 // Ecommerce CQRS Repositories
 builder.Services.AddScoped<BusinessLayer.Ecommerce.Commands.CreateCustomerSubmissionCommand>();
