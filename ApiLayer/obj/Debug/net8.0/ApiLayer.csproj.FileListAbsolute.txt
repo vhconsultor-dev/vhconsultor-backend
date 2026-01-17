@@ -134,6 +134,8 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/AutoMapper.Extensions.Microsoft.DependencyInjection.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Azure.Core.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Azure.Identity.dll
+/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Azure.Storage.Blobs.dll
+/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Azure.Storage.Common.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/Dapper.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/FluentValidation.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/FluentValidation.DependencyInjectionExtensions.dll
@@ -179,6 +181,7 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.DirectoryServices.Protocols.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.Drawing.Common.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.IdentityModel.Tokens.Jwt.dll
+/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.IO.Hashing.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.Memory.Data.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.Security.Cryptography.Pkcs.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApiLayer/bin/Debug/net8.0/System.Security.Cryptography.ProtectedData.dll

@@ -52,6 +52,34 @@ public class AmazonAuthService
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
+                
+                // Intentar parsear el error de Amazon para dar un mensaje más claro
+                try
+                {
+                    var errorResponse = JsonSerializer.Deserialize<AmazonErrorResponse>(errorContent, 
+                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    
+                    if (errorResponse != null)
+                    {
+                        var errorMessage = errorResponse.ErrorDescription ?? errorResponse.Error ?? "Error desconocido";
+                        
+                        if (errorResponse.Error == "invalid_grant")
+                        {
+                            errorMessage = "El refresh token no es válido. Puede haber sido revocado o expirado. Verifica que el refresh token en las variables de entorno de Azure sea correcto.";
+                        }
+                        
+                        return new GenerateAccessTokenResult
+                        {
+                            Success = false,
+                            Message = $"Error de Amazon: {errorMessage}"
+                        };
+                    }
+                }
+                catch
+                {
+                    // Si no se puede parsear, usar el mensaje original
+                }
+                
                 return new GenerateAccessTokenResult
                 {
                     Success = false,
@@ -164,6 +192,17 @@ public class AmazonTokenResponse
     public string? RefreshToken { get; set; }
     public string? TokenType { get; set; }
     public int ExpiresIn { get; set; }
+}
+
+/// <summary>
+/// Respuesta de error de Amazon
+/// </summary>
+public class AmazonErrorResponse
+{
+    public string? Error { get; set; }
+    public string? ErrorDescription { get; set; }
+    public string? ErrorIndex { get; set; }
+    public string? RequestId { get; set; }
 }
 
 /// <summary>

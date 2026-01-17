@@ -39,11 +39,37 @@ public class AmazonAuthController : ControllerBase
     {
         // Usar variables de entorno configuradas en Azure
         var amazonSettings = _configuration.GetSection("Amazon");
+        var refreshToken = amazonSettings["RefreshToken"] ?? string.Empty;
+        var clientId = amazonSettings["ClientId"] ?? string.Empty;
+        var clientSecret = amazonSettings["ClientSecret"] ?? string.Empty;
+
+        // Validar que las variables de entorno estén configuradas
+        if (string.IsNullOrEmpty(refreshToken))
+        {
+            var errorResponse = ResponseStructure<object>.BadRequest(
+                "La variable de entorno Amazon__RefreshToken no está configurada");
+            return BadRequest(errorResponse);
+        }
+
+        if (string.IsNullOrEmpty(clientId))
+        {
+            var errorResponse = ResponseStructure<object>.BadRequest(
+                "La variable de entorno Amazon__ClientId no está configurada");
+            return BadRequest(errorResponse);
+        }
+
+        if (string.IsNullOrEmpty(clientSecret))
+        {
+            var errorResponse = ResponseStructure<object>.BadRequest(
+                "La variable de entorno Amazon__ClientSecret no está configurada");
+            return BadRequest(errorResponse);
+        }
+
         var command = new GenerateAccessTokenCommand
         {
-            RefreshToken = amazonSettings["RefreshToken"] ?? string.Empty,
-            ClientId = amazonSettings["ClientId"] ?? string.Empty,
-            ClientSecret = amazonSettings["ClientSecret"] ?? string.Empty
+            RefreshToken = refreshToken,
+            ClientId = clientId,
+            ClientSecret = clientSecret
         };
 
         // Validación usando FluentValidation
