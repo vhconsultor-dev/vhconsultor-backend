@@ -43,11 +43,18 @@ public class AmazonAuthService
             };
 
             var content = new FormUrlEncodedContent(requestBody);
+            
+            // Configurar headers necesarios
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.amazon.com/auth/o2/token")
+            {
+                Content = content
+            };
+            
+            request.Headers.Add("Accept", "application/json");
+            request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-www-form-urlencoded");
 
             // Hacer la petición a Amazon
-            var response = await _httpClient.PostAsync(
-                "https://api.amazon.com/auth/o2/token", 
-                content);
+            var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -89,15 +96,94 @@ public class AmazonAuthService
 
             // Parsear la respuesta
             var responseContent = await response.Content.ReadAsStringAsync();
-            var tokenResponse = JsonSerializer.Deserialize<AmazonTokenResponse>(responseContent, 
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            
+            // Si la respuesta está vacía, retornar error
+            if (string.IsNullOrWhiteSpace(responseContent))
+            {
+                return new GenerateAccessTokenResult
+                {
+                    Success = false,
+                    Message = "Amazon devolvió una respuesta vacía. Verifica las credenciales configuradas."
+                };
+            }
+            
+            // Amazon devuelve las propiedades en snake_case (access_token, token_type, expires_in)
+            AmazonTokenResponse? tokenResponse = null;
+            
+            try
+            {
+                // Intentar parsear manualmente porque Amazon usa snake_case
+                using var doc = JsonDocument.Parse(responseContent);
+                var root = doc.RootElement;
+                
+                // Buscar access_token (snake_case que es el formato estándar de Amazon)
+                string? accessToken = null;
+                if (root.TryGetProperty("access_token", out var accessTokenProp))
+                {
+                    accessToken = accessTokenProp.GetString();
+                }
+                else if (root.TryGetProperty("accessToken", out var accessTokenCamel))
+                {
+                    accessToken = accessTokenCamel.GetString();
+                }
+                
+                if (string.IsNullOrEmpty(accessToken))
+                {
+                    // Si no hay access_token, puede ser un error
+                    var error = root.TryGetProperty("error", out var errorProp) ? errorProp.GetString() : null;
+                    var errorDescription = root.TryGetProperty("error_description", out var errorDescProp) 
+                        ? errorDescProp.GetString() 
+                        : null;
+                    
+                    return new GenerateAccessTokenResult
+                    {
+                        Success = false,
+                        Message = $"Amazon no devolvió un access token. Error: {error ?? "desconocido"}. Descripción: {errorDescription ?? "N/A"}. Respuesta completa: {responseContent}"
+                    };
+                }
+                
+                // Obtener otros campos
+                var tokenType = root.TryGetProperty("token_type", out var tokenTypeProp) 
+                    ? tokenTypeProp.GetString() ?? "bearer"
+                    : root.TryGetProperty("tokenType", out var tokenTypeCamel) 
+                        ? tokenTypeCamel.GetString() ?? "bearer"
+                        : "bearer";
+                
+                var expiresIn = root.TryGetProperty("expires_in", out var expiresInProp) 
+                    ? expiresInProp.GetInt32() 
+                    : root.TryGetProperty("expiresIn", out var expiresInCamel) 
+                        ? expiresInCamel.GetInt32() 
+                        : 3600;
+                
+                var refreshToken = root.TryGetProperty("refresh_token", out var refreshTokenProp) 
+                    ? refreshTokenProp.GetString() 
+                    : root.TryGetProperty("refreshToken", out var refreshTokenCamel) 
+                        ? refreshTokenCamel.GetString() 
+                        : null;
+                
+                tokenResponse = new AmazonTokenResponse
+                {
+                    AccessToken = accessToken,
+                    TokenType = tokenType,
+                    ExpiresIn = expiresIn,
+                    RefreshToken = refreshToken
+                };
+            }
+            catch (JsonException ex)
+            {
+                return new GenerateAccessTokenResult
+                {
+                    Success = false,
+                    Message = $"Error al parsear la respuesta de Amazon. Respuesta recibida: {responseContent}. Error: {ex.Message}"
+                };
+            }
 
             if (tokenResponse == null || string.IsNullOrEmpty(tokenResponse.AccessToken))
             {
                 return new GenerateAccessTokenResult
                 {
                     Success = false,
-                    Message = "La respuesta de Amazon no contiene un access token válido"
+                    Message = $"La respuesta de Amazon no contiene un access token válido. Respuesta recibida: {responseContent}"
                 };
             }
 

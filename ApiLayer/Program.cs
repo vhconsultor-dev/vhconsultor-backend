@@ -115,8 +115,12 @@ builder.Services.AddScoped<BusinessLayer.Shared.Services.AzureBlobStorageService
 #region Amazon Configuration
 // Configurar Amazon Settings
 builder.Services.Configure<BusinessLayer.Amazon.AmazonSettings>(builder.Configuration.GetSection("Amazon"));
-// Registrar HttpClient para Amazon
-builder.Services.AddHttpClient();
+// Registrar HttpClient para Amazon con configuración específica
+builder.Services.AddHttpClient<ApplicationLayer.Amazon.AmazonAuthService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
 #endregion
 
 #region JWT Configuration
