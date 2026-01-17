@@ -72,6 +72,9 @@ if (builder.Environment.IsProduction())
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Ecommerce.Commands.CreateCustomerSubmissionRequest>, BusinessLayer.Ecommerce.Validators.CreateCustomerSubmissionValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.GenerateJwtCommand>, BusinessLayer.Shared.Validators.GenerateJwtValidator>();
 
+// Amazon Validators
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Commands.GenerateAccessTokenCommand>, BusinessLayer.Amazon.Validators.GenerateAccessTokenValidator>();
+
 // Auth Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.LoginCommand>, BusinessLayer.Shared.Validators.LoginCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.CreateUserCommand>, BusinessLayer.Shared.Validators.CreateUserCommandValidator>();
@@ -107,6 +110,13 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 // Configurar Azure Storage Settings
 builder.Services.Configure<BusinessLayer.Shared.AzureStorageSettings>(builder.Configuration.GetSection("AzureStorage"));
 builder.Services.AddScoped<BusinessLayer.Shared.Services.AzureBlobStorageService>();
+#endregion
+
+#region Amazon Configuration
+// Configurar Amazon Settings
+builder.Services.Configure<BusinessLayer.Amazon.AmazonSettings>(builder.Configuration.GetSection("Amazon"));
+// Registrar HttpClient para Amazon
+builder.Services.AddHttpClient();
 #endregion
 
 #region JWT Configuration
@@ -155,6 +165,9 @@ builder.Services.AddScoped<ApplicationLayer.Shared.PermissionService>();
 // Ecommerce Services
 builder.Services.AddScoped<ApplicationLayer.Ecommerce.CustomerSubmissionService>();
 
+// Amazon Services
+builder.Services.AddScoped<ApplicationLayer.Amazon.AmazonAuthService>();
+
 // Corporate Services
 builder.Services.AddScoped<ApplicationLayer.Corporate.CustomerService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.CountryService>();
@@ -190,6 +203,10 @@ builder.Services.AddScoped<BusinessLayer.Shared.Queries.PermissionQueryRepositor
 
 // Ecommerce CQRS Repositories
 builder.Services.AddScoped<BusinessLayer.Ecommerce.Commands.CreateCustomerSubmissionCommand>();
+
+// Amazon CQRS Repositories
+builder.Services.AddScoped<BusinessLayer.Amazon.Commands.AmazonTokenCommandRepository>();
+builder.Services.AddScoped<BusinessLayer.Amazon.Queries.AmazonTokenQueryRepository>();
 
 // Corporate CQRS Repositories
 // Commands

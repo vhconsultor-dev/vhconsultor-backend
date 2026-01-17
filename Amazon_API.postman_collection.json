@@ -1,0 +1,174 @@
+{
+  "info": {
+    "name": "VHConsultor - Amazon SP-API",
+    "description": "Colección de endpoints para gestionar tokens de Amazon Selling Partner API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Amazon Auth",
+      "item": [
+        {
+          "name": "Generate Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{amazonRefreshToken}}\",\n  \"clientId\": \"{{amazonClientId}}\",\n  \"clientSecret\": \"{{amazonClientSecret}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/amazon/amazonauth/generate-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "amazon", "amazonauth", "generate-token"]
+            },
+            "description": "Genera un nuevo access token usando el refresh token de Amazon. El token tiene una duración de 1 hora (3600 segundos)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "description": "JWT Token para autenticación"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/amazon/amazonauth/active-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "amazon", "amazonauth", "active-token"]
+            },
+            "description": "Obtiene el token activo más reciente que no ha expirado."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Tokens",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "description": "JWT Token para autenticación"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/amazon/amazonauth/tokens?isActive=true&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "amazon", "amazonauth", "tokens"],
+              "query": [
+                {
+                  "key": "tokenId",
+                  "value": "1",
+                  "description": "ID específico del token",
+                  "disabled": true
+                },
+                {
+                  "key": "clientId",
+                  "value": "{{amazonClientId}}",
+                  "description": "Client ID de Amazon",
+                  "disabled": true
+                },
+                {
+                  "key": "isActive",
+                  "value": "true",
+                  "description": "Filtrar por estado activo"
+                },
+                {
+                  "key": "createdFrom",
+                  "value": "2026-01-01",
+                  "description": "Fecha de creación desde",
+                  "disabled": true
+                },
+                {
+                  "key": "createdTo",
+                  "value": "2026-12-31",
+                  "description": "Fecha de creación hasta",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Límite de registros"
+                }
+              ]
+            },
+            "description": "Obtiene una lista de tokens con filtros opcionales."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Token by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "description": "JWT Token para autenticación"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/amazon/amazonauth/tokens?tokenId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "amazon", "amazonauth", "tokens"],
+              "query": [
+                {
+                  "key": "tokenId",
+                  "value": "1",
+                  "description": "ID del token a buscar"
+                }
+              ]
+            },
+            "description": "Obtiene un token específico por su ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Expired Tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwtToken}}",
+                "description": "JWT Token para autenticación"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/amazon/amazonauth/deactivate-expired",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "amazon", "amazonauth", "deactivate-expired"]
+            },
+            "description": "Desactiva todos los tokens que ya han expirado."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints para gestionar la autenticación con Amazon SP-API"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:5001",
+      "type": "string"
+    },
+    {
+      "key": "jwtToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT Token obtenido del endpoint de login"
+    }
+  ]
+}

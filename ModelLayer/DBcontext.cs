@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ModelLayer.Corporate.Entities;
 using ModelLayer.Ecommerce.Entities;
+using ModelLayer.Amazon.Entities;
 using ModelLayer.Shared;
 using ModelLayer.Shared.Entities;
 
@@ -28,6 +29,9 @@ public class DBcontext : DbContext
     
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
+    
+    // Amazon DbSets
+    public DbSet<AmazonToken> AmazonTokens { get; set; }
     
     // Shared DbSets
     public DbSet<ErrorLog> ErrorLogs { get; set; }
@@ -541,6 +545,23 @@ public class DBcontext : DbContext
                 .WithMany(i => i.InvoiceAttachments)
                 .HasForeignKey(e => e.InvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configuración de AmazonToken (Amazon)
+        modelBuilder.Entity<AmazonToken>(entity =>
+        {
+            entity.ToTable("AmazonTokens", "Amazon");
+            entity.HasKey(e => e.TokenId);
+            entity.Property(e => e.TokenId).ValueGeneratedOnAdd();
+            entity.Property(e => e.RefreshToken).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.AccessToken).HasMaxLength(2000).IsRequired();
+            entity.Property(e => e.TokenType).HasMaxLength(50).IsRequired().HasDefaultValue("bearer");
+            entity.Property(e => e.ExpiresIn).IsRequired().HasDefaultValue(3600);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+            entity.Property(e => e.ExpiresAt).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.ClientId).HasMaxLength(255);
+            entity.Property(e => e.Notes).HasMaxLength(500);
         });
     }
 } 
