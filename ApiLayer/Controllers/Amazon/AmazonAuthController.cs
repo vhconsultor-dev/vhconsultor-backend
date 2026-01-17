@@ -34,7 +34,7 @@ public class AmazonAuthController : ControllerBase
     /// </summary>
     /// <returns>Access token generado</returns>
     [HttpPost("generate-token")]
-    [AllowAnonymous]
+    [Authorize]
     public async Task<IActionResult> GenerateAccessToken()
     {
         // Usar variables de entorno configuradas en Azure

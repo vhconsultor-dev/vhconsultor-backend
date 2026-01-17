@@ -25,6 +25,17 @@ Content-Type: application/json
 Accept: application/json
 ```
 
+### 🔑 Keys Requeridas
+
+El frontend necesita tener configuradas las siguientes keys para generar el payload encriptado:
+
+| Key | Descripción | Uso |
+|-----|-------------|-----|
+| **SecretKey** | Clave secreta para validación | Se incluye en el payload antes de encriptar |
+| **ValidationKey** | Clave para encriptar el payload | Se usa para encriptar el payload con AES-256 |
+
+**⚠️ IMPORTANTE**: Estas keys deben ser proporcionadas por el equipo de backend y configuradas de forma segura en el frontend (variables de entorno, archivos de configuración seguros, etc.).
+
 ### Request Body
 ```json
 {
@@ -34,10 +45,50 @@ Accept: application/json
 
 #### Descripción del Request
 - **encryptedPayload** (string, requerido): Payload encriptado que debe generarse antes de hacer la petición
-  - El payload debe contener: `{SecretKey}|{timestamp}`
-  - El timestamp debe ser en UTC-6 (hora de Costa Rica)
-  - El payload debe encriptarse usando AES con el ValidationKey
-  - El timestamp debe tener una diferencia máxima de 1 minuto con la hora actual
+
+#### Proceso para Generar el encryptedPayload
+
+1. **Crear el payload sin encriptar:**
+   ```
+   payload = "{SecretKey}|{timestamp}"
+   ```
+   - `SecretKey`: La clave secreta proporcionada por el backend
+   - `timestamp`: Timestamp en milisegundos Unix (UTC-6, hora de Costa Rica)
+   - Ejemplo: `"VHC0n5ult0r!2024$S3cur3K3y#F0rJWT@T0k3nG3n3r4t10n&V4l1d4t10n|1737144000000"`
+
+2. **Encriptar el payload usando AES-256-CBC:**
+   - Algoritmo: AES-256
+   - Modo: CBC
+   - Padding: PKCS7
+   - Key: Derivar de ValidationKey usando SHA256 (32 bytes)
+   - IV: Generar aleatoriamente (16 bytes)
+   - Formato: Base64 del resultado (IV + datos encriptados)
+
+3. **El encryptedPayload resultante** es lo que se envía en el request body
+
+#### Ejemplo de Generación del Payload
+
+```javascript
+// Pseudocódigo
+const secretKey = "VHC0n5ult0r!2024$S3cur3K3y#F0rJWT@T0k3nG3n3r4t10n&V4l1d4t10n";
+const validationKey = "AES256V4l1d4t10nK3y!2024@VHC0n5ult0r#Encryp7&D3cryp7$S3cur3";
+
+// 1. Generar timestamp en UTC-6 (Costa Rica)
+const timestamp = Date.now() - (6 * 60 * 60 * 1000); // UTC-6
+
+// 2. Crear payload
+const payload = `${secretKey}|${timestamp}`;
+
+// 3. Encriptar con AES-256-CBC usando validationKey
+const encryptedPayload = encryptAES256(payload, validationKey);
+
+// 4. Enviar al endpoint
+```
+
+#### Validaciones del Payload
+- El timestamp debe estar dentro de **±1 minuto** de diferencia con la hora actual del servidor (UTC-6)
+- El SecretKey debe coincidir exactamente con el configurado en el servidor
+- El payload debe estar correctamente encriptado con AES-256 usando el ValidationKey
 
 ### Response Exitoso (200 OK)
 ```json
@@ -95,7 +146,15 @@ Accept: application/json
 #### ✅ Validaciones del Request
 1. **encryptedPayload** debe estar presente y no estar vacío
 2. El payload desencriptado debe tener el formato: `{SecretKey}|{timestamp}`
-3. El timestamp debe estar dentro de 1 minuto de diferencia con la hora actual (UTC-6)
+3. El timestamp debe estar dentro de **±1 minuto** de diferencia con la hora actual del servidor (UTC-6)
+4. El **SecretKey** debe coincidir exactamente con el configurado en el servidor
+5. El payload debe estar correctamente encriptado con **AES-256-CBC** usando el **ValidationKey**
+
+#### ⚠️ Consideraciones Importantes
+- **Timing**: El timestamp debe generarse justo antes de hacer la petición (no más de 1 minuto de diferencia)
+- **Encriptación**: Usar AES-256-CBC con PKCS7 padding
+- **Key Derivation**: La ValidationKey se deriva usando SHA256 para obtener 32 bytes
+- **IV**: Se genera aleatoriamente y se incluye al inicio del payload encriptado
 
 #### ⚠️ Manejo de Errores
 - Si `status === false` y `statusCode === 400`: Error de validación o payload inválido
@@ -297,14 +356,31 @@ Usuario → Login → ✅ Login Exitoso
 
 ## ✅ Checklist de Implementación
 
+### Configuración Inicial
+- [ ] Obtener **SecretKey** del equipo de backend
+- [ ] Obtener **ValidationKey** del equipo de backend
+- [ ] Configurar las keys de forma segura (variables de entorno, archivos de configuración)
+- [ ] Implementar función de encriptación AES-256-CBC
+
+### Implementación de APIs
+- [ ] Implementar generación de payload encriptado para JWT
 - [ ] Invocar API de JWT después de login exitoso
 - [ ] Invocar API de Amazon después de login exitoso
 - [ ] Guardar token JWT para autenticación
 - [ ] Guardar access token de Amazon para llamadas a Amazon
+
+### Manejo de Errores y Validaciones
 - [ ] Implementar manejo de errores para ambas APIs
+- [ ] Validar que el timestamp esté dentro del rango permitido (±1 minuto)
+- [ ] Manejar errores de encriptación/desencriptación
 - [ ] Verificar expiración de tokens antes de usarlos
 - [ ] Implementar renovación automática de tokens cuando estén próximos a expirar
 - [ ] Manejar casos donde una API falle pero la otra tenga éxito
+
+### Seguridad
+- [ ] Nunca exponer SecretKey o ValidationKey en el código fuente
+- [ ] Usar variables de entorno o servicios de gestión de secretos
+- [ ] No loggear las keys en consola o archivos de log
 
 ---
 

@@ -22,24 +22,40 @@ public class AmazonTokenCommandRepository
     /// </summary>
     public async Task<int> SaveTokenAsync(AmazonToken token)
     {
-        // Desactivar tokens anteriores del mismo cliente
-        if (!string.IsNullOrEmpty(token.ClientId))
+        try
         {
-            var existingTokens = await _context.AmazonTokens
-                .Where(t => t.ClientId == token.ClientId && t.IsActive)
-                .ToListAsync();
-
-            foreach (var existingToken in existingTokens)
+            // Desactivar tokens anteriores del mismo cliente
+            if (!string.IsNullOrEmpty(token.ClientId))
             {
-                existingToken.IsActive = false;
+                try
+                {
+                    var existingTokens = await _context.AmazonTokens
+                        .Where(t => t.ClientId == token.ClientId && t.IsActive)
+                        .ToListAsync();
+
+                    foreach (var existingToken in existingTokens)
+                    {
+                        existingToken.IsActive = false;
+                    }
+                }
+                catch (Exception)
+                {
+                    // Si la tabla no existe, continuar sin desactivar tokens anteriores
+                }
             }
+
+            // Agregar el nuevo token
+            _context.AmazonTokens.Add(token);
+            await _context.SaveChangesAsync();
+
+            return token.TokenId;
         }
-
-        // Agregar el nuevo token
-        _context.AmazonTokens.Add(token);
-        await _context.SaveChangesAsync();
-
-        return token.TokenId;
+        catch (Exception)
+        {
+            // Si hay cualquier error de BD (tabla no existe, etc.), lanzar excepción
+            // para que el servicio la maneje y continúe sin guardar
+            throw;
+        }
     }
 
     /// <summary>

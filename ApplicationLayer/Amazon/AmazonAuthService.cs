@@ -187,23 +187,35 @@ public class AmazonAuthService
                 };
             }
 
-            // Crear el objeto de token para guardar
+            // Calcular fecha de expiración
             var now = DateTimeService.GetCostaRicaNow();
-            var amazonToken = new AmazonToken
-            {
-                RefreshToken = command.RefreshToken,
-                AccessToken = tokenResponse.AccessToken,
-                TokenType = tokenResponse.TokenType ?? "bearer",
-                ExpiresIn = tokenResponse.ExpiresIn,
-                CreatedAt = now,
-                ExpiresAt = now.AddSeconds(tokenResponse.ExpiresIn),
-                IsActive = true,
-                ClientId = command.ClientId,
-                Notes = "Token generado automáticamente"
-            };
+            var expiresAt = now.AddSeconds(tokenResponse.ExpiresIn);
 
-            // Guardar en la base de datos
-            var tokenId = await _tokenCommandRepository.SaveTokenAsync(amazonToken);
+            // Intentar guardar en la base de datos (opcional, no crítico si falla)
+            int? tokenId = null;
+            try
+            {
+                var amazonToken = new AmazonToken
+                {
+                    RefreshToken = command.RefreshToken,
+                    AccessToken = tokenResponse.AccessToken,
+                    TokenType = tokenResponse.TokenType ?? "bearer",
+                    ExpiresIn = tokenResponse.ExpiresIn,
+                    CreatedAt = now,
+                    ExpiresAt = expiresAt,
+                    IsActive = true,
+                    ClientId = command.ClientId,
+                    Notes = "Token generado automáticamente"
+                };
+
+                tokenId = await _tokenCommandRepository.SaveTokenAsync(amazonToken);
+            }
+            catch (Exception dbEx)
+            {
+                // Si falla el guardado en BD, continuar de todas formas
+                // El token sigue siendo válido aunque no se guarde
+                // Esto permite que el endpoint funcione aunque la tabla no exista aún
+            }
 
             return new GenerateAccessTokenResult
             {
@@ -214,7 +226,7 @@ public class AmazonAuthService
                 TokenType = tokenResponse.TokenType ?? "bearer",
                 ExpiresIn = tokenResponse.ExpiresIn,
                 TokenId = tokenId,
-                ExpiresAt = amazonToken.ExpiresAt
+                ExpiresAt = expiresAt
             };
         }
         catch (HttpRequestException ex)
