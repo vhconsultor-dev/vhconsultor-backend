@@ -93,6 +93,7 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateContractRequest>, BusinessLayer.Corporate.Validators.UpdateContractValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateContractServiceRequest>, BusinessLayer.Corporate.Validators.CreateContractServiceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateContractServiceRequest>, BusinessLayer.Corporate.Validators.UpdateContractServiceValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.GenerateContractPdfRequest>, BusinessLayer.Corporate.Validators.GenerateContractPdfRequestValidator>();
 // Pricing Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateServiceBudgetRangeCommand>, BusinessLayer.Corporate.Validators.CreateServiceBudgetRangeCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateServiceBudgetRangeCommand>, BusinessLayer.Corporate.Validators.UpdateServiceBudgetRangeCommandValidator>();
@@ -121,6 +122,19 @@ builder.Services.AddHttpClient<ApplicationLayer.Amazon.AmazonAuthService>(client
     client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
+#endregion
+
+#region CraftMyPDF Configuration
+// Configurar CraftMyPDF Settings
+builder.Services.Configure<BusinessLayer.Shared.CraftMyPdfSettings>(builder.Configuration.GetSection("CraftMyPdf"));
+// Registrar HttpClient para CraftMyPDF
+builder.Services.AddHttpClient("CraftMyPdf", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(60);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+// Registrar el servicio CraftMyPDF
+builder.Services.AddScoped<ApplicationLayer.Shared.CraftMyPdfService>();
 #endregion
 
 #region JWT Configuration

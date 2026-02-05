@@ -17,13 +17,16 @@ public class ContractController : ControllerBase
 {
     private readonly ContractService _contractService;
     private readonly ValidationService _validationService;
+    private readonly CraftMyPdfService _craftMyPdfService;
 
     public ContractController(
         ContractService contractService,
-        ValidationService validationService)
+        ValidationService validationService,
+        CraftMyPdfService craftMyPdfService)
     {
         _contractService = contractService;
         _validationService = validationService;
+        _craftMyPdfService = craftMyPdfService;
     }
 
     #region POST - Create Contract
@@ -293,6 +296,46 @@ public class ContractController : ControllerBase
         {
             var errorResponse = ResponseStructure<object>.Error(
                 $"Error al obtener los contratos activos: {ex.Message}", 
+                500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
+    #region POST - Generate Contract PDF
+
+    /// <summary>
+    /// Genera el PDF de un contrato usando CraftMyPDF
+    /// </summary>
+    /// <param name="request">Datos del contrato para generar el PDF</param>
+    /// <returns>Archivo PDF del contrato</returns>
+    [HttpPost("generate-pdf")]
+    public async Task<IActionResult> GenerateContractPdf([FromBody] GenerateContractPdfRequest request)
+    {
+        // Validación usando FluentValidation
+        var validationResult = await _validationService.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var response = ResponseStructure<object>.ValidationError(
+                string.Join(", ", validationResult.Errors));
+            return BadRequest(response);
+        }
+
+        try
+        {
+            // Generar el PDF usando CraftMyPDF
+            var pdfBytes = await _craftMyPdfService.GeneratePdfAsync(request.TemplateId, request.Data);
+
+            // Retornar el PDF como archivo descargable
+            var fileName = $"contrato_{request.Data.FullName.Replace(" ", "_")}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.pdf";
+            
+            return File(pdfBytes, "application/pdf", fileName);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Error al generar el PDF del contrato: {ex.Message}", 
                 500);
             return StatusCode(500, errorResponse);
         }
