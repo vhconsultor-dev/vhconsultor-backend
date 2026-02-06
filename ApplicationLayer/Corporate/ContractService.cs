@@ -1,6 +1,7 @@
 using BusinessLayer.Corporate.Commands;
 using BusinessLayer.Corporate.Queries;
 using ModelLayer.Corporate.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace ApplicationLayer.Corporate;
 
@@ -12,17 +13,20 @@ public class ContractService
     private readonly CreateContractCommand _createContractCommand;
     private readonly UpdateContractCommand _updateContractCommand;
     private readonly DeleteContractCommand _deleteContractCommand;
+    private readonly UploadSignedContractDocumentCommand _uploadSignedContractDocumentCommand;
     private readonly ContractQueryRepository _contractQueryRepository;
 
     public ContractService(
         CreateContractCommand createContractCommand,
         UpdateContractCommand updateContractCommand,
         DeleteContractCommand deleteContractCommand,
+        UploadSignedContractDocumentCommand uploadSignedContractDocumentCommand,
         ContractQueryRepository contractQueryRepository)
     {
         _createContractCommand = createContractCommand;
         _updateContractCommand = updateContractCommand;
         _deleteContractCommand = deleteContractCommand;
+        _uploadSignedContractDocumentCommand = uploadSignedContractDocumentCommand;
         _contractQueryRepository = contractQueryRepository;
     }
 
@@ -50,6 +54,14 @@ public class ContractService
     public async Task<bool> DeleteContractAsync(int contractId, string? deletedBy = null)
     {
         return await _deleteContractCommand.ExecuteAsync(contractId, deletedBy);
+    }
+
+    /// <summary>
+    /// Sube el documento firmado de un contrato a Azure Storage
+    /// </summary>
+    public async Task<UploadSignedContractDocumentResponse> UploadSignedDocumentAsync(int contractId, IFormFile file, string? lastModifiedBy = null)
+    {
+        return await _uploadSignedContractDocumentCommand.ExecuteAsync(contractId, file, lastModifiedBy);
     }
 
     #endregion

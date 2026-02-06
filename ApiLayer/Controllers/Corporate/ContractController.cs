@@ -303,6 +303,99 @@ public class ContractController : ControllerBase
 
     #endregion
 
+    #region POST - Upload Signed Contract Document
+
+    /// <summary>
+    /// Sube el documento PDF firmado de un contrato a Azure Storage
+    /// </summary>
+    /// <param name="contractId">ID del contrato</param>
+    /// <param name="file">Archivo PDF del contrato firmado</param>
+    /// <param name="lastModifiedBy">Usuario que realiza la subida (opcional)</param>
+    /// <returns>Resultado de la operación con la URL del documento</returns>
+    /// <remarks>
+    /// Este endpoint permite subir el contrato firmado por el cliente.
+    /// 
+    /// Validaciones:
+    /// - Solo se aceptan archivos PDF
+    /// - Tamaño máximo: 10 MB
+    /// - El contrato debe existir en la base de datos
+    /// 
+    /// El archivo se almacena en Azure Blob Storage en la ruta:
+    /// InvoicesAttachment/{ContractNumber}/signed_contract_{timestamp}.pdf
+    /// 
+    /// Solo se actualiza el campo SignedDocumentUrl del contrato, los demás campos permanecen sin cambios.
+    /// </remarks>
+    [HttpPost("{contractId}/upload-signed-document")]
+    [DisableRequestSizeLimit]
+    [RequestFormLimits(MultipartBodyLengthLimit = 10485760)] // 10 MB
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadSignedDocument(
+        int contractId, 
+        IFormFile file, 
+        [FromQuery] string? lastModifiedBy = null)
+    {
+        try
+        {
+            // Validación temprana del archivo
+            if (file == null || file.Length == 0)
+            {
+                var validationResponse = ResponseStructure<object>.ValidationError(
+                    "No se proporcionó ningún archivo o el archivo está vacío. " +
+                    "Por favor selecciona un archivo PDF válido para subir.");
+                return BadRequest(validationResponse);
+            }
+
+            // Validar extensión del archivo
+            var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (fileExtension != ".pdf")
+            {
+                var validationResponse = ResponseStructure<object>.ValidationError(
+                    $"Solo se aceptan archivos PDF para contratos firmados. " +
+                    $"El archivo '{file.FileName}' tiene la extensión '{fileExtension}'. " +
+                    $"Por favor sube un archivo con extensión .pdf");
+                return BadRequest(validationResponse);
+            }
+
+            var result = await _contractService.UploadSignedDocumentAsync(contractId, file, lastModifiedBy);
+
+            var successResponse = ResponseStructure<UploadSignedContractDocumentResponse>.Success(
+                result,
+                result.Message);
+
+            return Ok(successResponse);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message, 404);
+            return NotFound(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? ex.Message;
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Error al guardar en la base de datos: {innerMessage}",
+                500);
+            return StatusCode(500, errorResponse);
+        }
+        catch (Exception ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? string.Empty;
+            var fullMessage = $"Error inesperado al subir el documento firmado del contrato: {ex.Message}";
+            if (!string.IsNullOrEmpty(innerMessage))
+                fullMessage += $" | Detalles adicionales: {innerMessage}";
+            
+            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
     #region POST - Generate Contract PDF
 
     /// <summary>

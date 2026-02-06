@@ -235,6 +235,7 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateLastContactDat
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateContractCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateContractCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteContractCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UploadSignedContractDocumentCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateContractServiceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateContractServiceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteContractServiceCommand>();

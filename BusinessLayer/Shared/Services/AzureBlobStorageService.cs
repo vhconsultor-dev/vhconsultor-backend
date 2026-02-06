@@ -19,6 +19,70 @@ public class AzureBlobStorageService
     }
 
     /// <summary>
+    /// Uploads a contract document to Azure Blob Storage
+    /// </summary>
+    /// <param name="fileStream">File stream to upload</param>
+    /// <param name="fileName">Name of the file</param>
+    /// <param name="contractNumber">Contract number for folder organization</param>
+    /// <param name="contentType">MIME type of the file</param>
+    /// <returns>URL of the uploaded file</returns>
+    /// <exception cref="InvalidOperationException">If upload fails</exception>
+    public async Task<string> UploadContractDocumentAsync(Stream fileStream, string fileName, string contractNumber, string contentType)
+    {
+        try
+        {
+            // Validar que el connection string esté configurado
+            if (string.IsNullOrEmpty(_settings.ConnectionString))
+            {
+                throw new InvalidOperationException(
+                    "Azure Storage Connection String is not configured. " +
+                    "Please set the 'AzureStorage:ConnectionString' configuration value or environment variable.");
+            }
+
+            // Get or create container
+            var containerClient = _blobServiceClient.GetBlobContainerClient(_settings.ContainerName);
+            await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
+
+            // Build blob path: ContractSignedDocuments/{ContractNumber}/{fileName}
+            var blobPath = $"ContractSignedDocuments/{contractNumber}/{fileName}";
+            var blobClient = containerClient.GetBlobClient(blobPath);
+
+            // Set content type
+            var blobHttpHeaders = new BlobHttpHeaders
+            {
+                ContentType = contentType
+            };
+
+            // Upload file (overwrite if exists)
+            await blobClient.UploadAsync(fileStream, new BlobUploadOptions
+            {
+                HttpHeaders = blobHttpHeaders,
+                Conditions = null // Permite sobrescribir si existe
+            });
+
+            // Return the blob URL
+            return blobClient.Uri.ToString();
+        }
+        catch (InvalidOperationException)
+        {
+            throw; // Re-throw configuration errors as is
+        }
+        catch (Azure.RequestFailedException ex)
+        {
+            throw new InvalidOperationException(
+                $"Azure Storage request failed while uploading '{fileName}'. " +
+                $"Status: {ex.Status}, Error Code: {ex.ErrorCode}, Message: {ex.Message}", ex);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Failed to upload contract document '{fileName}' to Azure Blob Storage. " +
+                $"Container: '{_settings.ContainerName}', Path: 'ContractSignedDocuments/{contractNumber}'. " +
+                $"Error: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
     /// Uploads a file to Azure Blob Storage
     /// </summary>
     /// <param name="fileStream">File stream to upload</param>
