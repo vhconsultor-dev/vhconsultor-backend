@@ -2,8 +2,10 @@ using ApplicationLayer.Corporate;
 using ApplicationLayer.Shared;
 using ApiLayer.Tools;
 using BusinessLayer.Corporate.Commands;
+using BusinessLayer.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 
 namespace ApiLayer.Controllers.Corporate;
 
@@ -18,15 +20,18 @@ public class ContractController : ControllerBase
     private readonly ContractService _contractService;
     private readonly ValidationService _validationService;
     private readonly CraftMyPdfService _craftMyPdfService;
+    private readonly AzureStorageSettings _azureStorageSettings;
 
     public ContractController(
         ContractService contractService,
         ValidationService validationService,
-        CraftMyPdfService craftMyPdfService)
+        CraftMyPdfService craftMyPdfService,
+        IOptions<AzureStorageSettings> azureStorageSettings)
     {
         _contractService = contractService;
         _validationService = validationService;
         _craftMyPdfService = craftMyPdfService;
+        _azureStorageSettings = azureStorageSettings.Value;
     }
 
     #region POST - Create Contract
@@ -429,6 +434,90 @@ public class ContractController : ControllerBase
         {
             var errorResponse = ResponseStructure<object>.Error(
                 $"Error al generar el PDF del contrato: {ex.Message}", 
+                500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
+    #region GET - Get Contract Document URL with SAS
+
+    /// <summary>
+    /// Obtiene la URL del documento del contrato con token SAS para descarga
+    /// </summary>
+    /// <param name="documentUrl">URL del documento en Azure Storage</param>
+    /// <returns>URL del documento con token SAS para descarga</returns>
+    /// <remarks>
+    /// Este endpoint agrega el token SAS a la URL del documento para permitir su descarga.
+    /// La URL debe ser válida y pertenecer al contenedor de Azure Storage configurado.
+    /// </remarks>
+    [HttpGet("document-url")]
+    public IActionResult GetContractDocumentUrlWithSas([FromQuery] string documentUrl)
+    {
+        try
+        {
+            // Validar que se proporcionó la URL
+            if (string.IsNullOrWhiteSpace(documentUrl))
+            {
+                var validationResponse = ResponseStructure<object>.ValidationError(
+                    "La URL del documento es requerida. Por favor proporciona el parámetro 'documentUrl' en la consulta.");
+                return BadRequest(validationResponse);
+            }
+
+            // Validar que la URL sea válida
+            if (!Uri.TryCreate(documentUrl, UriKind.Absolute, out var uri) || 
+                (uri.Scheme != "http" && uri.Scheme != "https"))
+            {
+                var validationResponse = ResponseStructure<object>.ValidationError(
+                    $"La URL proporcionada no es válida: '{documentUrl}'. " +
+                    $"Por favor proporciona una URL válida de Azure Storage.");
+                return BadRequest(validationResponse);
+            }
+
+            // Validar que la URL pertenezca al contenedor correcto
+            var expectedContainerPath = $"/{_azureStorageSettings.ContainerName}/";
+            if (!uri.AbsolutePath.Contains(expectedContainerPath, StringComparison.OrdinalIgnoreCase))
+            {
+                var validationResponse = ResponseStructure<object>.ValidationError(
+                    $"La URL proporcionada no pertenece al contenedor de Azure Storage configurado. " +
+                    $"Se esperaba que la URL contenga el contenedor '{_azureStorageSettings.ContainerName}'. " +
+                    $"URL recibida: '{documentUrl}'");
+                return BadRequest(validationResponse);
+            }
+
+            // Validar que el SAS token esté configurado
+            if (string.IsNullOrWhiteSpace(_azureStorageSettings.BlobSasToken))
+            {
+                var errorResponse = ResponseStructure<object>.Error(
+                    "El token SAS de Azure Storage no está configurado. " +
+                    "Por favor contacta al administrador del sistema.",
+                    500);
+                return StatusCode(500, errorResponse);
+            }
+
+            // Concatenar el SAS token a la URL
+            // Si la URL ya tiene query parameters, usar &, si no, usar ?
+            var separator = uri.Query.Length > 0 ? "&" : "?";
+            var urlWithSas = $"{documentUrl}{separator}{_azureStorageSettings.BlobSasToken}";
+
+            var response = new
+            {
+                documentUrl = documentUrl,
+                urlWithSas = urlWithSas,
+                expiresAt = "2030-01-02T02:38:09Z" // Fecha de expiración del SAS (puedes hacerlo dinámico si lo necesitas)
+            };
+
+            var successResponse = ResponseStructure<object>.Success(
+                response,
+                "URL con token SAS generada exitosamente");
+
+            return Ok(successResponse);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Error inesperado al generar la URL con SAS: {ex.Message}",
                 500);
             return StatusCode(500, errorResponse);
         }
