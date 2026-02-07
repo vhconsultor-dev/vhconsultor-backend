@@ -21,17 +21,23 @@ public class ContractController : ControllerBase
     private readonly ValidationService _validationService;
     private readonly CraftMyPdfService _craftMyPdfService;
     private readonly AzureStorageSettings _azureStorageSettings;
+    private readonly SendGridService _sendGridService;
+    private readonly SendGridSettings _sendGridSettings;
 
     public ContractController(
         ContractService contractService,
         ValidationService validationService,
         CraftMyPdfService craftMyPdfService,
-        IOptions<AzureStorageSettings> azureStorageSettings)
+        IOptions<AzureStorageSettings> azureStorageSettings,
+        SendGridService sendGridService,
+        IOptions<SendGridSettings> sendGridSettings)
     {
         _contractService = contractService;
         _validationService = validationService;
         _craftMyPdfService = craftMyPdfService;
         _azureStorageSettings = azureStorageSettings.Value;
+        _sendGridService = sendGridService;
+        _sendGridSettings = sendGridSettings.Value;
     }
 
     #region POST - Create Contract
@@ -518,6 +524,158 @@ public class ContractController : ControllerBase
         {
             var errorResponse = ResponseStructure<object>.Error(
                 $"Error inesperado al generar la URL con SAS: {ex.Message}",
+                500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
+    #region POST - Send Contract Email
+
+    /// <summary>
+    /// Envía el contrato por correo electrónico al cliente usando SendGrid
+    /// </summary>
+    /// <param name="request">Datos del correo y contrato</param>
+    /// <param name="pdfFile">Archivo PDF del contrato (opcional)</param>
+    /// <returns>Resultado de la operación</returns>
+    /// <remarks>
+    /// Este endpoint envía un correo al cliente con el contrato para su firma.
+    /// 
+    /// Datos requeridos:
+    /// - toEmail: Correo del destinatario
+    /// - data: Información del contrato (nombre completo, identificación, número de contrato, etc.)
+    /// 
+    /// Opcionales:
+    /// - ccEmail: Correo en copia (CC)
+    /// - pdfFile: Archivo PDF adjunto del contrato
+    /// 
+    /// El correo usa una plantilla de SendGrid configurada en las variables de entorno.
+    /// </remarks>
+    [HttpPost("send-contract-email")]
+    [DisableRequestSizeLimit]
+    [RequestFormLimits(MultipartBodyLengthLimit = 10485760)] // 10 MB
+    public async Task<IActionResult> SendContractEmail(
+        [FromForm] string requestJson,
+        IFormFile? pdfFile = null)
+    {
+        try
+        {
+            // Deserializar el request JSON del form-data
+            SendContractEmailRequest? request;
+            try
+            {
+                request = System.Text.Json.JsonSerializer.Deserialize<SendContractEmailRequest>(
+                    requestJson,
+                    new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+            }
+            catch (Exception ex)
+            {
+                var parseErrorResponse = ResponseStructure<object>.ValidationError(
+                    $"Error al procesar los datos del correo: {ex.Message}. " +
+                    $"Por favor verifica que el JSON sea válido.");
+                return BadRequest(parseErrorResponse);
+            }
+
+            if (request == null)
+            {
+                var validationResponse = ResponseStructure<object>.ValidationError(
+                    "Los datos del correo son requeridos. Por favor proporciona 'requestJson' con los datos.");
+                return BadRequest(validationResponse);
+            }
+
+            // Validación usando FluentValidation
+            var validationResult = await _validationService.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                var response = ResponseStructure<object>.ValidationError(
+                    string.Join(", ", validationResult.Errors));
+                return BadRequest(response);
+            }
+
+            // Validar archivo PDF si se proporciona
+            byte[]? pdfContent = null;
+            string? pdfFileName = null;
+
+            if (pdfFile != null)
+            {
+                // Validar que sea un PDF
+                var fileExtension = Path.GetExtension(pdfFile.FileName).ToLowerInvariant();
+                if (fileExtension != ".pdf")
+                {
+                    var validationResponse = ResponseStructure<object>.ValidationError(
+                        $"Solo se aceptan archivos PDF como adjunto. " +
+                        $"El archivo '{pdfFile.FileName}' tiene la extensión '{fileExtension}'.");
+                    return BadRequest(validationResponse);
+                }
+
+                // Validar tamaño (10 MB máximo)
+                if (pdfFile.Length > 10485760)
+                {
+                    var validationResponse = ResponseStructure<object>.ValidationError(
+                        $"El archivo PDF es demasiado grande. Tamaño máximo permitido: 10 MB. " +
+                        $"Tamaño del archivo: {pdfFile.Length / 1024 / 1024:F2} MB.");
+                    return BadRequest(validationResponse);
+                }
+
+                // Leer el contenido del archivo
+                using (var memoryStream = new MemoryStream())
+                {
+                    await pdfFile.CopyToAsync(memoryStream);
+                    pdfContent = memoryStream.ToArray();
+                }
+                pdfFileName = pdfFile.FileName;
+            }
+
+            // Validar que el template ID esté configurado
+            if (string.IsNullOrWhiteSpace(_sendGridSettings.ContractTemplateId))
+            {
+                var errorResponse = ResponseStructure<object>.Error(
+                    "El template de SendGrid para contratos no está configurado. " +
+                    "Por favor contacta al administrador del sistema.",
+                    500);
+                return StatusCode(500, errorResponse);
+            }
+
+            // Enviar el correo usando SendGrid
+            var emailResult = await _sendGridService.SendTemplateEmailAsync(
+                request.ToEmail,
+                _sendGridSettings.ContractTemplateId,
+                request.Data,
+                request.CcEmail,
+                pdfContent,
+                pdfFileName);
+
+            if (emailResult.Success)
+            {
+                var response = new SendContractEmailResponse
+                {
+                    Success = true,
+                    Message = "Correo enviado exitosamente al cliente"
+                };
+
+                var successResponse = ResponseStructure<SendContractEmailResponse>.Success(
+                    response,
+                    "Correo enviado exitosamente");
+
+                return Ok(successResponse);
+            }
+            else
+            {
+                var errorResponse = ResponseStructure<object>.Error(
+                    $"No se pudo enviar el correo: {emailResult.Message}. " +
+                    $"Detalles: {emailResult.ErrorDetails}",
+                    500);
+                return StatusCode(500, errorResponse);
+            }
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Error inesperado al enviar el correo del contrato: {ex.Message}",
                 500);
             return StatusCode(500, errorResponse);
         }

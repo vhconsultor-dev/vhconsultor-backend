@@ -94,6 +94,7 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateContractServiceRequest>, BusinessLayer.Corporate.Validators.CreateContractServiceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateContractServiceRequest>, BusinessLayer.Corporate.Validators.UpdateContractServiceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.GenerateContractPdfRequest>, BusinessLayer.Corporate.Validators.GenerateContractPdfRequestValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.SendContractEmailRequest>, BusinessLayer.Corporate.Validators.SendContractEmailRequestValidator>();
 // Pricing Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateServiceBudgetRangeCommand>, BusinessLayer.Corporate.Validators.CreateServiceBudgetRangeCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateServiceBudgetRangeCommand>, BusinessLayer.Corporate.Validators.UpdateServiceBudgetRangeCommandValidator>();
@@ -135,6 +136,13 @@ builder.Services.AddHttpClient("CraftMyPdf", client =>
 });
 // Registrar el servicio CraftMyPDF
 builder.Services.AddScoped<ApplicationLayer.Shared.CraftMyPdfService>();
+#endregion
+
+#region SendGrid Configuration
+// Configurar SendGrid Settings
+builder.Services.Configure<BusinessLayer.Shared.SendGridSettings>(builder.Configuration.GetSection("SendGrid"));
+// Registrar el servicio SendGrid
+builder.Services.AddScoped<ApplicationLayer.Shared.SendGridService>();
 #endregion
 
 #region JWT Configuration
