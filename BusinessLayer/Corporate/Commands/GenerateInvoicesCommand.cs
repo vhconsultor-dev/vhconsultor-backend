@@ -33,89 +33,96 @@ public class GenerateInvoicesCommand
             .FirstOrDefaultAsync(c => c.ContractId == contractId);
 
         if (contract == null)
-            throw new KeyNotFoundException($"Contrato con ID {contractId} no encontrado");
+            throw new KeyNotFoundException($"Contract with ID {contractId} not found");
 
-        // 2. Verificar si ya existen facturas
+        // 2. Validar que sea contrato de monto fijo (FeeTypeId = 1)
+        if (contract.FeeTypeId != 1)
+        {
+            throw new InvalidOperationException(
+                $"This endpoint is only for fixed amount contracts (FeeTypeId = 1). " +
+                $"Contract {contract.ContractNumber} has FeeTypeId = {contract.FeeTypeId}");
+        }
+
+        // 3. Contar facturas existentes
         var existingInvoices = await _context.Invoices
             .Where(i => i.ContractId == contractId)
             .ToListAsync();
 
-        if (existingInvoices.Any())
-        {
-            return new GenerateInvoicesResponse
-            {
-                Success = false,
-                Message = "Ya existen facturas generadas para este contrato",
-                InvoicesGenerated = 0,
-                ExistingInvoicesCount = existingInvoices.Count
-            };
-        }
+        int existingCount = existingInvoices.Count;
 
-        // 3. Validar campos requeridos
+        // 4. Validar campos requeridos
         await ValidateContractForInvoiceGenerationAsync(contract, contractId);
 
-        // 3.5. Validar coherencia entre frecuencia y duración del contrato
-        int contractMonths = CalculateContractMonths(contract.StartDate!.Value, contract.EndDate!.Value);
-        int monthsInFrequency = GetMonthsForFrequency(contract.PaymentFrequency!);
-        
-        if (monthsInFrequency > contractMonths)
-        {
-            // Advertir pero permitir: se generará solo 1 factura
-            // Esto es válido para contratos cortos con frecuencia larga
-        }
-
-        // 4. Obtener servicios del contrato
-        var contractServices = await _context.ContractServices
-            .Where(cs => cs.ContractId == contractId && cs.IsActive)
-            .OrderBy(cs => cs.ServiceOrder)
-            .ToListAsync();
-
-        // 5. Calcular monto total
-        decimal totalAmount = contract.FeeAmount ?? 
-            contractServices.Sum(cs => cs.FinalPrice ?? 0);
-
-        if (totalAmount <= 0)
-            throw new InvalidOperationException("El monto total del contrato debe ser mayor a cero");
-
-        // 6. Calcular número de facturas
-        int numberOfInvoices = CalculateNumberOfInvoices(
+        // 5. Calcular número de facturas esperadas según el contrato
+        int expectedNumberOfInvoices = CalculateNumberOfInvoices(
             contract.StartDate!.Value,
             contract.EndDate!.Value,
             contract.PaymentFrequency!
         );
 
-        if (numberOfInvoices <= 0)
+        if (expectedNumberOfInvoices <= 0)
         {
+            int contractMonths = CalculateContractMonths(contract.StartDate!.Value, contract.EndDate!.Value);
+            int monthsInFrequency = GetMonthsForFrequency(contract.PaymentFrequency!);
             throw new InvalidOperationException(
-                $"No se pueden generar facturas. La frecuencia de pago ({monthsInFrequency} meses) es mayor que la duración del contrato ({contractMonths} meses). " +
-                $"Ajuste la frecuencia o la duración del contrato.");
+                $"Cannot generate invoices. Payment frequency ({monthsInFrequency} months) is greater than contract duration ({contractMonths} months). " +
+                $"Please adjust the payment frequency or contract duration.");
         }
 
-        // 7. Calcular monto por factura
-        decimal amountPerInvoice = totalAmount / numberOfInvoices;
+        // 6. Validar que no se exceda el número máximo de facturas
+        if (existingCount >= expectedNumberOfInvoices)
+        {
+            return new GenerateInvoicesResponse
+            {
+                Success = false,
+                Message = $"Cannot generate more invoices. The contract already has the maximum number of invoices ({existingCount}/{expectedNumberOfInvoices})",
+                InvoicesGenerated = 0,
+                ExistingInvoicesCount = existingCount,
+                ExpectedInvoicesCount = expectedNumberOfInvoices
+            };
+        }
 
-        // 8. Generar facturas
+        // 7. Calcular cuántas facturas faltan por crear
+        int invoicesToCreate = expectedNumberOfInvoices - existingCount;
+
+        // 8. Validar FeeAmount para contratos de monto fijo
+        if (!contract.FeeAmount.HasValue || contract.FeeAmount.Value <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Fixed amount contracts must have a valid FeeAmount greater than zero. " +
+                $"Contract {contract.ContractNumber} has FeeAmount = {contract.FeeAmount}");
+        }
+
+        // 9. Para contratos de monto fijo, cada factura tiene el mismo monto
+        decimal amountPerInvoice = contract.FeeAmount.Value;
+
+        // 10. Obtener servicios del contrato (opcional para items)
+        var contractServices = await _context.ContractServices
+            .Where(cs => cs.ContractId == contractId && cs.IsActive)
+            .OrderBy(cs => cs.ServiceOrder)
+            .ToListAsync();
+
+        // 11. Generar las facturas que faltan
         var invoices = new List<Invoice>();
         DateTime currentDate = contract.StartDate!.Value;
         int monthsIncrement = GetMonthsForFrequency(contract.PaymentFrequency!);
 
         // Generar todos los números de factura de una vez para evitar duplicados
-        var invoiceNumbers = await GenerateInvoiceNumbersAsync(numberOfInvoices);
+        var invoiceNumbers = await GenerateInvoiceNumbersAsync(invoicesToCreate);
 
-        for (int i = 0; i < numberOfInvoices; i++)
+        // Determinar desde qué índice comenzar (basado en las facturas existentes)
+        int startIndex = existingCount;
+
+        for (int i = 0; i < invoicesToCreate; i++)
         {
+            int totalIndex = startIndex + i;
+            
             // Calcular fechas
-            DateTime invoiceDate = i == 0 ? currentDate : currentDate.AddMonths(i * monthsIncrement);
+            DateTime invoiceDate = totalIndex == 0 ? currentDate : currentDate.AddMonths(totalIndex * monthsIncrement);
             DateTime dueDate = CalculateDueDate(invoiceDate, contract.PaymentDay);
 
-            // Ajustar última factura por redondeo
+            // Para monto fijo: todas las facturas tienen el mismo monto
             decimal invoiceAmount = amountPerInvoice;
-            if (i == numberOfInvoices - 1)
-            {
-                // Última factura: ajustar para que la suma sea exacta
-                decimal sumPreviousInvoices = amountPerInvoice * i;
-                invoiceAmount = totalAmount - sumPreviousInvoices;
-            }
 
             // Crear factura
             var invoice = new Invoice
@@ -125,7 +132,7 @@ public class GenerateInvoicesCommand
                 InvoiceDate = invoiceDate,
                 DueDate = dueDate,
                 SubTotal = invoiceAmount,
-                Tax = 0, // Por ahora sin impuestos
+                Tax = 0, // Sin impuestos
                 Total = invoiceAmount,
                 CurrencyCode = contract.CurrencyCode!,
                 Status = "Draft",
@@ -142,7 +149,7 @@ public class GenerateInvoicesCommand
             invoices.Add(invoice);
         }
 
-        // 9. Guardar todas las facturas
+        // 12. Guardar todas las facturas
         // Asegurar que cada invoice tenga ContractId correctamente asignado
         foreach (var invoice in invoices)
         {
@@ -155,19 +162,24 @@ public class GenerateInvoicesCommand
         await _context.SaveChangesAsync();
 
         // Construir mensaje informativo
-        string message = $"Se generaron {numberOfInvoices} factura(s) exitosamente";
-        if (numberOfInvoices == 1 && monthsInFrequency > contractMonths)
+        string message = invoicesToCreate == 1
+            ? $"Successfully generated 1 invoice for contract {contract.ContractNumber}"
+            : $"Successfully generated {invoicesToCreate} invoice(s) for contract {contract.ContractNumber}";
+
+        if (existingCount > 0)
         {
-            message += $". Nota: Se generó 1 factura porque la frecuencia de pago ({monthsInFrequency} meses) es mayor que la duración del contrato ({contractMonths} meses)";
+            message += $". Contract now has {existingCount + invoicesToCreate}/{expectedNumberOfInvoices} invoices";
         }
 
         return new GenerateInvoicesResponse
         {
             Success = true,
             Message = message,
-            InvoicesGenerated = numberOfInvoices,
-            TotalAmount = totalAmount,
-            InvoiceIds = invoices.Select(i => i.InvoiceId).ToList()
+            InvoicesGenerated = invoicesToCreate,
+            TotalAmount = amountPerInvoice * invoicesToCreate,
+            InvoiceIds = invoices.Select(i => i.InvoiceId).ToList(),
+            ExistingInvoicesCount = existingCount,
+            ExpectedInvoicesCount = expectedNumberOfInvoices
         };
     }
 
@@ -176,28 +188,19 @@ public class GenerateInvoicesCommand
         var errors = new List<string>();
 
         if (!contract.StartDate.HasValue)
-            errors.Add("El contrato debe tener StartDate");
+            errors.Add("Contract must have a StartDate");
 
         if (!contract.EndDate.HasValue)
-            errors.Add("El contrato debe tener EndDate");
+            errors.Add("Contract must have an EndDate");
 
         if (string.IsNullOrEmpty(contract.PaymentFrequency))
-            errors.Add("El contrato debe tener PaymentFrequency");
+            errors.Add("Contract must have a PaymentFrequency");
 
         if (string.IsNullOrEmpty(contract.CurrencyCode))
-            errors.Add("El contrato debe tener CurrencyCode");
-
-        if (!contract.FeeAmount.HasValue)
-        {
-            var hasActiveServices = await _context.ContractServices
-                .AnyAsync(cs => cs.ContractId == contractId && cs.IsActive && cs.FinalPrice.HasValue);
-            
-            if (!hasActiveServices)
-                errors.Add("El contrato debe tener FeeAmount o ContractServices activos con FinalPrice");
-        }
+            errors.Add("Contract must have a CurrencyCode");
 
         if (errors.Any())
-            throw new InvalidOperationException($"Validación fallida: {string.Join(", ", errors)}");
+            throw new InvalidOperationException($"Validation failed: {string.Join(", ", errors)}");
     }
 
     /// <summary>
@@ -410,6 +413,7 @@ public class GenerateInvoicesResponse
     public string Message { get; set; } = string.Empty;
     public int InvoicesGenerated { get; set; }
     public int ExistingInvoicesCount { get; set; }
+    public int ExpectedInvoicesCount { get; set; }
     public decimal TotalAmount { get; set; }
     public List<int> InvoiceIds { get; set; } = new();
 }

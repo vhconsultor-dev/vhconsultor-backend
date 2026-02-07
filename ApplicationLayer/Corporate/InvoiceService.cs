@@ -11,6 +11,9 @@ namespace ApplicationLayer.Corporate;
 public class InvoiceService
 {
     private readonly GenerateInvoicesCommand _generateInvoicesCommand;
+    private readonly CreateManualInvoiceCommand _createManualInvoiceCommand;
+    private readonly GeneratePercentageInvoicesCommand _generatePercentageInvoicesCommand;
+    private readonly UpdateInvoiceCommand _updateInvoiceCommand;
     private readonly MarkInvoiceAsPaidCommand _markInvoiceAsPaidCommand;
     private readonly DeleteInvoicesCommand _deleteInvoicesCommand;
     private readonly UploadInvoiceAttachmentCommand _uploadInvoiceAttachmentCommand;
@@ -19,6 +22,9 @@ public class InvoiceService
 
     public InvoiceService(
         GenerateInvoicesCommand generateInvoicesCommand,
+        CreateManualInvoiceCommand createManualInvoiceCommand,
+        GeneratePercentageInvoicesCommand generatePercentageInvoicesCommand,
+        UpdateInvoiceCommand updateInvoiceCommand,
         MarkInvoiceAsPaidCommand markInvoiceAsPaidCommand,
         DeleteInvoicesCommand deleteInvoicesCommand,
         UploadInvoiceAttachmentCommand uploadInvoiceAttachmentCommand,
@@ -26,6 +32,9 @@ public class InvoiceService
         InvoiceQueryRepository invoiceQueryRepository)
     {
         _generateInvoicesCommand = generateInvoicesCommand;
+        _createManualInvoiceCommand = createManualInvoiceCommand;
+        _generatePercentageInvoicesCommand = generatePercentageInvoicesCommand;
+        _updateInvoiceCommand = updateInvoiceCommand;
         _markInvoiceAsPaidCommand = markInvoiceAsPaidCommand;
         _deleteInvoicesCommand = deleteInvoicesCommand;
         _uploadInvoiceAttachmentCommand = uploadInvoiceAttachmentCommand;
@@ -36,11 +45,35 @@ public class InvoiceService
     #region Commands
 
     /// <summary>
-    /// Genera facturas automáticamente para un contrato
+    /// Genera facturas automáticamente para contratos de monto fijo
     /// </summary>
     public async Task<GenerateInvoicesResponse> GenerateInvoicesAsync(GenerateInvoicesRequest request)
     {
         return await _generateInvoicesCommand.ExecuteAsync(request);
+    }
+
+    /// <summary>
+    /// Crea una factura manualmente para contratos de porcentaje
+    /// </summary>
+    public async Task<CreateManualInvoiceResponse> CreateManualInvoiceAsync(CreateManualInvoiceRequest request)
+    {
+        return await _createManualInvoiceCommand.ExecuteAsync(request);
+    }
+
+    /// <summary>
+    /// Genera facturas automáticamente con monto 0 para contratos de porcentaje
+    /// </summary>
+    public async Task<GeneratePercentageInvoicesResponse> GeneratePercentageInvoicesAsync(GeneratePercentageInvoicesRequest request)
+    {
+        return await _generatePercentageInvoicesCommand.ExecuteAsync(request);
+    }
+
+    /// <summary>
+    /// Actualiza una factura (solo si no está pagada)
+    /// </summary>
+    public async Task<UpdateInvoiceResponse> UpdateInvoiceAsync(int invoiceId, UpdateInvoiceRequest request)
+    {
+        return await _updateInvoiceCommand.ExecuteAsync(invoiceId, request);
     }
 
     /// <summary>

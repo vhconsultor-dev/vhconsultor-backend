@@ -248,6 +248,9 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateContractServic
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateContractServiceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteContractServiceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.GenerateInvoicesCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateManualInvoiceCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.GeneratePercentageInvoicesCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateInvoiceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.MarkInvoiceAsPaidCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteInvoicesCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UploadInvoiceAttachmentCommand>();

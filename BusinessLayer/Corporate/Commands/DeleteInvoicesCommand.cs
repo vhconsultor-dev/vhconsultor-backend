@@ -23,11 +23,10 @@ public class DeleteInvoicesCommand
     /// <param name="invoiceId">ID de la factura a eliminar</param>
     /// <returns>Resultado de la operación</returns>
     /// <exception cref="KeyNotFoundException">Si la factura no existe</exception>
-    /// <exception cref="InvalidOperationException">Si la factura está pagada o tiene adjuntos</exception>
+    /// <exception cref="InvalidOperationException">Si la factura está pagada</exception>
     public async Task<DeleteInvoicesResponse> DeleteSingleInvoiceAsync(int invoiceId)
     {
         var invoice = await _context.Invoices
-            .Include(i => i.InvoiceAttachments)
             .FirstOrDefaultAsync(i => i.InvoiceId == invoiceId);
         
         if (invoice == null)
@@ -37,19 +36,8 @@ public class DeleteInvoicesCommand
         if (invoice.PaymentStatus == "Paid")
         {
             throw new InvalidOperationException(
-                $"Cannot delete invoice '{invoice.InvoiceNumber}' because it has already been paid. " +
+                $"Cannot delete invoice '{invoice.InvoiceNumber}' because it is already paid. " +
                 "Paid invoices cannot be deleted to maintain financial record integrity.");
-        }
-
-        // Validar que no tenga adjuntos
-        if (invoice.InvoiceAttachments.Any())
-        {
-            var attachmentCount = invoice.InvoiceAttachments.Count;
-            var attachmentWord = attachmentCount == 1 ? "attachment" : "attachments";
-            
-            throw new InvalidOperationException(
-                $"Cannot delete invoice '{invoice.InvoiceNumber}' because it has {attachmentCount} associated {attachmentWord}. " +
-                "Please delete all attachments first before deleting the invoice.");
         }
 
         // Eliminar la factura (cascade eliminará items automáticamente)
@@ -69,11 +57,10 @@ public class DeleteInvoicesCommand
     /// </summary>
     /// <param name="contractId">ID del contrato</param>
     /// <returns>Resultado de la operación</returns>
-    /// <exception cref="InvalidOperationException">Si alguna factura está pagada o tiene adjuntos</exception>
+    /// <exception cref="InvalidOperationException">Si alguna factura está pagada</exception>
     public async Task<DeleteInvoicesResponse> DeleteAllContractInvoicesAsync(int contractId)
     {
         var invoices = await _context.Invoices
-            .Include(i => i.InvoiceAttachments)
             .Where(i => i.ContractId == contractId)
             .ToListAsync();
 
@@ -91,27 +78,12 @@ public class DeleteInvoicesCommand
         var paidInvoices = invoices.Where(i => i.PaymentStatus == "Paid").ToList();
         if (paidInvoices.Any())
         {
-            var paidInvoiceNumbers = string.Join(", ", paidInvoices.Select(i => i.InvoiceNumber));
+            var paidInvoiceNumbers = string.Join(", ", paidInvoices.Select(i => $"#{i.InvoiceNumber}"));
             var paidWord = paidInvoices.Count == 1 ? "invoice is" : "invoices are";
             
             throw new InvalidOperationException(
-                $"Cannot delete invoices because {paidInvoices.Count} {paidWord} already paid: {paidInvoiceNumbers}. " +
-                "Paid invoices cannot be deleted to maintain financial record integrity.");
-        }
-
-        // Validar facturas con adjuntos
-        var invoicesWithAttachments = invoices.Where(i => i.InvoiceAttachments.Any()).ToList();
-        if (invoicesWithAttachments.Any())
-        {
-            var attachmentDetails = invoicesWithAttachments
-                .Select(i => $"{i.InvoiceNumber} ({i.InvoiceAttachments.Count} attachment{(i.InvoiceAttachments.Count > 1 ? "s" : "")})")
-                .ToList();
-            var detailsList = string.Join(", ", attachmentDetails);
-            var invoiceWord = invoicesWithAttachments.Count == 1 ? "invoice has" : "invoices have";
-            
-            throw new InvalidOperationException(
-                $"Cannot delete invoices because {invoicesWithAttachments.Count} {invoiceWord} attachments: {detailsList}. " +
-                "Please delete all attachments first before deleting the invoices.");
+                $"Cannot delete all invoices because {paidInvoices.Count} {paidWord} already paid: {paidInvoiceNumbers}. " +
+                "You can manually delete the unpaid invoices individually.");
         }
 
         // Eliminar todas las facturas

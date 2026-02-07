@@ -31,17 +31,17 @@ public class InvoiceController : ControllerBase
     #region POST - Generate Invoices
 
     /// <summary>
-    /// Genera todas las facturas automáticamente para un contrato
+    /// Genera todas las facturas automáticamente para un contrato de monto fijo (FeeTypeId = 1)
     /// </summary>
     /// <param name="contractId">ID del contrato</param>
     /// <returns>Resultado de la generación</returns>
     /// <remarks>
-    /// Este endpoint evalúa si ya existen facturas para el contrato.
-    /// Si existen, retorna un mensaje indicándolo.
-    /// Si no existen, genera todas las facturas en estado Draft.
+    /// This endpoint generates all invoices for fixed amount contracts.
+    /// Each invoice will have the same amount (contract's FeeAmount).
+    /// If invoices already exist, it will generate only the missing ones.
     /// </remarks>
-    [HttpPost("generate/{contractId}")]
-    public async Task<IActionResult> GenerateInvoices(int contractId)
+    [HttpPost("generate-fixed/{contractId}")]
+    public async Task<IActionResult> GenerateFixedInvoices(int contractId)
     {
         var request = new GenerateInvoicesRequest { ContractId = contractId };
 
@@ -96,6 +96,180 @@ public class InvoiceController : ControllerBase
         {
             var innerMessage = ex.InnerException?.Message ?? string.Empty;
             var fullMessage = $"Error al generar facturas: {ex.Message}";
+            if (!string.IsNullOrEmpty(innerMessage))
+                fullMessage += $" | Inner: {innerMessage}";
+                
+            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
+    #region POST - Create Manual Invoice (Percentage Contracts)
+
+    /// <summary>
+    /// Crea una factura manualmente para contratos de porcentaje (FeeTypeId = 2)
+    /// </summary>
+    /// <param name="request">Datos de la factura</param>
+    /// <returns>Resultado de la creación</returns>
+    [HttpPost("create-manual")]
+    public async Task<IActionResult> CreateManualInvoice([FromBody] CreateManualInvoiceRequest request)
+    {
+        // Validación usando FluentValidation
+        var validationResult = await _validationService.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var response = ResponseStructure<object>.ValidationError(
+                string.Join(", ", validationResult.Errors));
+            return BadRequest(response);
+        }
+
+        try
+        {
+            var result = await _invoiceService.CreateManualInvoiceAsync(request);
+
+            var successResponse = ResponseStructure<CreateManualInvoiceResponse>.Success(
+                result,
+                result.Message);
+
+            return Ok(successResponse);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message, 404);
+            return NotFound(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (Exception ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? string.Empty;
+            var fullMessage = $"Error creating manual invoice: {ex.Message}";
+            if (!string.IsNullOrEmpty(innerMessage))
+                fullMessage += $" | Inner: {innerMessage}";
+                
+            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
+    #region POST - Generate Percentage Invoices
+
+    /// <summary>
+    /// Genera todas las facturas automáticamente con monto 0 para contratos de porcentaje (FeeTypeId = 2)
+    /// </summary>
+    /// <param name="contractId">ID del contrato</param>
+    /// <returns>Resultado de la generación</returns>
+    /// <remarks>
+    /// This endpoint generates all invoice periods for percentage contracts with zero amounts.
+    /// The user can then manually edit each invoice to set the correct amount.
+    /// </remarks>
+    [HttpPost("generate-percentage/{contractId}")]
+    public async Task<IActionResult> GeneratePercentageInvoices(int contractId)
+    {
+        var request = new GeneratePercentageInvoicesRequest { ContractId = contractId };
+
+        // Validación usando FluentValidation
+        var validationResult = await _validationService.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var response = ResponseStructure<object>.ValidationError(
+                string.Join(", ", validationResult.Errors));
+            return BadRequest(response);
+        }
+
+        try
+        {
+            var result = await _invoiceService.GeneratePercentageInvoicesAsync(request);
+
+            if (!result.Success)
+            {
+                var warningResponse = ResponseStructure<GeneratePercentageInvoicesResponse>.ValidationError(
+                    result.Message);
+                warningResponse.Data = result;
+                return BadRequest(warningResponse);
+            }
+
+            var successResponse = ResponseStructure<GeneratePercentageInvoicesResponse>.Success(
+                result,
+                result.Message);
+
+            return Ok(successResponse);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message, 404);
+            return NotFound(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (Exception ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? string.Empty;
+            var fullMessage = $"Error generating percentage invoices: {ex.Message}";
+            if (!string.IsNullOrEmpty(innerMessage))
+                fullMessage += $" | Inner: {innerMessage}";
+                
+            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
+    #region PUT - Update Invoice
+
+    /// <summary>
+    /// Actualiza una factura (solo si no está pagada)
+    /// </summary>
+    /// <param name="invoiceId">ID de la factura</param>
+    /// <param name="request">Datos actualizados</param>
+    /// <returns>Resultado de la actualización</returns>
+    [HttpPut("{invoiceId}")]
+    public async Task<IActionResult> UpdateInvoice(int invoiceId, [FromBody] UpdateInvoiceRequest request)
+    {
+        // Validación usando FluentValidation
+        var validationResult = await _validationService.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var response = ResponseStructure<object>.ValidationError(
+                string.Join(", ", validationResult.Errors));
+            return BadRequest(response);
+        }
+
+        try
+        {
+            var result = await _invoiceService.UpdateInvoiceAsync(invoiceId, request);
+
+            var successResponse = ResponseStructure<UpdateInvoiceResponse>.Success(
+                result,
+                result.Message);
+
+            return Ok(successResponse);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message, 404);
+            return NotFound(errorResponse);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
+            return BadRequest(errorResponse);
+        }
+        catch (Exception ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? string.Empty;
+            var fullMessage = $"Error updating invoice: {ex.Message}";
             if (!string.IsNullOrEmpty(innerMessage))
                 fullMessage += $" | Inner: {innerMessage}";
                 
