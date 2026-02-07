@@ -35,10 +35,22 @@ public class CraftMyPdfService
         {
             // Paso 1: Generar el PDF y obtener la URL de descarga
             // CraftMyPDF espera: template_id, data y export_type en el body
+            // El objeto 'data' debe serializarse en camelCase para que coincida con los nombres del template
+            
+            // Serializar el objeto data con camelCase
+            var dataJson = JsonSerializer.Serialize(data, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // Convertir a camelCase
+                WriteIndented = false
+            });
+            
+            // Deserializar a un objeto dinámico para mantener camelCase
+            var dataObject = JsonSerializer.Deserialize<JsonElement>(dataJson);
+            
             var generateRequest = new
             {
                 template_id = templateId,
-                data = data,
+                data = dataObject,
                 export_type = "json" // Necesario para obtener la URL del PDF en la respuesta
             };
 
