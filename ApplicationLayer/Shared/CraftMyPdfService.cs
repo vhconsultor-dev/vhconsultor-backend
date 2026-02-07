@@ -34,11 +34,12 @@ public class CraftMyPdfService
         try
         {
             // Paso 1: Generar el PDF y obtener la URL de descarga
-            // CraftMyPDF espera: template_id y data en el body
+            // CraftMyPDF espera: template_id, data y export_type en el body
             var generateRequest = new
             {
                 template_id = templateId,
-                data = data
+                data = data,
+                export_type = "json" // Necesario para obtener la URL del PDF en la respuesta
             };
 
             var jsonContent = JsonSerializer.Serialize(generateRequest, new JsonSerializerOptions
@@ -49,8 +50,8 @@ public class CraftMyPdfService
 
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            // CraftMyPDF usa el endpoint /render para generar PDFs desde templates
-            var generateResponse = await _httpClient.PostAsync("/render", content);
+            // CraftMyPDF usa el endpoint /v1/create para generar PDFs desde templates
+            var generateResponse = await _httpClient.PostAsync("/v1/create", content);
             
             if (!generateResponse.IsSuccessStatusCode)
             {
