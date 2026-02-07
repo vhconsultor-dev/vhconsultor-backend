@@ -40,11 +40,11 @@ public class ContractPdfDataValidator : AbstractValidator<ContractPdfData>
             .MaximumLength(200)
             .WithMessage("El nombre completo no puede exceder 200 caracteres");
 
-        RuleFor(x => x.Identification)
+        RuleFor(x => x.TaxId)
             .NotEmpty()
-            .WithMessage("La identificación es requerida")
+            .WithMessage("El Tax ID es requerido")
             .MaximumLength(50)
-            .WithMessage("La identificación no puede exceder 50 caracteres");
+            .WithMessage("El Tax ID no puede exceder 50 caracteres");
 
         RuleFor(x => x.Nationality)
             .NotEmpty()
@@ -70,6 +70,16 @@ public class ContractPdfDataValidator : AbstractValidator<ContractPdfData>
             .MaximumLength(50)
             .WithMessage("La frecuencia de pago no puede exceder 50 caracteres");
 
+        RuleFor(x => x.Fee)
+            .NotEmpty()
+            .WithMessage("La tarifa (fee) es requerida")
+            .MaximumLength(200)
+            .WithMessage("La tarifa no puede exceder 200 caracteres");
+
+        RuleFor(x => x.FeePaymentDay)
+            .InclusiveBetween(1, 31)
+            .WithMessage("El día de pago de la tarifa debe estar entre 1 y 31");
+
         RuleFor(x => x.ContractDurations)
             .NotEmpty()
             .WithMessage("La duración del contrato es requerida")
@@ -81,6 +91,12 @@ public class ContractPdfDataValidator : AbstractValidator<ContractPdfData>
             .WithMessage("El período de aviso es requerido")
             .MaximumLength(100)
             .WithMessage("El período de aviso no puede exceder 100 caracteres");
+
+        RuleFor(x => x.WorkingSince)
+            .NotEmpty()
+            .WithMessage("La fecha de inicio de trabajo (workingSince) es requerida")
+            .MaximumLength(20)
+            .WithMessage("La fecha de inicio de trabajo no puede exceder 20 caracteres");
 
         RuleFor(x => x.Day)
             .InclusiveBetween(1, 31)

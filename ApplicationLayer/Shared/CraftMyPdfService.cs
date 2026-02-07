@@ -34,22 +34,23 @@ public class CraftMyPdfService
         try
         {
             // Paso 1: Generar el PDF y obtener la URL de descarga
+            // CraftMyPDF espera: template_id y data en el body
             var generateRequest = new
             {
                 template_id = templateId,
-                data = data,
-                export_type = "json", // Solicitamos respuesta JSON con URL
-                output_file = $"contract_{DateTime.UtcNow:yyyyMMdd_HHmmss}.pdf"
+                data = data
             };
 
             var jsonContent = JsonSerializer.Serialize(generateRequest, new JsonSerializerOptions
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                PropertyNamingPolicy = null, // Mantener el nombre exacto: template_id
+                WriteIndented = false
             });
 
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            var generateResponse = await _httpClient.PostAsync("/create", content);
+            // CraftMyPDF usa el endpoint /render para generar PDFs desde templates
+            var generateResponse = await _httpClient.PostAsync("/render", content);
             
             if (!generateResponse.IsSuccessStatusCode)
             {
@@ -59,14 +60,16 @@ public class CraftMyPdfService
             }
 
             var responseJson = await generateResponse.Content.ReadAsStringAsync();
+            
+            // CraftMyPDF devuelve un objeto con 'file' (URL del PDF) y 'file_name'
             var responseData = JsonSerializer.Deserialize<CraftMyPdfResponse>(responseJson, new JsonSerializerOptions
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                PropertyNameCaseInsensitive = true
             });
 
-            if (responseData?.File == null)
+            if (responseData?.File == null || string.IsNullOrWhiteSpace(responseData.File))
             {
-                throw new Exception("CraftMyPDF no devolvió una URL de descarga válida");
+                throw new Exception($"CraftMyPDF no devolvió una URL de descarga válida. Respuesta: {responseJson}");
             }
 
             // Paso 2: Descargar el PDF desde la URL proporcionada

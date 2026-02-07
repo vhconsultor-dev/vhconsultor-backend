@@ -32,9 +32,9 @@ public class ContractPdfData
     public string FullName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Número de identificación del cliente
+    /// Tax ID del cliente
     /// </summary>
-    public string Identification { get; set; } = string.Empty;
+    public string TaxId { get; set; } = string.Empty;
 
     /// <summary>
     /// Nacionalidad del cliente
@@ -57,6 +57,16 @@ public class ContractPdfData
     public string PaymentFrequency { get; set; } = string.Empty;
 
     /// <summary>
+    /// Fee o tarifa del contrato
+    /// </summary>
+    public string Fee { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Día del mes para el pago de la tarifa
+    /// </summary>
+    public int FeePaymentDay { get; set; }
+
+    /// <summary>
     /// Duración del contrato (ej: "1 year", "2 years")
     /// </summary>
     public string ContractDurations { get; set; } = string.Empty;
@@ -65,6 +75,11 @@ public class ContractPdfData
     /// Período de aviso para cancelación (ej: "2 months")
     /// </summary>
     public string NoticePeriod { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Fecha desde cuando está trabajando (formato: "MM/DD/YYYY")
+    /// </summary>
+    public string WorkingSince { get; set; } = string.Empty;
 
     /// <summary>
     /// Día de la firma del contrato
