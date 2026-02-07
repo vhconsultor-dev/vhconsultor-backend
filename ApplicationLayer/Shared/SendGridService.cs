@@ -44,10 +44,17 @@ public class SendGridService
 
             var msg = MailHelper.CreateSingleTemplateEmail(from, to, templateId, templateData);
 
-            // Add CC if provided
+            // Add CC if provided (supports multiple emails separated by commas)
             if (!string.IsNullOrWhiteSpace(ccEmail))
             {
-                msg.AddCc(new EmailAddress(ccEmail));
+                var ccEmails = ccEmail.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                foreach (var email in ccEmails)
+                {
+                    if (!string.IsNullOrWhiteSpace(email))
+                    {
+                        msg.AddCc(new EmailAddress(email));
+                    }
+                }
             }
 
             // Add PDF attachment if provided

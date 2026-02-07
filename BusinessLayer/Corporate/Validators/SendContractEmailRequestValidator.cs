@@ -1,5 +1,7 @@
 using BusinessLayer.Corporate.Commands;
 using FluentValidation;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace BusinessLayer.Corporate.Validators;
 
@@ -15,7 +17,7 @@ public class SendContractEmailRequestValidator : AbstractValidator<SendContractE
             .EmailAddress().WithMessage("El correo del destinatario no es válido");
 
         RuleFor(x => x.CcEmail)
-            .EmailAddress().WithMessage("El correo CC no es válido")
+            .Must(BeValidEmailList).WithMessage("El correo CC no es válido. Debe ser un correo válido o múltiples correos separados por comas")
             .When(x => !string.IsNullOrWhiteSpace(x.CcEmail));
 
         RuleFor(x => x.Data)
@@ -48,5 +50,20 @@ public class SendContractEmailRequestValidator : AbstractValidator<SendContractE
         RuleFor(x => x.Data.Year)
             .NotEmpty().WithMessage("El año es requerido")
             .When(x => x.Data != null);
+    }
+
+    /// <summary>
+    /// Valida que el string sea un correo válido o múltiples correos separados por comas
+    /// </summary>
+    private bool BeValidEmailList(string? emailList)
+    {
+        if (string.IsNullOrWhiteSpace(emailList))
+            return true; // Opcional, ya se valida con When
+
+        // Dividir por comas y validar cada correo
+        var emails = emailList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        
+        var emailValidator = new EmailAddressAttribute();
+        return emails.All(email => emailValidator.IsValid(email));
     }
 }
