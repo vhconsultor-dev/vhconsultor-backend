@@ -640,11 +640,26 @@ public class ContractController : ControllerBase
                 return StatusCode(500, errorResponse);
             }
 
+            // Preparar los datos del template para SendGrid
+            // SendGrid espera que los nombres de las variables coincidan exactamente con el template
+            // Crear un objeto con los nombres en camelCase (formato estándar de SendGrid)
+            // Si el template usa otros nombres, ajustar aquí
+            var templateData = new Dictionary<string, object>
+            {
+                { "fullName", request.Data.FullName },
+                { "identification", request.Data.Identification },
+                { "contractNumber", request.Data.ContractNumber },
+                { "companyName", request.Data.CompanyName },
+                { "day", request.Data.Day },
+                { "month", request.Data.Month },
+                { "year", request.Data.Year }
+            };
+
             // Enviar el correo usando SendGrid
             var emailResult = await _sendGridService.SendTemplateEmailAsync(
                 request.ToEmail,
                 _sendGridSettings.ContractTemplateId,
-                request.Data,
+                templateData,
                 request.CcEmail,
                 pdfContent,
                 pdfFileName);
