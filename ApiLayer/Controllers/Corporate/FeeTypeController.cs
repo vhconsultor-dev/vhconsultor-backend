@@ -20,20 +20,15 @@ public class FeeTypeController : ControllerBase
         _feeTypeService = feeTypeService;
     }
 
-    #region GET - Get Fee Types (Flexible Search)
+    #region GET - Get Fee Types
 
     /// <summary>
-    /// Obtiene fee types con búsqueda flexible usando parámetros opcionales
+    /// Obtiene fee types. Si se proporciona un ID, retorna un solo registro. Si no, retorna todos.
     /// </summary>
-    /// <param name="id">ID del fee type (si se especifica, devuelve solo ese fee type)</param>
-    /// <param name="typeName">Nombre del tipo para búsqueda parcial</param>
-    /// <param name="isActive">Filtrar por estado activo (por defecto true)</param>
-    /// <returns>Lista de fee types que coinciden con los criterios</returns>
+    /// <param name="id">ID del fee type (opcional)</param>
+    /// <returns>Un fee type si se proporciona ID, o lista de todos los fee types si no se proporciona ID</returns>
     [HttpGet]
-    public async Task<IActionResult> GetFeeTypes(
-        [FromQuery] int? id = null,
-        [FromQuery] string? typeName = null,
-        [FromQuery] bool? isActive = true)
+    public async Task<IActionResult> GetFeeTypes([FromQuery] int? id = null)
     {
         try
         {
@@ -57,8 +52,8 @@ public class FeeTypeController : ControllerBase
                 return Ok(singleResponse);
             }
 
-            // Devolver todos los fee types con los filtros aplicados
-            var feeTypes = await _feeTypeService.GetFeeTypesAsync(id, typeName, isActive);
+            // Devolver todos los fee types (sin filtros)
+            var feeTypes = await _feeTypeService.GetFeeTypesAsync(null, null, null);
             
             var response = ResponseStructure<IEnumerable<ModelLayer.Corporate.Entities.FeeType>>.Success(
                 feeTypes, 
