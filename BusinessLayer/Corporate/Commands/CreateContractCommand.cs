@@ -139,7 +139,7 @@ public class CreateContractRequest
     public string? ClientPhone { get; set; }
     public int? ContractTypeId { get; set; }
     public string? ServiceDescription { get; set; }
-    public int? FeeTypeId { get; set; }
+    public int FeeTypeId { get; set; }
     public decimal? FeeAmount { get; set; }
     public string? FeeDescription { get; set; }
     public string? CurrencyCode { get; set; }

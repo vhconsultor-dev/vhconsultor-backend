@@ -135,7 +135,7 @@ public class DBcontext : DbContext
             entity.Property(e => e.ClientPhone).HasMaxLength(50);
             entity.Property(e => e.ContractTypeId);
             entity.Property(e => e.ServiceDescription);
-            entity.Property(e => e.FeeTypeId);
+            entity.Property(e => e.FeeTypeId).IsRequired();
             entity.Property(e => e.FeeAmount).HasColumnType("decimal(10,4)");
             entity.Property(e => e.FeeDescription);
             entity.Property(e => e.CurrencyCode).HasMaxLength(3);

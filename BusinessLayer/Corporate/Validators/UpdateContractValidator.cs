@@ -13,6 +13,9 @@ public class UpdateContractValidator : AbstractValidator<UpdateContractRequest>
         RuleFor(x => x.CustomerId)
             .GreaterThan(0).WithMessage("El ID del customer debe ser mayor a 0");
 
+        RuleFor(x => x.FeeTypeId)
+            .GreaterThan(0).WithMessage("El ID del tipo de tarifa (FeeTypeId) es requerido y debe ser mayor a 0");
+
         RuleFor(x => x.ContractNumber)
             .NotEmpty().WithMessage("El número de contrato es requerido")
             .MaximumLength(100).WithMessage("El número de contrato no puede exceder 100 caracteres");
