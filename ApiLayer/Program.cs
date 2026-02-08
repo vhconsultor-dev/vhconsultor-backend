@@ -210,6 +210,7 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.PricingServiceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.BusinessTypeService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.PlatformService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.InvoiceService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.BillingReportService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -272,6 +273,7 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PricingServiceQueryRe
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.BusinessTypeQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PlatformQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.InvoiceQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.BillingReportQueryRepository>();
 #endregion
 
 #region SwaggerConfig
@@ -282,7 +284,19 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "VHConsultor API",
         Version = "v1",
-        Description = "API para VHConsultor - Sistema de Consultoría",
+        // Actualizar versión al subir cambios (ej.: 1.2.0.3, 1.2.0.4, 1.3.0.0)
+        Description = "Versión: 1.2.0.2\n\n" +
+            "API para VHConsultor - Sistema de Consultoría.\n\n" +
+            "---\n\n" +
+            "**ADVERTENCIA — ACCESO NO AUTORIZADO PROHIBIDO / WARNING — UNAUTHORIZED ACCESS PROHIBITED**\n\n" +
+            "**Español:** Queda estrictamente prohibido el ingreso y el uso de esta plataforma o de cualquiera de sus APIs por personas no autorizadas por VHConsultor. " +
+            "El acceso, consulta o consumo de estos recursos sin autorización expresa no está permitido y puede constituir un delito. " +
+            "El acceso ilícito a sistemas informáticos está tipificado como delito en instrumentos internacionales vinculantes, entre ellos el Convenio sobre la Ciberdelincuencia del Consejo de Europa (Convenio de Budapest, 2001), Artículo 2 — Acceso ilícito, y en las leyes penales aplicables en las jurisdicciones de los usuarios y de VHConsultor. " +
+            "VHConsultor se reserva el derecho de denunciar y perseguir cualquier uso no autorizado, incluidas las acciones legales y la cooperación con autoridades.\n\n" +
+            "**English:** Unauthorized access to and use of this platform or any of its APIs by persons not authorized by VHConsultor is strictly prohibited. " +
+            "Accessing, querying or consuming these resources without express authorization is not permitted and may constitute a criminal offence. " +
+            "Illegal access to computer systems is criminalized under binding international instruments, including the Council of Europe Convention on Cybercrime (Budapest Convention, 2001), Article 2 — Illegal access, and under applicable criminal laws in the users’ and VHConsultor’s jurisdictions. " +
+            "VHConsultor reserves the right to report and pursue any unauthorized use, including legal action and cooperation with authorities.",
         Contact = new Microsoft.OpenApi.Models.OpenApiContact
         {
             Name = "VHConsultor Team",
