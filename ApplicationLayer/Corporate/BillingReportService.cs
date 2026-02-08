@@ -15,11 +15,12 @@ public class BillingReportService
     }
 
     /// <summary>
-    /// Gets all invoices pending payment, with optional filters (customer tax id, customer name, fee type).
-    /// When multiple filters are provided, they are combined with AND. When none are provided, all pending invoices are returned.
+    /// Gets invoices with optional filters (status type, customer tax id, customer name, fee type, etc.).
+    /// Supports all scenarios: all invoices, pending, overdue, paid, cancelled, draft, sent.
+    /// When multiple filters are provided, they are combined with AND. When none are provided, all invoices are returned.
     /// </summary>
-    public async Task<IEnumerable<PendingInvoiceReportDto>> GetPendingInvoicesAsync(PendingInvoicesReportFilter filter)
+    public async Task<IEnumerable<InvoiceReportDto>> GetInvoicesAsync(InvoiceReportFilter filter)
     {
-        return await _billingReportQueryRepository.GetPendingInvoicesAsync(filter);
+        return await _billingReportQueryRepository.GetInvoicesAsync(filter);
     }
 }
