@@ -15,15 +15,21 @@ public class AuthService
     private readonly UserQueryRepository _userQueryRepository;
     private readonly UserLoginHistoryQueryRepository _loginHistoryQueryRepository;
     private readonly UserAuthCommandRepository _authCommandRepository;
+    private readonly SendGridService _sendGridService;
+    private readonly Microsoft.Extensions.Options.IOptions<BusinessLayer.Shared.SendGridSettings> _sendGridSettings;
 
     public AuthService(
         UserQueryRepository userQueryRepository,
         UserLoginHistoryQueryRepository loginHistoryQueryRepository,
-        UserAuthCommandRepository authCommandRepository)
+        UserAuthCommandRepository authCommandRepository,
+        SendGridService sendGridService,
+        Microsoft.Extensions.Options.IOptions<BusinessLayer.Shared.SendGridSettings> sendGridSettings)
     {
         _userQueryRepository = userQueryRepository;
         _loginHistoryQueryRepository = loginHistoryQueryRepository;
         _authCommandRepository = authCommandRepository;
+        _sendGridService = sendGridService;
+        _sendGridSettings = sendGridSettings;
     }
 
     #region Login
@@ -197,6 +203,138 @@ public class AuthService
             Success = false,
             Message = "Error al cambiar la contraseña"
         };
+    }
+
+    #endregion
+
+    #region Admin Password Reset
+
+    /// <summary>
+    /// Admin resets a user's password by generating a new temporary password automatically.
+    /// Validates user exists, is active, and is not locked. Sends password via email.
+    /// </summary>
+    public async Task<AdminResetPasswordResult> AdminResetPasswordAsync(AdminResetPasswordRequest request)
+    {
+        // Get user
+        var user = await _userQueryRepository.GetByIdAsync(request.UserId);
+        if (user == null)
+        {
+            return new AdminResetPasswordResult
+            {
+                Success = false,
+                Message = $"User with ID {request.UserId} was not found."
+            };
+        }
+
+        // Validate user is active
+        if (!user.IsActive)
+        {
+            return new AdminResetPasswordResult
+            {
+                Success = false,
+                Message = $"Cannot reset password for user '{user.Username}' because the account is inactive."
+            };
+        }
+
+        // Validate user is not locked
+        if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTimeService.GetCostaRicaNow())
+        {
+            return new AdminResetPasswordResult
+            {
+                Success = false,
+                Message = $"Cannot reset password for user '{user.Username}' because the account is locked until {user.LockedUntil.Value:yyyy-MM-dd HH:mm:ss}. Please unlock the account first."
+            };
+        }
+
+        // Generate temporary password (12 characters: uppercase, lowercase, digits, special chars)
+        var temporaryPassword = GenerateTemporaryPassword();
+
+        // Hash the new password
+        var newPasswordHash = HashPassword(temporaryPassword);
+
+        // Update password in database
+        var success = await _authCommandRepository.ChangePasswordAsync(request.UserId, newPasswordHash);
+        if (!success)
+        {
+            return new AdminResetPasswordResult
+            {
+                Success = false,
+                Message = "Error updating password in database."
+            };
+        }
+
+        // Send email with new password using SendGrid template
+        var fullName = $"{user.FirstName} {user.LastName}".Trim();
+        var currentYear = DateTime.UtcNow.Year.ToString();
+        var templateData = new
+        {
+            fullName = fullName,
+            username = user.Email, // Using email as username for the template
+            newPassword = temporaryPassword,
+            supportEmail = _sendGridSettings.Value.SupportEmail,
+            year = currentYear
+        };
+
+        var emailResult = await _sendGridService.SendTemplateEmailAsync(
+            user.Email,
+            _sendGridSettings.Value.ResetPasswordTemplateId,
+            templateData,
+            ccEmail: null);
+
+        if (!emailResult.Success)
+        {
+            // Password was changed in DB, but email failed
+            return new AdminResetPasswordResult
+            {
+                Success = false,
+                Message = $"Password was reset in database, but failed to send email to '{user.Email}'. Error: {emailResult.Message}",
+                TemporaryPassword = temporaryPassword // Return password so admin can manually share it
+            };
+        }
+
+        return new AdminResetPasswordResult
+        {
+            Success = true,
+            Message = $"Password reset successfully for user '{user.Username}'. Temporary password sent to '{user.Email}'.",
+            TemporaryPassword = temporaryPassword // Optionally return for admin logging
+        };
+    }
+
+    /// <summary>
+    /// Generates a secure temporary password: 12 characters with uppercase, lowercase, digits, and special chars.
+    /// </summary>
+    private string GenerateTemporaryPassword()
+    {
+        const string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const string lowercase = "abcdefghijklmnopqrstuvwxyz";
+        const string digits = "0123456789";
+        const string special = "!@#$%^&*";
+        const int length = 12;
+
+        var random = new Random();
+        var password = new char[length];
+
+        // Ensure at least one of each type
+        password[0] = uppercase[random.Next(uppercase.Length)];
+        password[1] = lowercase[random.Next(lowercase.Length)];
+        password[2] = digits[random.Next(digits.Length)];
+        password[3] = special[random.Next(special.Length)];
+
+        // Fill remaining with random from all character sets
+        var allChars = uppercase + lowercase + digits + special;
+        for (int i = 4; i < length; i++)
+        {
+            password[i] = allChars[random.Next(allChars.Length)];
+        }
+
+        // Shuffle the password characters
+        for (int i = length - 1; i > 0; i--)
+        {
+            int j = random.Next(i + 1);
+            (password[i], password[j]) = (password[j], password[i]);
+        }
+
+        return new string(password);
     }
 
     #endregion
@@ -444,6 +582,13 @@ public class CreateUserResult
     public string Message { get; set; } = string.Empty;
     public User? User { get; set; }
     public int? UserId { get; set; }
+}
+
+public class AdminResetPasswordResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string? TemporaryPassword { get; set; }
 }
 
 #endregion

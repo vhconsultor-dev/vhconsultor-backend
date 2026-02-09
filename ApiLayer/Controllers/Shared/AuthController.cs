@@ -160,6 +160,54 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
+    /// Admin resets a user's password by generating a temporary password automatically.
+    /// Validates user exists, is active, and is not locked. Sends the new password via email.
+    /// </summary>
+    /// <param name="userId">ID of the user whose password will be reset.</param>
+    [HttpPost("admin/reset-password/{userId}")]
+    [Authorize]
+    public async Task<IActionResult> AdminResetPassword(int userId)
+    {
+        try
+        {
+            var request = new AdminResetPasswordRequest { UserId = userId };
+
+            // Validation
+            var validationResult = await _validationService.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                var errorResponse = ResponseStructure<object>.ValidationError(
+                    string.Join(", ", validationResult.Errors));
+                return BadRequest(errorResponse);
+            }
+
+            var result = await _authService.AdminResetPasswordAsync(request);
+
+            if (!result.Success)
+            {
+                var errorResponse = ResponseStructure<object>.Error(result.Message, 400);
+                return BadRequest(errorResponse);
+            }
+
+            // Success - return message and optionally the temporary password for admin logging
+            var response = ResponseStructure<object>.Success(
+                new { message = result.Message, temporaryPassword = result.TemporaryPassword },
+                result.Message);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? string.Empty;
+            var fullMessage = $"Error resetting user password: {ex.Message}";
+            if (!string.IsNullOrEmpty(innerMessage))
+                fullMessage += $" | Inner: {innerMessage}";
+
+            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    /// <summary>
     /// Bloquea una cuenta de usuario manualmente
     /// </summary>
     /// <param name="command">Datos para bloquear cuenta</param>

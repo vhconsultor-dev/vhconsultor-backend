@@ -79,6 +79,7 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Comm
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.LoginCommand>, BusinessLayer.Shared.Validators.LoginCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.CreateUserCommand>, BusinessLayer.Shared.Validators.CreateUserCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.ChangePasswordCommand>, BusinessLayer.Shared.Validators.ChangePasswordCommandValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.AdminResetPasswordRequest>, BusinessLayer.Shared.Validators.AdminResetPasswordValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.LockAccountCommand>, BusinessLayer.Shared.Validators.LockAccountCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.UnlockAccountCommand>, BusinessLayer.Shared.Validators.UnlockAccountCommandValidator>();
 
