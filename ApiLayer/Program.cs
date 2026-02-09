@@ -111,6 +111,8 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonMarketplaceRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonMarketplaceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonAccountRequest>, BusinessLayer.Corporate.Validators.CreateAmazonAccountValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonAccountRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonAccountValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonAccountMarketplaceRequest>, BusinessLayer.Corporate.Validators.CreateAmazonAccountMarketplaceValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonAccountMarketplaceRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonAccountMarketplaceValidator>();
 #endregion
 
 #region Azure Storage Configuration
@@ -218,6 +220,7 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.InvoiceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.BillingReportService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonMarketplaceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountMarketplaceService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -287,6 +290,10 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonMarketpl
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonAccountQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateAmazonAccountCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonAccountCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonAccountMarketplaceQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateAmazonAccountMarketplaceCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonAccountMarketplaceCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteAmazonAccountMarketplaceCommand>();
 #endregion
 
 #region SwaggerConfig

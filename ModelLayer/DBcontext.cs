@@ -28,6 +28,7 @@ public class DBcontext : DbContext
     public DbSet<InvoiceAttachment> InvoiceAttachments { get; set; }
     public DbSet<AmazonMarketplace> AmazonMarketplaces { get; set; }
     public DbSet<AmazonAccount> AmazonAccounts { get; set; }
+    public DbSet<AmazonAccountMarketplace> AmazonAccountMarketplaces { get; set; }
     
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
@@ -149,6 +150,19 @@ public class DBcontext : DbContext
             entity.Property(e => e.IsActive).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.UpdatedAt);
+        });
+
+        // Configuración de AmazonAccountMarketplace (Corporate) - junction table Account <-> Marketplaces
+        modelBuilder.Entity<AmazonAccountMarketplace>(entity =>
+        {
+            entity.ToTable("AmazonAccountMarketplaces", "Corporate");
+            entity.HasKey(e => e.AmazonAccountMarketplaceId);
+            entity.Property(e => e.AmazonAccountMarketplaceId).ValueGeneratedOnAdd();
+            entity.Property(e => e.AmazonAccountId).IsRequired();
+            entity.Property(e => e.AmazonMarketplaceId).IsRequired();
+            entity.Property(e => e.IsPrimary).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
         });
 
         // Configuración de Contract (Corporate)
