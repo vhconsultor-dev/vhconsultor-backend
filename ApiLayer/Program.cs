@@ -108,6 +108,8 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkInvoiceAsPaidRequest>, BusinessLayer.Corporate.Validators.MarkInvoiceAsPaidValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonMarketplaceRequest>, BusinessLayer.Corporate.Validators.CreateAmazonMarketplaceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonMarketplaceRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonMarketplaceValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonAccountRequest>, BusinessLayer.Corporate.Validators.CreateAmazonAccountValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonAccountRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonAccountValidator>();
 #endregion
 
 #region Azure Storage Configuration
@@ -214,6 +216,7 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.PlatformService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.InvoiceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.BillingReportService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonMarketplaceService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -280,6 +283,9 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.BillingReportQueryRep
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonMarketplaceQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateAmazonMarketplaceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonMarketplaceCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonAccountQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateAmazonAccountCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonAccountCommand>();
 #endregion
 
 #region SwaggerConfig
