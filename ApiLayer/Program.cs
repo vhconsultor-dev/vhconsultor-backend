@@ -106,6 +106,8 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 // Invoice Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.GenerateInvoicesRequest>, BusinessLayer.Corporate.Validators.GenerateInvoicesValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkInvoiceAsPaidRequest>, BusinessLayer.Corporate.Validators.MarkInvoiceAsPaidValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonMarketplaceRequest>, BusinessLayer.Corporate.Validators.CreateAmazonMarketplaceValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonMarketplaceRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonMarketplaceValidator>();
 #endregion
 
 #region Azure Storage Configuration
@@ -211,6 +213,7 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.BusinessTypeService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.PlatformService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.InvoiceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.BillingReportService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonMarketplaceService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -274,6 +277,9 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.BusinessTypeQueryRepo
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PlatformQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.InvoiceQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.BillingReportQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonMarketplaceQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateAmazonMarketplaceCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonMarketplaceCommand>();
 #endregion
 
 #region SwaggerConfig

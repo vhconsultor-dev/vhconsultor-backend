@@ -26,6 +26,7 @@ public class DBcontext : DbContext
     public DbSet<Invoice> Invoices { get; set; }
     public DbSet<InvoiceItem> InvoiceItems { get; set; }
     public DbSet<InvoiceAttachment> InvoiceAttachments { get; set; }
+    public DbSet<AmazonMarketplace> AmazonMarketplaces { get; set; }
     
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
@@ -116,6 +117,20 @@ public class DBcontext : DbContext
             entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETDATE()");
+        });
+
+        // Configuración de AmazonMarketplace (Corporate)
+        modelBuilder.Entity<AmazonMarketplace>(entity =>
+        {
+            entity.ToTable("AmazonMarketplaces", "Corporate");
+            entity.HasKey(e => e.AmazonMarketplaceId);
+            entity.Property(e => e.AmazonMarketplaceId).ValueGeneratedOnAdd();
+            entity.Property(e => e.AmazonMarketplaceCode).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.CountryCode).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.CountryName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.AmazonRegion).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.CurrencyCode).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired();
         });
 
         // Configuración de Contract (Corporate)
