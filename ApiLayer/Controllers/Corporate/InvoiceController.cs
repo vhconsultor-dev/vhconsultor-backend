@@ -7,6 +7,8 @@ using BusinessLayer.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
+using System.Collections.Generic;
+using System.IO;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -24,17 +26,23 @@ public class InvoiceController : ControllerBase
     private readonly ValidationService _validationService;
     private readonly CraftMyPdfService _craftMyPdfService;
     private readonly CraftMyPdfSettings _craftMyPdfSettings;
+    private readonly SendGridService _sendGridService;
+    private readonly SendGridSettings _sendGridSettings;
 
     public InvoiceController(
         InvoiceService invoiceService,
         ValidationService validationService,
         CraftMyPdfService craftMyPdfService,
-        IOptions<CraftMyPdfSettings> craftMyPdfSettings)
+        IOptions<CraftMyPdfSettings> craftMyPdfSettings,
+        SendGridService sendGridService,
+        IOptions<SendGridSettings> sendGridSettings)
     {
         _invoiceService = invoiceService;
         _validationService = validationService;
         _craftMyPdfService = craftMyPdfService;
         _craftMyPdfSettings = craftMyPdfSettings.Value;
+        _sendGridService = sendGridService;
+        _sendGridSettings = sendGridSettings.Value;
     }
 
     #region POST - Generate Invoices
@@ -157,6 +165,130 @@ public class InvoiceController : ControllerBase
         {
             var errorResponse = ResponseStructure<object>.Error(
                 $"Error generating invoice PDF: {ex.Message}",
+                500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
+    #region POST - Send Invoice Email (SendGrid + PDF attachment)
+
+    /// <summary>
+    /// Sends the invoice statement email to the client using the SendGrid template, with the invoice PDF as attachment.
+    /// Same pattern as contract: multipart form-data with requestJson and optional pdfFile.
+    /// </summary>
+    /// <param name="requestJson">JSON string with ToEmail, optional CcEmail, and Data (clientName, companyName, invoiceNumber, invoiceMonth, invoiceYear, issueDate, currency, totalAmount).</param>
+    /// <param name="pdfFile">Invoice PDF file to attach (optional but recommended).</param>
+    /// <returns>Success or error response.</returns>
+    [HttpPost("send-email")]
+    [DisableRequestSizeLimit]
+    [RequestFormLimits(MultipartBodyLengthLimit = 10485760)] // 10 MB
+    public async Task<IActionResult> SendInvoiceEmail(
+        [FromForm] string requestJson,
+        IFormFile? pdfFile = null)
+    {
+        try
+        {
+            SendInvoiceEmailRequest? request;
+            try
+            {
+                request = JsonSerializer.Deserialize<SendInvoiceEmailRequest>(requestJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (Exception ex)
+            {
+                var parseError = ResponseStructure<object>.ValidationError(
+                    $"Invalid request JSON: {ex.Message}. Provide a valid JSON with ToEmail, optional CcEmail, and Data.");
+                return BadRequest(parseError);
+            }
+
+            if (request == null)
+            {
+                var validationResponse = ResponseStructure<object>.ValidationError(
+                    "Request data is required. Provide 'requestJson' with ToEmail and Data.");
+                return BadRequest(validationResponse);
+            }
+
+            var validationResult = await _validationService.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                var response = ResponseStructure<object>.ValidationError(
+                    string.Join(", ", validationResult.Errors));
+                return BadRequest(response);
+            }
+
+            byte[]? pdfContent = null;
+            string? pdfFileName = null;
+
+            if (pdfFile != null)
+            {
+                var ext = Path.GetExtension(pdfFile.FileName).ToLowerInvariant();
+                if (ext != ".pdf")
+                {
+                    var validationResponse = ResponseStructure<object>.ValidationError(
+                        $"Only PDF attachments are allowed. File '{pdfFile.FileName}' has extension '{ext}'.");
+                    return BadRequest(validationResponse);
+                }
+                if (pdfFile.Length > 10485760)
+                {
+                    var validationResponse = ResponseStructure<object>.ValidationError(
+                        $"PDF is too large. Maximum size: 10 MB. File size: {pdfFile.Length / 1024 / 1024:F2} MB.");
+                    return BadRequest(validationResponse);
+                }
+                using var ms = new MemoryStream();
+                await pdfFile.CopyToAsync(ms);
+                pdfContent = ms.ToArray();
+                pdfFileName = pdfFile.FileName;
+            }
+
+            if (string.IsNullOrWhiteSpace(_sendGridSettings.InvoiceStatementTemplateId))
+            {
+                var configError = ResponseStructure<object>.Error(
+                    "Invoice statement email template is not configured. Set SendGrid:InvoiceStatementTemplateId in configuration.",
+                    500);
+                return StatusCode(500, configError);
+            }
+
+            var templateData = new Dictionary<string, object>
+            {
+                { "clientName", request.Data.ClientName },
+                { "companyName", request.Data.CompanyName },
+                { "invoiceNumber", request.Data.InvoiceNumber },
+                { "invoiceMonth", request.Data.InvoiceMonth },
+                { "invoiceYear", request.Data.InvoiceYear },
+                { "issueDate", request.Data.IssueDate },
+                { "currency", request.Data.Currency },
+                { "totalAmount", request.Data.TotalAmount }
+            };
+
+            var emailResult = await _sendGridService.SendTemplateEmailAsync(
+                request.ToEmail,
+                _sendGridSettings.InvoiceStatementTemplateId,
+                templateData,
+                request.CcEmail,
+                pdfContent,
+                pdfFileName);
+
+            if (emailResult.Success)
+            {
+                var response = new SendInvoiceEmailResponse
+                {
+                    Success = true,
+                    Message = "Invoice email sent successfully."
+                };
+                return Ok(ResponseStructure<SendInvoiceEmailResponse>.Success(response, "Invoice email sent successfully."));
+            }
+
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Failed to send invoice email: {emailResult.Message}. Details: {emailResult.ErrorDetails}",
+                500);
+            return StatusCode(500, errorResponse);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Error sending invoice email: {ex.Message}",
                 500);
             return StatusCode(500, errorResponse);
         }

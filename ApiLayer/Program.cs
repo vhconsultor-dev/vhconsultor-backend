@@ -97,6 +97,7 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.GenerateContractPdfRequest>, BusinessLayer.Corporate.Validators.GenerateContractPdfRequestValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.GenerateInvoicePdfRequest>, BusinessLayer.Corporate.Validators.GenerateInvoicePdfRequestValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.SendContractEmailRequest>, BusinessLayer.Corporate.Validators.SendContractEmailRequestValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.SendInvoiceEmailRequest>, BusinessLayer.Corporate.Validators.SendInvoiceEmailRequestValidator>();
 // Pricing Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateServiceBudgetRangeCommand>, BusinessLayer.Corporate.Validators.CreateServiceBudgetRangeCommandValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateServiceBudgetRangeCommand>, BusinessLayer.Corporate.Validators.UpdateServiceBudgetRangeCommandValidator>();
