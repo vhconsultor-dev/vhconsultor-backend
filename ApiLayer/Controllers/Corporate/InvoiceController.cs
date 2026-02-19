@@ -3,9 +3,12 @@ using ApplicationLayer.Shared;
 using ApiLayer.Tools;
 using BusinessLayer.Corporate.Commands;
 using BusinessLayer.Corporate.Queries;
+using BusinessLayer.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace ApiLayer.Controllers.Corporate;
 
@@ -19,13 +22,19 @@ public class InvoiceController : ControllerBase
 {
     private readonly InvoiceService _invoiceService;
     private readonly ValidationService _validationService;
+    private readonly CraftMyPdfService _craftMyPdfService;
+    private readonly CraftMyPdfSettings _craftMyPdfSettings;
 
     public InvoiceController(
         InvoiceService invoiceService,
-        ValidationService validationService)
+        ValidationService validationService,
+        CraftMyPdfService craftMyPdfService,
+        IOptions<CraftMyPdfSettings> craftMyPdfSettings)
     {
         _invoiceService = invoiceService;
         _validationService = validationService;
+        _craftMyPdfService = craftMyPdfService;
+        _craftMyPdfSettings = craftMyPdfSettings.Value;
     }
 
     #region POST - Generate Invoices
@@ -100,6 +109,55 @@ public class InvoiceController : ControllerBase
                 fullMessage += $" | Inner: {innerMessage}";
                 
             var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
+    #region POST - Generate Invoice PDF (CraftMyPDF)
+
+    /// <summary>
+    /// Generates an invoice PDF using the CraftMyPDF template. Returns the PDF file.
+    /// </summary>
+    /// <param name="request">Invoice data for the PDF (items, company and bill-to info, dates, etc.).</param>
+    /// <returns>PDF file (application/pdf).</returns>
+    [HttpPost("generate-pdf")]
+    public async Task<IActionResult> GenerateInvoicePdf([FromBody] GenerateInvoicePdfRequest request)
+    {
+        var validationResult = await _validationService.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var response = ResponseStructure<object>.ValidationError(
+                string.Join(", ", validationResult.Errors));
+            return BadRequest(response);
+        }
+
+        if (string.IsNullOrWhiteSpace(_craftMyPdfSettings.InvoiceTemplateId))
+        {
+            var configError = ResponseStructure<object>.Error(
+                "Invoice PDF template is not configured. Set CraftMyPdf:InvoiceTemplateId in configuration.",
+                500);
+            return StatusCode(500, configError);
+        }
+
+        try
+        {
+            var dataOptions = new JsonSerializerOptions { PropertyNamingPolicy = null, WriteIndented = false };
+            var pdfBytes = await _craftMyPdfService.GeneratePdfWithDataOptionsAsync(
+                _craftMyPdfSettings.InvoiceTemplateId,
+                request,
+                dataOptions);
+
+            var safeInvoiceNo = string.IsNullOrEmpty(request.InvoiceNo) ? "invoice" : request.InvoiceNo.Replace(" ", "_");
+            var fileName = $"invoice_{safeInvoiceNo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.pdf";
+            return File(pdfBytes, "application/pdf", fileName);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Error generating invoice PDF: {ex.Message}",
+                500);
             return StatusCode(500, errorResponse);
         }
     }

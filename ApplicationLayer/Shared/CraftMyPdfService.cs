@@ -24,27 +24,33 @@ public class CraftMyPdfService
     }
 
     /// <summary>
-    /// Genera un PDF a partir de un template y devuelve el PDF como array de bytes
+    /// Genera un PDF a partir de un template y devuelve el PDF como array de bytes.
+    /// Serializa el objeto data en camelCase (para templates que usan camelCase, ej. contrato).
     /// </summary>
     /// <param name="templateId">ID del template en CraftMyPDF</param>
     /// <param name="data">Datos JSON para llenar el template</param>
     /// <returns>Array de bytes del PDF generado</returns>
     public async Task<byte[]> GeneratePdfAsync(string templateId, object data)
     {
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = false };
+        return await GeneratePdfInternalAsync(templateId, data, options);
+    }
+
+    /// <summary>
+    /// Genera un PDF a partir de un template con opciones de serialización personalizadas para el data.
+    /// Use esto para templates que esperan snake_case (ej. invoice_no, bill_to) aplicando PropertyNamingPolicy = null y [JsonPropertyName] en el DTO.
+    /// </summary>
+    public async Task<byte[]> GeneratePdfWithDataOptionsAsync(string templateId, object data, JsonSerializerOptions dataSerializationOptions)
+    {
+        return await GeneratePdfInternalAsync(templateId, data, dataSerializationOptions);
+    }
+
+    private async Task<byte[]> GeneratePdfInternalAsync(string templateId, object data, JsonSerializerOptions dataSerializationOptions)
+    {
         try
         {
-            // Paso 1: Generar el PDF y obtener la URL de descarga
-            // CraftMyPDF espera: template_id, data y export_type en el body
-            // El objeto 'data' debe serializarse en camelCase para que coincida con los nombres del template
-            
-            // Serializar el objeto data con camelCase
-            var dataJson = JsonSerializer.Serialize(data, new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // Convertir a camelCase
-                WriteIndented = false
-            });
-            
-            // Deserializar a un objeto dinámico para mantener camelCase
+            // Serializar el objeto data con las opciones indicadas (camelCase o preservar [JsonPropertyName])
+            var dataJson = JsonSerializer.Serialize(data, dataSerializationOptions);
             var dataObject = JsonSerializer.Deserialize<JsonElement>(dataJson);
             
             var generateRequest = new

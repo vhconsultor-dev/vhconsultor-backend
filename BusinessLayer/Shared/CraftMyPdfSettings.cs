@@ -19,4 +19,9 @@ public class CraftMyPdfSettings
     /// Timeout en segundos para las peticiones HTTP
     /// </summary>
     public int TimeoutSeconds { get; set; } = 60;
+
+    /// <summary>
+    /// Template ID en CraftMyPDF para generar PDFs de facturas (invoice).
+    /// </summary>
+    public string InvoiceTemplateId { get; set; } = string.Empty;
 }
