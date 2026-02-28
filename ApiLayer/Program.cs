@@ -7,6 +7,11 @@ using ApiLayer.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 
+#region EPPlus License Configuration
+// Configurar licencia EPPlus para uso no comercial (requerido por EPPlus 5+)
+OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+#endregion
+
 #region Environments
 builder.Configuration
     .SetBasePath(Directory.GetCurrentDirectory())
@@ -115,6 +120,7 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonAccountRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonAccountValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonAccountMarketplaceRequest>, BusinessLayer.Corporate.Validators.CreateAmazonAccountMarketplaceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonAccountMarketplaceRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonAccountMarketplaceValidator>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Validators.BulkUploadAmazonAccountAsinsValidator>();
 #endregion
 
 #region Azure Storage Configuration
@@ -223,6 +229,7 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.BillingReportService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonMarketplaceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountMarketplaceService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.BulkUploadAmazonAccountAsinsService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -296,6 +303,7 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonAccountMarketpl
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateAmazonAccountMarketplaceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonAccountMarketplaceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteAmazonAccountMarketplaceCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.BulkUploadAmazonAccountAsinsCommand>();
 #endregion
 
 #region SwaggerConfig

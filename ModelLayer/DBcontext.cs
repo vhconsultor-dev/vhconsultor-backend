@@ -29,6 +29,11 @@ public class DBcontext : DbContext
     public DbSet<AmazonMarketplace> AmazonMarketplaces { get; set; }
     public DbSet<AmazonAccount> AmazonAccounts { get; set; }
     public DbSet<AmazonAccountMarketplace> AmazonAccountMarketplaces { get; set; }
+    public DbSet<Category> Categories { get; set; }
+    public DbSet<SubCategory> SubCategories { get; set; }
+    public DbSet<ProductGroup> ProductGroups { get; set; }
+    public DbSet<ReplenishmentCategory> ReplenishmentCategories { get; set; }
+    public DbSet<AmazonAccountAsin> AmazonAccountAsins { get; set; }
     
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
@@ -609,6 +614,83 @@ public class DBcontext : DbContext
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.ClientId).HasMaxLength(255);
             entity.Property(e => e.Notes).HasMaxLength(500);
+        });
+
+        // Configuración de Category (Corporate)
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.ToTable("Categories", "Corporate");
+            entity.HasKey(e => e.CategoryId);
+            entity.Property(e => e.CategoryId).ValueGeneratedOnAdd();
+            entity.Property(e => e.CategoryCode).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.CategoryName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedDate).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+        });
+
+        // Configuración de SubCategory (Corporate)
+        modelBuilder.Entity<SubCategory>(entity =>
+        {
+            entity.ToTable("SubCategories", "Corporate");
+            entity.HasKey(e => e.SubCategoryId);
+            entity.Property(e => e.SubCategoryId).ValueGeneratedOnAdd();
+            entity.Property(e => e.CategoryId).IsRequired();
+            entity.Property(e => e.SubCategoryCode).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.SubCategoryName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedDate).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+        });
+
+        // Configuración de ProductGroup (Corporate)
+        modelBuilder.Entity<ProductGroup>(entity =>
+        {
+            entity.ToTable("ProductGroups", "Corporate");
+            entity.HasKey(e => e.ProductGroupId);
+            entity.Property(e => e.ProductGroupId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ProductGroupCode).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ProductGroupName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedDate).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+        });
+
+        // Configuración de ReplenishmentCategory (Corporate)
+        modelBuilder.Entity<ReplenishmentCategory>(entity =>
+        {
+            entity.ToTable("ReplenishmentCategories", "Corporate");
+            entity.HasKey(e => e.ReplenishmentCategoryId);
+            entity.Property(e => e.ReplenishmentCategoryId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ReplenishmentCategoryCode).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.ReplenishmentCategoryName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedDate).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+        });
+
+        // Configuración de AmazonAccountAsin (Corporate)
+        modelBuilder.Entity<AmazonAccountAsin>(entity =>
+        {
+            entity.ToTable("AmazonAccountAsins", "Corporate");
+            entity.HasKey(e => e.AmazonAccountAsinId);
+            entity.Property(e => e.AmazonAccountAsinId).ValueGeneratedOnAdd();
+            entity.Property(e => e.AmazonAccountId).IsRequired();
+            entity.Property(e => e.Asin).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.ProductTitle).HasMaxLength(500);
+            entity.Property(e => e.ManufacturerCode).HasMaxLength(40);
+            entity.Property(e => e.ParentAsin).HasMaxLength(10);
+            entity.Property(e => e.Upc).HasMaxLength(20);
+            entity.Property(e => e.Ean).HasMaxLength(20);
+            entity.Property(e => e.Isbn).HasMaxLength(20);
+            entity.Property(e => e.ModelNumber).HasMaxLength(100);
+            entity.Property(e => e.CategoryId);
+            entity.Property(e => e.SubCategoryId);
+            entity.Property(e => e.ProductGroupId);
+            entity.Property(e => e.ReleaseDate);
+            entity.Property(e => e.ReplenishmentCategoryId);
+            entity.Property(e => e.PrepInstructionsRequired).HasMaxLength(200);
+            entity.Property(e => e.PrepInstructionsVendorState).HasMaxLength(200);
+            entity.Property(e => e.CreatedDate).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+            entity.Property(e => e.CreatedBy).HasMaxLength(60);
+            entity.Property(e => e.ModifiedDate);
+            entity.Property(e => e.ModifiedBy).HasMaxLength(60);
         });
     }
 } 
