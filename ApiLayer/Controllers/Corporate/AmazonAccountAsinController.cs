@@ -107,7 +107,12 @@ public class AmazonAccountAsinController : ControllerBase
             if (!validationResult.IsValid)
             {
                 var errors = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage));
-                var errorResponse = ResponseStructure<object>.Error(errors);
+                var errorResponse = ResponseStructure<object>.BadRequest(
+                    $"Validation failed: {errors}. " +
+                    $"Please ensure: 1) amazonAccountId is greater than 0, " +
+                    $"2) excelFile is provided, 3) file has .xlsx or .xls extension, " +
+                    $"4) file is not empty."
+                );
                 return BadRequest(errorResponse);
             }
 
@@ -120,16 +125,45 @@ public class AmazonAccountAsinController : ControllerBase
             var response = ResponseStructure<BulkUploadResult>.Success(result, message);
             return Ok(response);
         }
+        catch (BulkUploadValidationException validationEx)
+        {
+            _logger.LogWarning(validationEx, "Validation error in bulk upload: {ErrorCode} - {Message}", 
+                validationEx.ErrorCode, validationEx.Message);
+            
+            var detailedError = new
+            {
+                error = validationEx.Message,
+                errorCode = validationEx.ErrorCode,
+                suggestion = validationEx.Suggestion,
+                timestamp = DateTime.UtcNow.AddHours(-6)
+            };
+            
+            var errorResponse = ResponseStructure<object>.BadRequest(
+                $"{validationEx.Message} [Error Code: {validationEx.ErrorCode}] Suggestion: {validationEx.Suggestion}"
+            );
+            return BadRequest(errorResponse);
+        }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Validation error in bulk upload: {Message}", ex.Message);
-            var response = ResponseStructure<object>.Error(ex.Message);
+            var response = ResponseStructure<object>.BadRequest(
+                $"{ex.Message} Please verify your data and try again."
+            );
             return BadRequest(response);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing bulk upload for AmazonAccountId {AmazonAccountId}", request.AmazonAccountId);
-            var response = ResponseStructure<object>.Error("An error occurred while processing the Excel file. Please check the file format and try again.");
+            _logger.LogError(ex, "Error processing bulk upload for AmazonAccountId {AmazonAccountId}. Error: {ErrorMessage}", 
+                request.AmazonAccountId, ex.Message);
+            
+            var response = ResponseStructure<object>.Error(
+                $"An unexpected error occurred while processing the Excel file. " +
+                $"Please verify: 1) The file is a valid Excel format (.xlsx or .xls), " +
+                $"2) The file can be opened in Microsoft Excel, " +
+                $"3) Row 1 contains headers 'ASIN' and 'Product Title', " +
+                $"4) There is at least one data row. " +
+                $"If the problem persists, contact support with this error: {ex.Message}"
+            );
             return StatusCode(500, response);
         }
     }

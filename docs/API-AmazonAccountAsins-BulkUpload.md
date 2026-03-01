@@ -82,6 +82,92 @@ Todos los parámetros se envían como partes del `multipart/form-data`:
 
 ---
 
+## Qué significa el error 500 con "An error occurred while processing the Excel file"
+
+Si el API responde **HTTP 500** con este cuerpo:
+
+```json
+{
+  "status": false,
+  "statusCode": 500,
+  "data": null,
+  "message": "An error occurred while processing the Excel file. Please check the file format and try again.",
+  "errorNumber": null,
+  "timestamp": "..."
+}
+```
+
+significa que **pasaron las validaciones iniciales** (amazonAccountId y archivo recibidos correctamente) pero **durante el procesamiento del Excel ocurrió una excepción no controlada**. Posibles causas:
+
+| Causa | Qué revisar |
+|-------|-------------|
+| **Formato del archivo** | Que sea un Excel real (.xlsx o .xls), no CSV renombrado ni archivo corrupto. Abrirlo en Excel y guardar de nuevo como .xlsx. |
+| **Columnas obligatorias** | Primera fila con encabezados que incluyan exactamente `ASIN` y `Product Title` (nombre de columna tal cual o equivalente sin distinguir mayúsculas). |
+| **Cuenta Amazon inexistente** | Que el `amazonAccountId` exista en base de datos. |
+| **Error de base de datos** | Conexión, tablas no creadas, o restricción al insertar. Revisar logs del servidor. |
+| **Licencia EPPlus / librería** | En algunos entornos la librería que lee el Excel puede lanzar. Revisar logs del servidor para el detalle. |
+
+El mensaje que ve el usuario es genérico por seguridad; el **detalle real** del error queda en los **logs del backend** (buscar la excepción asociada al bulk upload).
+
+---
+
+## Cómo debe enviar el front el Excel (instrucciones)
+
+El front **debe** enviar un **POST** con **multipart/form-data**, con **dos partes**:
+
+1. **`amazonAccountId`** — número (entero), como texto en el form (ej. `"42"`).
+2. **`excelFile`** — el archivo binario, con nombre de archivo terminado en `.xlsx` o `.xls`.
+
+**Importante:**
+
+- **No** enviar el body como JSON (`application/json`).
+- **No** poner el archivo en un campo con otro nombre (debe ser `excelFile`).
+- Dejar que el navegador/sdk establezca el `Content-Type` del request como `multipart/form-data; boundary=...` (no fijar a mano un `Content-Type` sin boundary).
+- Si usas autenticación, enviar el header `Authorization: Bearer {token}`.
+
+### Ejemplo en JavaScript (fetch)
+
+```javascript
+const formData = new FormData();
+formData.append('amazonAccountId', String(amazonAccountId));  // número como string
+formData.append('excelFile', file);  // objeto File del input type="file" (debe ser .xlsx o .xls)
+
+const response = await fetch('/api/corporate/amazon-account-asins/bulk-upload', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`  // si aplica
+    // NO incluir Content-Type: fetch lo pone con el boundary
+  },
+  body: formData
+});
+
+const json = await response.json();
+if (!response.ok) {
+  // 400: validación (message tiene el detalle)
+  // 500: error procesando Excel (revisar formato/columnas/logs backend)
+  console.error(json.message);
+}
+```
+
+### Ejemplo con axios
+
+```javascript
+const formData = new FormData();
+formData.append('amazonAccountId', amazonAccountId);
+formData.append('excelFile', file);
+
+const response = await axios.post('/api/corporate/amazon-account-asins/bulk-upload', formData, {
+  headers: {
+    'Content-Type': 'multipart/form-data',
+    'Authorization': `Bearer ${token}`
+  }
+});
+```
+
+Si el usuario elige el archivo desde un `<input type="file" accept=".xlsx,.xls">`, usar ese `File` directamente en `formData.append('excelFile', file)`.
+
+---
+
 ## Validaciones del request (antes de procesar el Excel)
 
 Si alguna falla, el API responde con **400 Bad Request** y no se procesa el archivo:
