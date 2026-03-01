@@ -7,11 +7,6 @@ using ApiLayer.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 
-#region EPPlus License Configuration
-// Configurar licencia EPPlus para uso no comercial (requerido por EPPlus 5+)
-OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-#endregion
-
 #region Environments
 builder.Configuration
     .SetBasePath(Directory.GetCurrentDirectory())
