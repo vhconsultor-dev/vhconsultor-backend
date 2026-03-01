@@ -225,6 +225,7 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonMarketplaceService>(
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountMarketplaceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.BulkUploadAmazonAccountAsinsService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountAsinService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -299,6 +300,7 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateAmazonAccountM
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonAccountMarketplaceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteAmazonAccountMarketplaceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.BulkUploadAmazonAccountAsinsCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonAccountAsinQueryRepository>();
 #endregion
 
 #region SwaggerConfig
