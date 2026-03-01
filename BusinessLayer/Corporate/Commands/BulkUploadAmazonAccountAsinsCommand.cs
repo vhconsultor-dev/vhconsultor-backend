@@ -63,6 +63,10 @@ public class BulkUploadAmazonAccountAsinsCommand
             await excelFile.CopyToAsync(stream);
             stream.Position = 0;
 
+            // EPPlus 8+ requiere configurar la licencia antes de usar ExcelPackage.
+            // Uso no comercial (organización). Para uso comercial: comprar licencia en epplussoftware.com
+            ExcelPackage.License.SetNonCommercialOrganization("VHConsultor");
+
             ExcelPackage package;
             try
             {
