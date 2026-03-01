@@ -1,6 +1,34 @@
 # API: Carga masiva de ASINs (Amazon Account Asins)
 
-Documentación del endpoint de carga masiva de ASINs desde archivo Excel, para consumo desde el frontend.
+Documentación del endpoint de carga masiva de ASINs desde archivo Excel, para consumo desde el frontend. Incluye la estructura JSON de todas las respuestas y todos los escenarios posibles (éxito y error).
+
+---
+
+## Estructura JSON común a todas las respuestas
+
+Todas las respuestas del endpoint comparten el mismo envelope. Los nombres de propiedades se serializan en **camelCase** (p. ej. `statusCode`, `errorNumber`).
+
+| Propiedad   | Tipo             | Siempre presente | Descripción |
+|------------|------------------|------------------|-------------|
+| `status`   | boolean          | Sí               | `true` si la operación fue exitosa (HTTP 200); `false` en cualquier error. |
+| `statusCode` | number (entero) | Sí               | Código HTTP de la respuesta. En respuestas de validación (HTTP 400) el backend puede devolver aquí 500; el valor de referencia es el **código HTTP** de la petición. |
+| `data`     | object \| null   | Sí               | En 200: objeto con el resultado de la carga. En 4xx/5xx: `null`. |
+| `message`  | string           | Sí               | Mensaje descriptivo. En éxito incluye cantidades; en error, el motivo. |
+| `errorNumber` | string \| null | Sí             | En este endpoint suele ser `null`. Si el API lo rellena en otros casos, es un código de error interno. |
+| `timestamp`| string (ISO 8601)| Sí              | Fecha/hora del servidor (zona Costa Rica). Ejemplo: `"2025-02-28T18:30:00.000"`. |
+
+Ejemplo mínimo de envelope (error):
+
+```json
+{
+  "status": false,
+  "statusCode": 400,
+  "data": null,
+  "message": "Excel file is required",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
 
 ---
 
@@ -111,49 +139,46 @@ Si existen estas columnas en el Excel, se usan; si no, el campo queda vacío o N
 
 ---
 
-## Respuesta exitosa (200 OK)
+## Respuestas HTTP y JSON por escenario
 
-Cuando la petición es válida y el procesamiento termina (con o sin errores por fila), el API responde **200 OK** con un cuerpo con estructura estándar del API.
+A continuación se describen **todos** los escenarios posibles y el **JSON completo** que devuelve el API en cada uno. El código HTTP y la presencia de `data` o `data === null` indican el tipo de resultado.
 
-### Estructura genérica de la respuesta
+---
+
+### Escenario 1: Éxito total (200) — todas las filas insertadas
+
+- **Cuándo:** Excel válido, columnas correctas, todas las filas con ASIN válido y sin duplicados ni excepciones.
+- **HTTP:** `200 OK`
+- **Cuerpo:** `status === true`, `data` con el resultado, `errores` vacío.
+
+**JSON de respuesta:**
 
 ```json
 {
   "status": true,
   "statusCode": 200,
-  "data": { ... },
-  "message": "string",
+  "data": {
+    "totalFilasLeidas": 10,
+    "registrosCargadosOk": 10,
+    "registrosDuplicados": 0,
+    "registrosConError": 0,
+    "errores": []
+  },
+  "message": "Bulk upload completed. 10 records loaded successfully, 0 duplicates skipped, 0 errors.",
   "errorNumber": null,
-  "timestamp": "2025-02-28T12:00:00.000"
+  "timestamp": "2025-02-28T18:30:00.000"
 }
 ```
 
-- **status:** `true` en 200.
-- **statusCode:** `200`.
-- **data:** objeto con el resultado de la carga (ver abajo).
-- **message:** texto descriptivo con cantidades (ej. registros cargados, duplicados, errores).
-- **errorNumber:** `null` en éxito.
-- **timestamp:** fecha/hora del servidor (Costa Rica).
+---
 
-### Contenido de `data` (BulkUploadResult)
+### Escenario 2: Éxito parcial (200) — algunas filas con error o duplicadas
 
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `totalFilasLeidas` | number | Total de filas de datos (excluyendo la fila de encabezados). |
-| `registrosCargadosOk` | number | Cantidad de registros insertados correctamente. |
-| `registrosDuplicados` | number | Cantidad de filas omitidas porque el ASIN ya existía para esa cuenta. |
-| `registrosConError` | number | Cantidad de filas que fallaron (ASIN vacío o excepción). |
-| `errores` | array | Lista de objetos con detalle de cada fila que falló. |
+- **Cuándo:** El procesamiento termina pero hay filas omitidas por duplicado o filas que fallaron (ASIN vacío u otra excepción).
+- **HTTP:** `200 OK`
+- **Cuerpo:** `status === true`, `data` con totales y array `errores` con al menos un elemento por cada fila que falló.
 
-### Objeto de un elemento de `errores` (BulkUploadError)
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `fila` | number | Número de fila en el Excel (incluyendo header = fila 1). |
-| `asin` | string | Valor del ASIN en esa fila (puede ser vacío si el error fue "ASIN is required"). |
-| `error` | string | Mensaje de error (ej. `"ASIN is required"` o mensaje de excepción). |
-
-### Ejemplo de respuesta 200
+**JSON de respuesta (ejemplo con 2 errores y 3 duplicados):**
 
 ```json
 {
@@ -183,24 +208,189 @@ Cuando la petición es válida y el procesamiento termina (con o sin errores por
 }
 ```
 
+**Formato de cada elemento de `data.errores`:**
+
+| Propiedad | Tipo   | Descripción |
+|-----------|--------|-------------|
+| `fila`   | number | Número de fila en el Excel (fila 1 = encabezados; la 2 es la primera de datos). |
+| `asin`   | string | Valor del ASIN en esa fila; puede ser `""` si el error fue "ASIN is required". |
+| `error`  | string | Mensaje de error (ej. `"ASIN is required"` o mensaje de excepción del servidor). |
+
 ---
 
-## Respuestas de error
+### Escenario 3: Éxito (200) — solo duplicados, nada nuevo insertado
 
-Todas las respuestas de error usan la misma estructura genérica; `data` puede ser `null` y `status` es `false`.
+- **Cuándo:** Se envía de nuevo el mismo Excel (o uno cuyos ASINs ya existen para esa cuenta). No se inserta ninguna fila nueva.
+- **HTTP:** `200 OK`
+- **Cuerpo:** `registrosCargadosOk === 0`, `registrosDuplicados > 0`, `errores` vacío o con solo filas inválidas.
 
-### 400 Bad Request
+**JSON de respuesta (ejemplo):**
 
-- **Cuándo:** validación del request (FluentValidation) o validación del Excel (columnas obligatorias o cuenta inexistente).
-- **statusCode:** `400`
-- **message:** mensaje de validación (ej. `"AmazonAccountId must be greater than 0"`, `"Missing required columns: ASIN"`, `"Amazon Account with ID X does not exist."`).
+```json
+{
+  "status": true,
+  "statusCode": 200,
+  "data": {
+    "totalFilasLeidas": 50,
+    "registrosCargadosOk": 0,
+    "registrosDuplicados": 50,
+    "registrosConError": 0,
+    "errores": []
+  },
+  "message": "Bulk upload completed. 0 records loaded successfully, 50 duplicates skipped, 0 errors.",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
 
-Ejemplo:
+---
+
+### Escenario 4: Éxito (200) — Excel solo con encabezados (sin filas de datos)
+
+- **Cuándo:** El archivo tiene solo la fila de encabezados (o se considera que no hay filas de datos).
+- **HTTP:** `200 OK`
+- **Cuerpo:** `totalFilasLeidas === 0`, resto de totales en 0, `errores` vacío.
+
+**JSON de respuesta:**
+
+```json
+{
+  "status": true,
+  "statusCode": 200,
+  "data": {
+    "totalFilasLeidas": 0,
+    "registrosCargadosOk": 0,
+    "registrosDuplicados": 0,
+    "registrosConError": 0,
+    "errores": []
+  },
+  "message": "Bulk upload completed. 0 records loaded successfully, 0 duplicates skipped, 0 errors.",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
+
+---
+
+### Escenario 5: Error 400 — `amazonAccountId` inválido (≤ 0)
+
+- **Cuándo:** Se envía `amazonAccountId` igual a 0 o negativo.
+- **HTTP:** `400 Bad Request`
+- **Cuerpo:** `status === false`, `data === null`, `message` con el texto de validación.
+
+**JSON de respuesta:**
 
 ```json
 {
   "status": false,
-  "statusCode": 400,
+  "statusCode": 500,
+  "data": null,
+  "message": "AmazonAccountId must be greater than 0",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
+
+*Nota: en respuestas de validación el backend puede devolver `statusCode: 500` en el cuerpo; el código de referencia es el **HTTP status** (400).*
+
+---
+
+### Escenario 6: Error 400 — archivo no enviado
+
+- **Cuándo:** No se envía la parte `excelFile` en el multipart.
+- **HTTP:** `400 Bad Request`
+- **Cuerpo:** `data === null`, `message` indicando que falta el archivo.
+
+**JSON de respuesta:**
+
+```json
+{
+  "status": false,
+  "statusCode": 500,
+  "data": null,
+  "message": "Excel file is required",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
+
+---
+
+### Escenario 7: Error 400 — archivo con extensión no permitida
+
+- **Cuándo:** El archivo no es `.xlsx` ni `.xls` (ej. `.csv`, `.pdf`, `.txt`).
+- **HTTP:** `400 Bad Request`
+- **Cuerpo:** `data === null`.
+
+**JSON de respuesta:**
+
+```json
+{
+  "status": false,
+  "statusCode": 500,
+  "data": null,
+  "message": "File must be an Excel file (.xlsx or .xls)",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
+
+---
+
+### Escenario 8: Error 400 — archivo vacío (tamaño 0)
+
+- **Cuándo:** Se envía un archivo con 0 bytes.
+- **HTTP:** `400 Bad Request`
+- **Cuerpo:** `data === null`.
+
+**JSON de respuesta:**
+
+```json
+{
+  "status": false,
+  "statusCode": 500,
+  "data": null,
+  "message": "Excel file cannot be empty",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
+
+---
+
+### Escenario 9: Error 400 — varias validaciones fallidas a la vez
+
+- **Cuándo:** Por ejemplo no se envía archivo y además `amazonAccountId` es 0.
+- **HTTP:** `400 Bad Request`
+- **Cuerpo:** `message` con varios mensajes concatenados por coma y espacio.
+
+**JSON de respuesta (ejemplo):**
+
+```json
+{
+  "status": false,
+  "statusCode": 500,
+  "data": null,
+  "message": "AmazonAccountId must be greater than 0, Excel file is required",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
+
+---
+
+### Escenario 10: Error 400 — columnas obligatorias faltantes en el Excel
+
+- **Cuándo:** En la primera fila del Excel falta la columna "ASIN" y/o "Product Title".
+- **HTTP:** `400 Bad Request`
+- **Cuerpo:** `data === null`, `message` indicando qué columnas faltan. En el cuerpo JSON, `statusCode` puede venir como 500; el código de referencia es el HTTP status (400).
+
+**JSON de respuesta (falta solo ASIN):**
+
+```json
+{
+  "status": false,
+  "statusCode": 500,
   "data": null,
   "message": "Missing required columns: ASIN",
   "errorNumber": null,
@@ -208,14 +398,72 @@ Ejemplo:
 }
 ```
 
-### 500 Internal Server Error
+**JSON de respuesta (faltan ASIN y Product Title):**
 
-- **Cuándo:** error inesperado al procesar el archivo (lectura del Excel, base de datos, etc.).
-- **statusCode:** `500`
-- **message:** mensaje genérico: `"An error occurred while processing the Excel file. Please check the file format and try again."`
-- El detalle técnico no se expone en la respuesta (solo se registra en logs del servidor).
+```json
+{
+  "status": false,
+  "statusCode": 500,
+  "data": null,
+  "message": "Missing required columns: ASIN, Product Title",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
 
-Ejemplo:
+---
+
+### Escenario 11: Error 400 — cuenta Amazon inexistente
+
+- **Cuándo:** `amazonAccountId` es válido (> 0) pero no existe en base de datos.
+- **HTTP:** `400 Bad Request`
+- **Cuerpo:** `data === null`, `message` con el ID usado. En el cuerpo JSON, `statusCode` puede venir como 500; el código de referencia es el HTTP status (400).
+
+**JSON de respuesta (ejemplo para ID 99999):**
+
+```json
+{
+  "status": false,
+  "statusCode": 500,
+  "data": null,
+  "message": "Amazon Account with ID 99999 does not exist.",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
+
+---
+
+### Escenario 12: Error 401 — no autorizado
+
+- **Cuándo:** El endpoint está protegido y no se envía `Authorization: Bearer {token}` o el token es inválido/expirado.
+- **HTTP:** `401 Unauthorized`
+- **Cuerpo:** En este endpoint el controlador no devuelve 401 explícitamente; si el API global devuelve 401, el cuerpo puede ser el envelope estándar con `status: false`, `data: null` y un mensaje de no autorizado. No se procesa el archivo.
+
+**JSON de respuesta (típico de middleware de autenticación):**
+
+```json
+{
+  "status": false,
+  "statusCode": 401,
+  "data": null,
+  "message": "Unauthorized",
+  "errorNumber": null,
+  "timestamp": "2025-02-28T18:30:00.000"
+}
+```
+
+*El mensaje exacto puede variar según la configuración del API.*
+
+---
+
+### Escenario 13: Error 500 — fallo inesperado al procesar el Excel
+
+- **Cuándo:** Excepción no controlada (lectura del archivo, base de datos, etc.). El mensaje expuesto es genérico; el detalle queda en logs del servidor.
+- **HTTP:** `500 Internal Server Error`
+- **Cuerpo:** `data === null`, `message` fijo.
+
+**JSON de respuesta:**
 
 ```json
 {
@@ -230,14 +478,14 @@ Ejemplo:
 
 ---
 
-## Resumen de códigos HTTP
+## Resumen: códigos HTTP y contenido de `data`
 
-| Código | Significado |
-|--------|-------------|
-| 200 | Procesamiento completado. Revisar `data.registrosCargadosOk`, `data.registrosDuplicados`, `data.registrosConError` y `data.errores`. |
-| 400 | Request inválido (parámetros, archivo, columnas obligatorias o cuenta inexistente). |
-| 401 | No autorizado (si el endpoint está protegido y no se envía o el token es inválido). |
-| 500 | Error interno del servidor al procesar el Excel. |
+| HTTP | `status` | `data` | Uso |
+|------|----------|--------|-----|
+| 200 | `true` | Objeto con `totalFilasLeidas`, `registrosCargadosOk`, `registrosDuplicados`, `registrosConError`, `errores[]` | Procesamiento completado (con o sin errores/duplicados por fila). |
+| 400 | `false` | `null` | Validación de request o Excel (parámetros, archivo, columnas, cuenta inexistente). |
+| 401 | `false` | `null` | No autorizado (si el endpoint está protegido). |
+| 500 | `false` | `null` | Error interno al procesar el Excel. |
 
 ---
 
@@ -264,15 +512,17 @@ Ejemplo:
 - El tamaño máximo del body multipart lo define el servidor (en el proyecto actual: 10 MB por defecto para `MultipartBodyLengthLimit`). Archivos mayores pueden devolver 413 o error de conexión.
 - Nombres de columna con espacios o puntuación deben coincidir exactamente con los de la tabla (ej. `Product Title`, `Parent ASIN`, `Replenishment Category`).
 - Columnas de catálogo con formato "código + espacio + descripción" se dividen en el primer espacio; el resto es la descripción (ej. `2000 Hardware` → código `2000`, nombre `Hardware`).
+- En respuestas 400 por validación (FluentValidation), el cuerpo puede incluir `statusCode: 500`; el código de referencia para el cliente es siempre el **código HTTP** de la respuesta.
 
 ---
 
-## Resumen rápido para el frontend
+## Referencia rápida: propiedades del JSON
 
-1. **URL:** `POST /api/corporate/amazon-account-asins/bulk-upload`
-2. **Content-Type:** `multipart/form-data`
-3. **Campos:** `amazonAccountId` (número), `excelFile` (archivo .xlsx o .xls).
-4. **200:** `data` contiene `totalFilasLeidas`, `registrosCargadosOk`, `registrosDuplicados`, `registrosConError`, `errores[]` con `fila`, `asin`, `error`.
-5. **400:** mensaje en `message` (validación o columnas faltantes).
-6. **500:** mensaje genérico; no se expone detalle del error.
-7. Idempotencia: duplicados por (cuenta + ASIN) se omiten y se cuentan en `registrosDuplicados`.
+**Envelope (todas las respuestas):**  
+`status` (boolean), `statusCode` (number), `data` (object | null), `message` (string), `errorNumber` (string | null), `timestamp` (string).
+
+**Cuando `data` no es null (solo en 200):**  
+`totalFilasLeidas` (number), `registrosCargadosOk` (number), `registrosDuplicados` (number), `registrosConError` (number), `errores` (array).
+
+**Cada elemento de `errores`:**  
+`fila` (number), `asin` (string), `error` (string).

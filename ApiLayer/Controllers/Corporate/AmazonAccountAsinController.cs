@@ -27,22 +27,14 @@ public class AmazonAccountAsinController : ControllerBase
     /// <summary>
     /// Carga masiva de ASINs desde archivo Excel
     /// </summary>
-    /// <param name="amazonAccountId">ID de la cuenta Amazon</param>
-    /// <param name="excelFile">Archivo Excel con los ASINs</param>
+    /// <param name="request">amazonAccountId y archivo Excel (excelFile)</param>
     /// <returns>Resultado de la carga con estadísticas</returns>
     [HttpPost("bulk-upload")]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> BulkUpload([FromForm] int amazonAccountId, [FromForm] IFormFile excelFile)
+    public async Task<IActionResult> BulkUpload([FromForm] BulkUploadAmazonAccountAsinsRequest request)
     {
         try
         {
-            // Validar request
-            var request = new BulkUploadAmazonAccountAsinsRequest
-            {
-                AmazonAccountId = amazonAccountId,
-                ExcelFile = excelFile
-            };
-
             var validationResult = await _bulkUploadValidator.ValidateAsync(request);
             if (!validationResult.IsValid)
             {
@@ -51,11 +43,8 @@ public class AmazonAccountAsinController : ControllerBase
                 return BadRequest(errorResponse);
             }
 
-            // Obtener usuario actual (aquí puedes usar Claims si tienes autenticación)
             var currentUser = User?.Identity?.Name ?? "System";
-
-            // Procesar carga masiva
-            var result = await _bulkUploadService.ProcessExcelAsync(amazonAccountId, excelFile, currentUser);
+            var result = await _bulkUploadService.ProcessExcelAsync(request.AmazonAccountId, request.ExcelFile, currentUser);
 
             var message = $"Bulk upload completed. {result.RegistrosCargadosOk} records loaded successfully, " +
                          $"{result.RegistrosDuplicados} duplicates skipped, {result.RegistrosConError} errors.";
@@ -71,7 +60,7 @@ public class AmazonAccountAsinController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing bulk upload for AmazonAccountId {AmazonAccountId}", amazonAccountId);
+            _logger.LogError(ex, "Error processing bulk upload for AmazonAccountId {AmazonAccountId}", request.AmazonAccountId);
             var response = ResponseStructure<object>.Error("An error occurred while processing the Excel file. Please check the file format and try again.");
             return StatusCode(500, response);
         }
