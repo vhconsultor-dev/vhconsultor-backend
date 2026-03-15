@@ -79,29 +79,49 @@ public class BrandPartnerAuthService
             };
         }
 
-        // Crear usuario
+        // Generar contraseña temporal y enviar por correo (mismo template que reset password)
+        var temporaryPassword = GenerateTemporaryPassword();
+        var passwordHash = _userCommandRepository.HashPassword(temporaryPassword);
+
         var user = new BrandPartnerUser
         {
             CustomerId = request.CustomerId,
             Email = request.Email.ToLower(),
-            PasswordHash = _userCommandRepository.HashPassword(request.Password),
+            PasswordHash = passwordHash,
             FirstName = request.FirstName,
             LastName = request.LastName,
             PhoneNumber = request.PhoneNumber,
             IsActive = true,
             EmailVerified = false,
-            RequirePasswordChangeOnNextLogin = false,
+            RequirePasswordChangeOnNextLogin = true,
             FailedLoginAttempts = 0,
             CreatedAt = DateTimeService.GetCostaRicaNow(),
             CreatedBy = request.CreatedBy
         };
 
         var userId = await _userCommandRepository.CreateUserAsync(user);
+        user.BrandPartnerUserId = userId;
+
+        // Enviar email con contraseña temporal (template BrandPartnerResetPasswordTemplateId)
+        var fullName = $"{user.FirstName} {user.LastName}".Trim();
+        var templateData = new { fullName, email = user.Email, newPassword = temporaryPassword };
+        try
+        {
+            await _sendGridService.SendTemplateEmailAsync(
+                user.Email,
+                _sendGridSettings.Value.BrandPartnerResetPasswordTemplateId,
+                templateData,
+                null);
+        }
+        catch
+        {
+            // Si falla el envío, el usuario ya está creado; puede usar "Olvidé mi contraseña"
+        }
 
         return new CreateBrandPartnerUserResult
         {
             Success = true,
-            Message = "Brand Partner user created successfully.",
+            Message = "Brand Partner user created successfully. A temporary password has been sent to the user's email.",
             BrandPartnerUserId = userId,
             User = new
             {
@@ -112,7 +132,8 @@ public class BrandPartnerAuthService
                 user.LastName,
                 user.PhoneNumber,
                 user.IsActive,
-                user.EmailVerified
+                user.EmailVerified,
+                user.RequirePasswordChangeOnNextLogin
             }
         };
     }
@@ -470,6 +491,47 @@ public class BrandPartnerAuthService
     {
         return await _loginHistoryQueryRepository.GetLoginHistoryAsync(
             brandPartnerUserId, dateFrom, dateTo, ipAddress, country, city, loginSuccessful, limit);
+    }
+
+    /// <summary>
+    /// Deactivates a Brand Partner user and resets their password so they cannot log in. No email is sent.
+    /// </summary>
+    public async Task<InactivateBrandPartnerUserResult> InactivateUserAsync(int brandPartnerUserId)
+    {
+        var user = await _userQueryRepository.GetByIdAsync(brandPartnerUserId);
+        if (user == null)
+        {
+            return new InactivateBrandPartnerUserResult
+            {
+                Success = false,
+                Message = "User not found. The specified Brand Partner user ID does not exist."
+            };
+        }
+
+        if (!user.IsActive)
+        {
+            return new InactivateBrandPartnerUserResult
+            {
+                Success = false,
+                Message = "User is already inactive. No changes were applied."
+            };
+        }
+
+        var updated = await _userCommandRepository.SetUserInactiveAsync(brandPartnerUserId);
+        if (!updated)
+        {
+            return new InactivateBrandPartnerUserResult
+            {
+                Success = false,
+                Message = "Unable to deactivate the user. Please try again or contact support."
+            };
+        }
+
+        return new InactivateBrandPartnerUserResult
+        {
+            Success = true,
+            Message = "User has been successfully deactivated. Access has been revoked and the account password has been reset for security."
+        };
     }
 
     private string GenerateTemporaryPassword()

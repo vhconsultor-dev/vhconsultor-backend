@@ -93,6 +93,26 @@ public class BrandPartnerUserCommandRepository
         await _context.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// Sets user as inactive and replaces password with a random hash so the user cannot log in.
+    /// </summary>
+    public async Task<bool> SetUserInactiveAsync(int brandPartnerUserId)
+    {
+        var user = await _context.BrandPartnerUsers.FindAsync(brandPartnerUserId);
+        if (user == null) return false;
+
+        user.IsActive = false;
+        user.UpdatedAt = DateTimeService.GetCostaRicaNow();
+        // Set a random password hash so the previous password no longer works
+        var randomBytes = new byte[32];
+        using (var rng = RandomNumberGenerator.Create())
+            rng.GetBytes(randomBytes);
+        user.PasswordHash = Convert.ToBase64String(randomBytes);
+
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public string HashPassword(string password)
     {
         using var sha256 = SHA256.Create();

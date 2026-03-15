@@ -41,7 +41,7 @@ public class BrandPartnerAuthController : ControllerBase
     /// POST /api/brandpartner/auth/users
     /// </summary>
     [HttpPost("users")]
-    [Authorize(Roles = "Admin,Corporate")]
+    [Authorize]
     public async Task<IActionResult> CreateUser([FromBody] CreateBrandPartnerUserRequest request)
     {
         try
@@ -77,6 +77,65 @@ public class BrandPartnerAuthController : ControllerBase
                 Status = false,
                 StatusCode = 500,
                 Message = "An unexpected error occurred. Please try again later or contact support if the problem persists.",
+                Data = null,
+                Timestamp = DateTimeService.GetCostaRicaNow()
+            });
+        }
+    }
+
+    /// <summary>
+    /// Inactivate a Brand Partner user. Sets the user as inactive and resets their password so they cannot log in. No email is sent.
+    /// POST /api/brandpartner/auth/users/inactivate?brandPartnerUserId=15
+    /// </summary>
+    [HttpPost("users/inactivate")]
+    [Authorize]
+    public async Task<IActionResult> InactivateUser([FromQuery] int brandPartnerUserId)
+    {
+        try
+        {
+            if (brandPartnerUserId <= 0)
+            {
+                return Ok(new ResponseStructure<object>
+                {
+                    Status = false,
+                    StatusCode = 400,
+                    Message = "Invalid user ID. Brand Partner user ID must be greater than zero.",
+                    Data = null,
+                    Timestamp = DateTimeService.GetCostaRicaNow()
+                });
+            }
+
+            var result = await _authService.InactivateUserAsync(brandPartnerUserId);
+
+            if (!result.Success)
+            {
+                var statusCode = result.Message.Contains("not exist") ? 404 : 400;
+                return Ok(new ResponseStructure<object>
+                {
+                    Status = false,
+                    StatusCode = statusCode,
+                    Message = result.Message,
+                    Data = null,
+                    Timestamp = DateTimeService.GetCostaRicaNow()
+                });
+            }
+
+            return Ok(new ResponseStructure<object>
+            {
+                Status = true,
+                StatusCode = 200,
+                Message = result.Message,
+                Data = new { brandPartnerUserId, isActive = false },
+                Timestamp = DateTimeService.GetCostaRicaNow()
+            });
+        }
+        catch (Exception)
+        {
+            return Ok(new ResponseStructure<object>
+            {
+                Status = false,
+                StatusCode = 500,
+                Message = "An unexpected error occurred while deactivating the user. Please try again later or contact support if the problem persists.",
                 Data = null,
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
@@ -313,7 +372,7 @@ public class BrandPartnerAuthController : ControllerBase
     /// GET /api/brandpartner/auth/users?customerId=1&isActive=true&emailVerified=false
     /// </summary>
     [HttpGet("users")]
-    [Authorize(Roles = "Admin,Corporate")]
+    [Authorize]
     public async Task<IActionResult> GetUsersByCustomer(
         [FromQuery] int customerId,
         [FromQuery] bool? isActive = null,

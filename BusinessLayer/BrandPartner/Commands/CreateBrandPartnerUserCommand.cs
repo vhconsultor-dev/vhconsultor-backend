@@ -1,17 +1,18 @@
 namespace BusinessLayer.BrandPartner.Commands;
 
 /// <summary>
-/// Request para crear un usuario Brand Partner
+/// Request para crear un usuario Brand Partner.
+/// No se pide contraseña: se genera una temporal y se envía por correo.
+/// BrandPartnerUserId es autoincremental en BD, no se envía.
 /// </summary>
 public class CreateBrandPartnerUserRequest
 {
     public int CustomerId { get; set; }
     public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string? PhoneNumber { get; set; }
-    public string CreatedBy { get; set; } = string.Empty;
+    public string? CreatedBy { get; set; }
 }
 
 /// <summary>
