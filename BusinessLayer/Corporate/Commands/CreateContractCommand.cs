@@ -83,6 +83,7 @@ public class CreateContractCommand
             DisputeResolution = request.DisputeResolution,
             ContractualDomicile = request.ContractualDomicile,
             Jurisdiction = request.Jurisdiction,
+            Regions = request.Regions,
             Notes = request.Notes,
             DocumentUrl = request.DocumentUrl,
             SignedDocumentUrl = request.SignedDocumentUrl,
@@ -160,6 +161,7 @@ public class CreateContractRequest
     public string? DisputeResolution { get; set; }
     public string? ContractualDomicile { get; set; }
     public string? Jurisdiction { get; set; }
+    public string? Regions { get; set; }
     public string? Notes { get; set; }
     public string? DocumentUrl { get; set; }
     public string? SignedDocumentUrl { get; set; }

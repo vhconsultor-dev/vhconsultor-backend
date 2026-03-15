@@ -44,7 +44,7 @@ public class ContractQueryRepository
                 CurrencyCode, ContractTerm, PaymentFrequency, PaymentDay, PaymentMethodId,
                 SignedDate, EffectiveDate, StartDate, EndDate, AutoRenewal, RenewalTerm,
                 RenewalNoticeDays, NoticePeriodDays, Status, GoverningLaw, DisputeResolution,
-                ContractualDomicile, Jurisdiction, Notes, CreatedAt, UpdatedAt, LastModifiedBy,
+                ContractualDomicile, Jurisdiction, Regions, Notes, CreatedAt, UpdatedAt, LastModifiedBy,
                 DocumentUrl, SignedDocumentUrl
             FROM [Corporate].[Contracts]
             WHERE 1=1";
@@ -133,7 +133,7 @@ public class ContractQueryRepository
                 CurrencyCode, ContractTerm, PaymentFrequency, PaymentDay, PaymentMethodId,
                 SignedDate, EffectiveDate, StartDate, EndDate, AutoRenewal, RenewalTerm,
                 RenewalNoticeDays, NoticePeriodDays, Status, GoverningLaw, DisputeResolution,
-                ContractualDomicile, Jurisdiction, Notes, CreatedAt, UpdatedAt, LastModifiedBy,
+                ContractualDomicile, Jurisdiction, Regions, Notes, CreatedAt, UpdatedAt, LastModifiedBy,
                 DocumentUrl, SignedDocumentUrl
             FROM [Corporate].[Contracts]
             WHERE ContractId = @ContractId";
@@ -158,7 +158,7 @@ public class ContractQueryRepository
                 CurrencyCode, ContractTerm, PaymentFrequency, PaymentDay, PaymentMethodId,
                 SignedDate, EffectiveDate, StartDate, EndDate, AutoRenewal, RenewalTerm,
                 RenewalNoticeDays, NoticePeriodDays, Status, GoverningLaw, DisputeResolution,
-                ContractualDomicile, Jurisdiction, Notes, CreatedAt, UpdatedAt, LastModifiedBy,
+                ContractualDomicile, Jurisdiction, Regions, Notes, CreatedAt, UpdatedAt, LastModifiedBy,
                 DocumentUrl, SignedDocumentUrl
             FROM [Corporate].[Contracts]
             WHERE CustomerId = @CustomerId
@@ -184,7 +184,7 @@ public class ContractQueryRepository
                 CurrencyCode, ContractTerm, PaymentFrequency, PaymentDay, PaymentMethodId,
                 SignedDate, EffectiveDate, StartDate, EndDate, AutoRenewal, RenewalTerm,
                 RenewalNoticeDays, NoticePeriodDays, Status, GoverningLaw, DisputeResolution,
-                ContractualDomicile, Jurisdiction, Notes, CreatedAt, UpdatedAt, LastModifiedBy,
+                ContractualDomicile, Jurisdiction, Regions, Notes, CreatedAt, UpdatedAt, LastModifiedBy,
                 DocumentUrl, SignedDocumentUrl
             FROM [Corporate].[Contracts]
             WHERE Status IN ('Activo', 'Vigente')

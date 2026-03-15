@@ -38,6 +38,7 @@ public class Contract
     public string? DisputeResolution { get; set; }
     public string? ContractualDomicile { get; set; }
     public string? Jurisdiction { get; set; }
+    public string? Regions { get; set; }
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

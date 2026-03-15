@@ -62,6 +62,7 @@ public class UpdateContractCommand
         contract.DisputeResolution = request.DisputeResolution;
         contract.ContractualDomicile = request.ContractualDomicile;
         contract.Jurisdiction = request.Jurisdiction;
+        contract.Regions = request.Regions;
         contract.Notes = request.Notes;
         contract.DocumentUrl = request.DocumentUrl;
         contract.SignedDocumentUrl = request.SignedDocumentUrl;
@@ -111,6 +112,7 @@ public class UpdateContractRequest
     public string? DisputeResolution { get; set; }
     public string? ContractualDomicile { get; set; }
     public string? Jurisdiction { get; set; }
+    public string? Regions { get; set; }
     public string? Notes { get; set; }
     public string? DocumentUrl { get; set; }
     public string? SignedDocumentUrl { get; set; }

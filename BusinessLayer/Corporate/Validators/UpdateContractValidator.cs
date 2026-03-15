@@ -40,6 +40,10 @@ public class UpdateContractValidator : AbstractValidator<UpdateContractRequest>
             .MaximumLength(50).WithMessage("El estado no puede exceder 50 caracteres")
             .When(x => !string.IsNullOrEmpty(x.Status));
 
+        RuleFor(x => x.Regions)
+            .MaximumLength(100).WithMessage("El campo Regions no puede exceder 100 caracteres")
+            .When(x => !string.IsNullOrEmpty(x.Regions));
+
         RuleFor(x => x.EndDate)
             .GreaterThan(x => x.StartDate).WithMessage("La fecha de fin debe ser posterior a la fecha de inicio")
             .When(x => x.StartDate.HasValue && x.EndDate.HasValue);
