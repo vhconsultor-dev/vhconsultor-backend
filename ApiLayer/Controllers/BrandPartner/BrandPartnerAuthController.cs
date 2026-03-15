@@ -84,15 +84,22 @@ public class BrandPartnerAuthController : ControllerBase
     }
 
     /// <summary>
-    /// 2. Login paso 1: validar email/password y enviar código 2FA
-    /// POST /api/brandpartner/auth/login
+    /// 2. Login paso 1: validar email/password y enviar código 2FA. Solo enviar email y password; IP y User-Agent los obtiene el servidor.
     /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<IActionResult> Login([FromBody] BrandPartnerLoginCommand command)
+    public async Task<IActionResult> Login([FromBody] BrandPartnerLoginRequest request)
     {
         try
         {
+            var command = new BrandPartnerLoginCommand
+            {
+                Email = request.Email,
+                Password = request.Password,
+                IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+                UserAgent = Request.Headers["User-Agent"].ToString()
+            };
+
             var validationResult = await _loginValidator.ValidateAsync(command);
             if (!validationResult.IsValid)
             {
@@ -105,10 +112,6 @@ public class BrandPartnerAuthController : ControllerBase
                     Timestamp = DateTimeService.GetCostaRicaNow()
                 });
             }
-
-            // Obtener IP y User-Agent del request
-            command.IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            command.UserAgent = Request.Headers["User-Agent"].ToString();
 
             var result = await _authService.LoginStepOneAsync(command);
 
@@ -136,15 +139,23 @@ public class BrandPartnerAuthController : ControllerBase
     }
 
     /// <summary>
-    /// 3. Login paso 2: verificar código 2FA y obtener JWT
-    /// POST /api/brandpartner/auth/verify-2fa
+    /// 3. Login paso 2: verificar código 2FA y obtener JWT. Solo enviar email y code; IP, User-Agent y SessionId los obtiene el servidor.
     /// </summary>
     [HttpPost("verify-2fa")]
     [AllowAnonymous]
-    public async Task<IActionResult> VerifyTwoFactorCode([FromBody] VerifyTwoFactorCodeCommand command)
+    public async Task<IActionResult> VerifyTwoFactorCode([FromBody] VerifyTwoFactorCodeRequest request)
     {
         try
         {
+            var command = new VerifyTwoFactorCodeCommand
+            {
+                Email = request.Email,
+                Code = request.Code,
+                IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+                UserAgent = Request.Headers["User-Agent"].ToString(),
+                SessionId = Guid.NewGuid().ToString()
+            };
+
             var validationResult = await _verifyCodeValidator.ValidateAsync(command);
             if (!validationResult.IsValid)
             {
@@ -157,10 +168,6 @@ public class BrandPartnerAuthController : ControllerBase
                     Timestamp = DateTimeService.GetCostaRicaNow()
                 });
             }
-
-            command.IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            command.UserAgent = Request.Headers["User-Agent"].ToString();
-            command.SessionId = Guid.NewGuid().ToString();
 
             var result = await _authService.VerifyTwoFactorCodeAsync(command);
 

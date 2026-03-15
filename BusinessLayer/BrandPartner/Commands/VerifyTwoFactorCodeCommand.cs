@@ -1,7 +1,17 @@
 namespace BusinessLayer.BrandPartner.Commands;
 
 /// <summary>
-/// Command para verificar código 2FA (paso 2 del login)
+/// Request body for verify-2FA API. Only email and code are sent by the client.
+/// IPAddress, UserAgent and SessionId are set by the backend.
+/// </summary>
+public class VerifyTwoFactorCodeRequest
+{
+    public string Email { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Command para verificar código 2FA (paso 2 del login). Used internally.
 /// </summary>
 public class VerifyTwoFactorCodeCommand
 {

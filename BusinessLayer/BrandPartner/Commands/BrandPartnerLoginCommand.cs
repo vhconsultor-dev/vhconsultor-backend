@@ -1,7 +1,17 @@
 namespace BusinessLayer.BrandPartner.Commands;
 
 /// <summary>
-/// Command para login Brand Partner (paso 1: validar credenciales)
+/// Request body for login API. Only email and password are sent by the client.
+/// IPAddress and UserAgent are set by the backend from the HTTP context.
+/// </summary>
+public class BrandPartnerLoginRequest
+{
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Command para login Brand Partner (paso 1: validar credenciales). Used internally.
 /// </summary>
 public class BrandPartnerLoginCommand
 {
