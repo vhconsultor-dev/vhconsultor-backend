@@ -17,12 +17,12 @@ public class SendGridSettings
     public string SupportEmail { get; set; } = string.Empty;
     /// <summary>
     /// Template ID for Brand Partner 2FA code email (código de verificación 2FA).
-    /// Variables: {{ fullName }}, {{ code }}, {{ expiresIn }}
+    /// Variables: fullName, code, expiresIn (e.g. "3 minutes")
     /// </summary>
     public string BrandPartnerTwoFactorCodeTemplateId { get; set; } = string.Empty;
     /// <summary>
     /// Template ID for Brand Partner reset password email (contraseña temporal).
-    /// Variables: {{ fullName }}, {{ email }}, {{ newPassword }}
+    /// Variables: fullName, username (email), password (contraseña temporal)
     /// </summary>
     public string BrandPartnerResetPasswordTemplateId { get; set; } = string.Empty;
 }

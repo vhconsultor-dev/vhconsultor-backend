@@ -103,8 +103,14 @@ public class BrandPartnerAuthService
         user.BrandPartnerUserId = userId;
 
         // Enviar email con contraseña temporal (template BrandPartnerResetPasswordTemplateId)
+        // SendGrid espera: fullName, username (email), password (contraseña temporal)
         var fullName = $"{user.FirstName} {user.LastName}".Trim();
-        var templateData = new { fullName, email = user.Email, newPassword = temporaryPassword };
+        var templateData = new Dictionary<string, object>
+        {
+            { "fullName", fullName },
+            { "username", user.Email },
+            { "password", temporaryPassword }
+        };
         try
         {
             await _sendGridService.SendTemplateEmailAsync(
@@ -262,13 +268,13 @@ public class BrandPartnerAuthService
 
             var twoFactorCode = await _twoFactorCommandRepository.CreateCodeAsync(user.BrandPartnerUserId);
 
-            // Enviar email con código
+            // Enviar email con código (SendGrid espera: fullName, code, expiresIn)
             var fullName = $"{user.FirstName} {user.LastName}".Trim();
-            var templateData = new
+            var templateData = new Dictionary<string, object>
             {
-                fullName,
-                code = twoFactorCode.Code,
-                expiresIn = "3 minutos"
+                { "fullName", fullName },
+                { "code", twoFactorCode.Code },
+                { "expiresIn", "3 minutes" }
             };
 
             try
@@ -419,13 +425,13 @@ public class BrandPartnerAuthService
         await _userCommandRepository.UpdatePasswordAsync(user.BrandPartnerUserId, newPasswordHash);
         await _userCommandRepository.UpdateRequirePasswordChangeAsync(user.BrandPartnerUserId, true);
 
-        // Enviar email
+        // Enviar email (SendGrid espera: fullName, username, password)
         var fullName = $"{user.FirstName} {user.LastName}".Trim();
-        var templateData = new
+        var templateData = new Dictionary<string, object>
         {
-            fullName,
-            email = user.Email,
-            newPassword = temporaryPassword
+            { "fullName", fullName },
+            { "username", user.Email },
+            { "password", temporaryPassword }
         };
 
         await _sendGridService.SendTemplateEmailAsync(
