@@ -116,6 +116,13 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonAccountMarketplaceRequest>, BusinessLayer.Corporate.Validators.CreateAmazonAccountMarketplaceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonAccountMarketplaceRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonAccountMarketplaceValidator>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Validators.BulkUploadAmazonAccountAsinsValidator>();
+
+// Brand Partner Validators
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.CreateBrandPartnerUserValidator>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.BrandPartnerLoginValidator>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.VerifyTwoFactorCodeValidator>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.ResetPasswordBrandPartnerValidator>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.ChangePasswordBrandPartnerValidator>();
 #endregion
 
 #region Azure Storage Configuration
@@ -226,6 +233,9 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountMarketplaceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.BulkUploadAmazonAccountAsinsService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountAsinService>();
+
+// Brand Partner Services
+builder.Services.AddScoped<ApplicationLayer.BrandPartner.BrandPartnerAuthService>();
 #endregion
 
 #region ScopedInterfazAndRepository
@@ -301,6 +311,15 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonAccountM
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteAmazonAccountMarketplaceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.BulkUploadAmazonAccountAsinsCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonAccountAsinQueryRepository>();
+
+// Brand Partner CQRS Repositories
+// Commands
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Commands.BrandPartnerUserCommandRepository>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Commands.BrandPartnerTwoFactorCodeCommandRepository>();
+// Queries
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.BrandPartnerUserQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.BrandPartnerLoginHistoryQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.BrandPartnerTwoFactorCodeQueryRepository>();
 #endregion
 
 #region SwaggerConfig
