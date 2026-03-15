@@ -70,13 +70,13 @@ public class BrandPartnerAuthController : ControllerBase
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return Ok(new ResponseStructure<object>
             {
                 Status = false,
                 StatusCode = 500,
-                Message = $"An error occurred: {ex.Message}",
+                Message = "An unexpected error occurred. Please try again later or contact support if the problem persists.",
                 Data = null,
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
@@ -121,13 +121,14 @@ public class BrandPartnerAuthController : ControllerBase
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
+            // Never expose internal exception details
             return Ok(new ResponseStructure<object>
             {
                 Status = false,
                 StatusCode = 500,
-                Message = $"An error occurred: {ex.Message}",
+                Message = "An unexpected error occurred. Please try again later or contact support if the problem persists.",
                 Data = null,
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
@@ -177,13 +178,13 @@ public class BrandPartnerAuthController : ControllerBase
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return Ok(new ResponseStructure<object>
             {
                 Status = false,
                 StatusCode = 500,
-                Message = $"An error occurred: {ex.Message}",
+                Message = "An unexpected error occurred. Please try again later or contact support if the problem persists.",
                 Data = null,
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
@@ -224,13 +225,13 @@ public class BrandPartnerAuthController : ControllerBase
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return Ok(new ResponseStructure<object>
             {
                 Status = false,
                 StatusCode = 500,
-                Message = $"An error occurred: {ex.Message}",
+                Message = "An unexpected error occurred. Please try again later or contact support if the problem persists.",
                 Data = null,
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
@@ -287,13 +288,13 @@ public class BrandPartnerAuthController : ControllerBase
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return Ok(new ResponseStructure<object>
             {
                 Status = false,
                 StatusCode = 500,
-                Message = $"An error occurred: {ex.Message}",
+                Message = "An unexpected error occurred. Please try again later or contact support if the problem persists.",
                 Data = null,
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
@@ -397,13 +398,13 @@ public class BrandPartnerAuthController : ControllerBase
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return Ok(new ResponseStructure<object>
             {
                 Status = false,
                 StatusCode = 500,
-                Message = $"An error occurred: {ex.Message}",
+                Message = "An unexpected error occurred. Please try again later or contact support if the problem persists.",
                 Data = null,
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });

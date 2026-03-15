@@ -122,115 +122,173 @@ public class BrandPartnerAuthService
     /// </summary>
     public async Task<BrandPartnerLoginResult> LoginStepOneAsync(BrandPartnerLoginCommand command)
     {
-        var user = await _userQueryRepository.GetByEmailAsync(command.Email);
-
-        // Registrar intento
-        var loginHistory = new BrandPartnerUserLoginHistory
+        try
         {
-            BrandPartnerUserId = user?.BrandPartnerUserId ?? 0,
-            LoginDate = DateTimeService.GetCostaRicaNow(),
-            IPAddress = command.IPAddress ?? "Unknown",
-            UserAgent = command.UserAgent,
-            Location = command.Location,
-            Country = command.Country,
-            City = command.City,
-            LoginSuccessful = false,
-            FailureReason = null
-        };
+            var user = await _userQueryRepository.GetByEmailAsync(command.Email);
 
-        if (user == null)
-        {
-            loginHistory.FailureReason = "User not found";
-            await _userCommandRepository.RecordLoginAttemptAsync(loginHistory);
-            return new BrandPartnerLoginResult
+            if (user == null)
             {
-                Success = false,
-                Message = "Invalid email or password."
-            };
-        }
+                // Intentar registrar historial (sin fallar si la tabla no existe)
+                try
+                {
+                    var loginHistory = new BrandPartnerUserLoginHistory
+                    {
+                        BrandPartnerUserId = 0,
+                        LoginDate = DateTimeService.GetCostaRicaNow(),
+                        IPAddress = command.IPAddress ?? "Unknown",
+                        UserAgent = command.UserAgent,
+                        Location = command.Location,
+                        Country = command.Country,
+                        City = command.City,
+                        LoginSuccessful = false,
+                        FailureReason = "User not found"
+                    };
+                    await _userCommandRepository.RecordLoginAttemptAsync(loginHistory);
+                }
+                catch
+                {
+                    // Ignorar errores de historial
+                }
 
-        loginHistory.BrandPartnerUserId = user.BrandPartnerUserId;
+                return new BrandPartnerLoginResult
+                {
+                    Success = false,
+                    Message = "Invalid email or password."
+                };
+            }
 
-        // Verificar cuenta activa
-        if (!user.IsActive)
-        {
-            loginHistory.FailureReason = "Account inactive";
-            await _userCommandRepository.RecordLoginAttemptAsync(loginHistory);
-            return new BrandPartnerLoginResult
+            // Registrar intento
+            var loginHistoryRecord = new BrandPartnerUserLoginHistory
             {
-                Success = false,
-                Message = "Account is inactive. Please contact support."
+                BrandPartnerUserId = user.BrandPartnerUserId,
+                LoginDate = DateTimeService.GetCostaRicaNow(),
+                IPAddress = command.IPAddress ?? "Unknown",
+                UserAgent = command.UserAgent,
+                Location = command.Location,
+                Country = command.Country,
+                City = command.City,
+                LoginSuccessful = false,
+                FailureReason = null
             };
-        }
 
-        // Verificar bloqueo
-        if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTimeService.GetCostaRicaNow())
-        {
-            loginHistory.FailureReason = "Account locked";
-            await _userCommandRepository.RecordLoginAttemptAsync(loginHistory);
-            return new BrandPartnerLoginResult
+            // Verificar cuenta activa
+            if (!user.IsActive)
             {
-                Success = false,
-                Message = $"Account is locked until {user.LockedUntil.Value:yyyy-MM-dd HH:mm:ss}",
-                LockedUntil = user.LockedUntil.Value
+                loginHistoryRecord.FailureReason = "Account inactive";
+                try { await _userCommandRepository.RecordLoginAttemptAsync(loginHistoryRecord); } catch { }
+                return new BrandPartnerLoginResult
+                {
+                    Success = false,
+                    Message = "Account is inactive. Please contact support."
+                };
+            }
+
+            // Verificar bloqueo
+            if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTimeService.GetCostaRicaNow())
+            {
+                loginHistoryRecord.FailureReason = "Account locked";
+                try { await _userCommandRepository.RecordLoginAttemptAsync(loginHistoryRecord); } catch { }
+                return new BrandPartnerLoginResult
+                {
+                    Success = false,
+                    Message = $"Account is locked until {user.LockedUntil.Value:yyyy-MM-dd HH:mm:ss}",
+                    LockedUntil = user.LockedUntil.Value
+                };
+            }
+
+            // Verificar contraseña
+            var passwordHash = _userCommandRepository.HashPassword(command.Password);
+            if (user.PasswordHash != passwordHash)
+            {
+                loginHistoryRecord.FailureReason = "Incorrect password";
+                try { await _userCommandRepository.RecordLoginAttemptAsync(loginHistoryRecord); } catch { }
+                
+                try
+                {
+                    await _userCommandRepository.IncrementFailedLoginAttemptsAsync(user.BrandPartnerUserId);
+                }
+                catch
+                {
+                    // Si falla incrementar, continuar
+                }
+
+                var failedAttempts = user.FailedLoginAttempts + 1;
+                if (failedAttempts >= 5)
+                {
+                    return new BrandPartnerLoginResult
+                    {
+                        Success = false,
+                        Message = "Too many failed attempts. Account locked for 30 minutes."
+                    };
+                }
+
+                return new BrandPartnerLoginResult
+                {
+                    Success = false,
+                    Message = $"Invalid email or password. Remaining attempts: {5 - failedAttempts}"
+                };
+            }
+
+            // Credenciales válidas: generar y enviar código 2FA
+            try
+            {
+                await _twoFactorCommandRepository.DeleteExpiredCodesAsync(user.BrandPartnerUserId);
+            }
+            catch
+            {
+                // Ignorar si falla limpiar códigos expirados
+            }
+
+            var twoFactorCode = await _twoFactorCommandRepository.CreateCodeAsync(user.BrandPartnerUserId);
+
+            // Enviar email con código
+            var fullName = $"{user.FirstName} {user.LastName}".Trim();
+            var templateData = new
+            {
+                fullName,
+                code = twoFactorCode.Code,
+                expiresIn = "3 minutos"
             };
-        }
 
-        // Verificar contraseña
-        var passwordHash = _userCommandRepository.HashPassword(command.Password);
-        if (user.PasswordHash != passwordHash)
-        {
-            loginHistory.FailureReason = "Incorrect password";
-            await _userCommandRepository.RecordLoginAttemptAsync(loginHistory);
-            await _userCommandRepository.IncrementFailedLoginAttemptsAsync(user.BrandPartnerUserId);
-
-            var failedAttempts = user.FailedLoginAttempts + 1;
-            if (failedAttempts >= 5)
+            try
+            {
+                await _sendGridService.SendTemplateEmailAsync(
+                    user.Email,
+                    _sendGridSettings.Value.BrandPartnerTwoFactorCodeTemplateId,
+                    templateData,
+                    null);
+            }
+            catch
             {
                 return new BrandPartnerLoginResult
                 {
                     Success = false,
-                    Message = "Too many failed attempts. Account locked for 30 minutes."
+                    Message = "Failed to send verification code. Please check your email configuration or contact support."
                 };
             }
 
+            loginHistoryRecord.LoginSuccessful = false;
+            loginHistoryRecord.FailureReason = "Waiting for 2FA code";
+            try { await _userCommandRepository.RecordLoginAttemptAsync(loginHistoryRecord); } catch { }
+
+            return new BrandPartnerLoginResult
+            {
+                Success = true,
+                Message = "2FA code sent to your email. Please check your inbox.",
+                RequiresTwoFactor = true,
+                BrandPartnerUserId = user.BrandPartnerUserId
+            };
+        }
+        catch
+        {
+            // Log the actual error for debugging but return a user-friendly message
+            // TODO: Add proper logging here (ILogger)
             return new BrandPartnerLoginResult
             {
                 Success = false,
-                Message = $"Invalid email or password. Remaining attempts: {5 - failedAttempts}"
+                Message = "An error occurred during login. Please try again or contact support if the problem persists."
             };
         }
-
-        // Credenciales válidas: generar y enviar código 2FA
-        await _twoFactorCommandRepository.DeleteExpiredCodesAsync(user.BrandPartnerUserId);
-        var twoFactorCode = await _twoFactorCommandRepository.CreateCodeAsync(user.BrandPartnerUserId);
-
-        // Enviar email con código
-        var fullName = $"{user.FirstName} {user.LastName}".Trim();
-        var templateData = new
-        {
-            fullName,
-            code = twoFactorCode.Code,
-            expiresIn = "3 minutos"
-        };
-
-        await _sendGridService.SendTemplateEmailAsync(
-            user.Email,
-            _sendGridSettings.Value.BrandPartnerTwoFactorCodeTemplateId,
-            templateData,
-            null);
-
-        loginHistory.LoginSuccessful = false;
-        loginHistory.FailureReason = "Waiting for 2FA code";
-        await _userCommandRepository.RecordLoginAttemptAsync(loginHistory);
-
-        return new BrandPartnerLoginResult
-        {
-            Success = true,
-            Message = "2FA code sent to your email. Please check your inbox.",
-            RequiresTwoFactor = true,
-            BrandPartnerUserId = user.BrandPartnerUserId
-        };
     }
 
     /// <summary>
