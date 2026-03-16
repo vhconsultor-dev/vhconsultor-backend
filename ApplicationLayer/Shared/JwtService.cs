@@ -102,8 +102,8 @@ public class JwtService
                 };
             }
 
-            // Generar el JWT
-            var token = GenerateJwtToken();
+            // Generar el JWT (opcionalmente con UserId para Brand Partner)
+            var token = GenerateJwtToken(command.UserId);
             var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationMinutes);
 
             return new GenerateJwtResponse
@@ -214,21 +214,25 @@ public class JwtService
     }
 
     /// <summary>
-    /// Genera el JWT token
+    /// Genera el JWT token. Si userId tiene valor (Brand Partner), se añade el claim "UserId".
     /// </summary>
-    private string GenerateJwtToken()
+    private string GenerateJwtToken(int? userId = null)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_jwtSettings.SecretKey);
 
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, "VHConsultor"),
+            new Claim(ClaimTypes.Role, "ApiClient"),
+            new Claim("Timestamp", DateTime.UtcNow.ToString("O"))
+        };
+        if (userId.HasValue)
+            claims.Add(new Claim("UserId", userId.Value.ToString()));
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.Name, "VHConsultor"),
-                new Claim(ClaimTypes.Role, "ApiClient"),
-                new Claim("Timestamp", DateTime.UtcNow.ToString("O"))
-            }),
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationMinutes),
             Issuer = _jwtSettings.Issuer,
             Audience = _jwtSettings.Audience,

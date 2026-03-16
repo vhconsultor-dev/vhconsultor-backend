@@ -368,7 +368,8 @@ public class BrandPartnerAuthService
         var encryptedPayload = EncryptPayload($"{_jwtSettings.Value.SecretKey}|{timestampUtcMinus6}");
         var jwtCommand = new BusinessLayer.Shared.Commands.GenerateJwtCommand
         {
-            EncryptedPayload = encryptedPayload
+            EncryptedPayload = encryptedPayload,
+            UserId = user.BrandPartnerUserId
         };
         var tokenResult = await _jwtService.GenerateTokenAsync(jwtCommand);
 

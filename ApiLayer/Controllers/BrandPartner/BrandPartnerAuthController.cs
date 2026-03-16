@@ -309,7 +309,7 @@ public class BrandPartnerAuthController : ControllerBase
     /// POST /api/brandpartner/auth/change-password
     /// </summary>
     [HttpPost("change-password")]
-    [Authorize(Roles = "BrandPartner")]
+    [Authorize(Roles = "ApiClient,BrandPartner")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordBrandPartnerCommand command)
     {
         try
@@ -421,7 +421,7 @@ public class BrandPartnerAuthController : ControllerBase
     /// GET /api/brandpartner/auth/login-history?brandPartnerUserId=1&dateFrom=2025-01-01&dateTo=2025-12-31&loginSuccessful=true&limit=50
     /// </summary>
     [HttpGet("login-history")]
-    [Authorize(Roles = "Admin,Corporate,BrandPartner")]
+    [Authorize(Roles = "Admin,Corporate,BrandPartner,ApiClient")]
     public async Task<IActionResult> GetLoginHistory(
         [FromQuery] int? brandPartnerUserId = null,
         [FromQuery] DateTime? dateFrom = null,
