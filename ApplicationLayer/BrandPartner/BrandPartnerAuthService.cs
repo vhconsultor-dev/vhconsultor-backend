@@ -363,19 +363,29 @@ public class BrandPartnerAuthService
         };
         await _userCommandRepository.RecordLoginAttemptAsync(loginHistory);
 
-        // Generar JWT
-        var encryptedPayload = EncryptPayload($"{user.BrandPartnerUserId}|{user.Email}|BrandPartner");
+        // Generar JWT (el payload debe ser SecretKey|Timestamp para que JwtService lo acepte)
+        var timestampUtcMinus6 = DateTimeOffset.UtcNow.AddHours(-6).ToUnixTimeMilliseconds();
+        var encryptedPayload = EncryptPayload($"{_jwtSettings.Value.SecretKey}|{timestampUtcMinus6}");
         var jwtCommand = new BusinessLayer.Shared.Commands.GenerateJwtCommand
         {
             EncryptedPayload = encryptedPayload
         };
-        var token = await _jwtService.GenerateTokenAsync(jwtCommand);
+        var tokenResult = await _jwtService.GenerateTokenAsync(jwtCommand);
+
+        if (!tokenResult.Success)
+        {
+            return new VerifyTwoFactorCodeResult
+            {
+                Success = false,
+                Message = tokenResult.Message ?? "Could not generate authentication token."
+            };
+        }
 
         return new VerifyTwoFactorCodeResult
         {
             Success = true,
             Message = "Login successful.",
-            Token = token.Token,
+            Token = tokenResult.Token,
             RequiresPasswordChange = user.RequirePasswordChangeOnNextLogin,
             User = new
             {
