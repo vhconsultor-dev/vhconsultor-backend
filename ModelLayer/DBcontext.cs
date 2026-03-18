@@ -544,6 +544,7 @@ public class DBcontext : DbContext
             entity.Property(e => e.DepositNumber).HasMaxLength(255);
             entity.Property(e => e.TransferNumber).HasMaxLength(255);
             entity.Property(e => e.Notes);
+            entity.Property(e => e.Lang).HasMaxLength(10);
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
             entity.Property(e => e.UpdatedAt);
             entity.Property(e => e.LastModifiedBy).HasMaxLength(255);

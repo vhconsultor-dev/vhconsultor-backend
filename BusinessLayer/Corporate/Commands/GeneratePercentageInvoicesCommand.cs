@@ -108,6 +108,7 @@ public class GeneratePercentageInvoicesCommand
                 CurrencyCode = contract.CurrencyCode!,
                 Status = "Draft",
                 PaymentStatus = "Unpaid",
+                Lang = "es",
                 CreatedAt = DateTimeService.GetCostaRicaNow()
             };
 

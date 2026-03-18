@@ -3227,19 +3227,19 @@
     ]
   },
   "packageFolders": {
-    "/Users/jamartinezu/.nuget/packages/": {}
+    "/Users/afajardop/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj",
+      "projectUniqueName": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj",
       "projectName": "BusinessLayer",
-      "projectPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj",
-      "packagesPath": "/Users/jamartinezu/.nuget/packages/",
-      "outputPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/obj/",
+      "projectPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj",
+      "packagesPath": "/Users/afajardop/.nuget/packages/",
+      "outputPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/Users/jamartinezu/.nuget/NuGet/NuGet.Config"
+        "/Users/afajardop/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -3251,8 +3251,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/ModelLayer.csproj": {
-              "projectPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/ModelLayer.csproj"
+            "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/ModelLayer.csproj": {
+              "projectPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/ModelLayer.csproj"
             }
           }
         }
@@ -3266,8 +3266,7 @@
         "enableAudit": "true",
         "auditLevel": "low",
         "auditMode": "direct"
-      },
-      "SdkAnalysisLevel": "9.0.300"
+      }
     },
     "frameworks": {
       "net8.0": {
@@ -3326,7 +3325,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.301/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.416/PortableRuntimeIdentifierGraph.json"
       }
     }
   },
@@ -3335,7 +3334,7 @@
       "code": "NU1603",
       "level": "Warning",
       "warningLevel": 1,
-      "message": "BusinessLayer depende de Microsoft.Extensions.Configuration (>= 8.0.2), pero no se encontró Microsoft.Extensions.Configuration 8.0.2. Microsoft.Extensions.Configuration 9.0.0 se resolvió en su lugar.",
+      "message": "BusinessLayer depends on Microsoft.Extensions.Configuration (>= 8.0.2) but Microsoft.Extensions.Configuration 8.0.2 was not found. Microsoft.Extensions.Configuration 9.0.0 was resolved instead.",
       "libraryId": "Microsoft.Extensions.Configuration",
       "targetGraphs": [
         "net8.0"

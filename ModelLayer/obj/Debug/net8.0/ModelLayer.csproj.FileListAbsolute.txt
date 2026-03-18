@@ -23,3 +23,16 @@
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/refint/ModelLayer.dll
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.pdb
 /Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ref/ModelLayer.dll
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.csproj.AssemblyReference.cache
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.GeneratedMSBuildEditorConfig.editorconfig
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.AssemblyInfoInputs.cache
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.AssemblyInfo.cs
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.csproj.CoreCompileInputs.cache
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.sourcelink.json
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.dll
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/refint/ModelLayer.dll
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ModelLayer.pdb
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/bin/Debug/net8.0/ModelLayer.deps.json
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/bin/Debug/net8.0/ModelLayer.dll
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/bin/Debug/net8.0/ModelLayer.pdb
+/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/Debug/net8.0/ref/ModelLayer.dll

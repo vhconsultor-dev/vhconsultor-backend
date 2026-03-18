@@ -78,6 +78,7 @@ public class CreateManualInvoiceCommand
             Status = "Draft",
             PaymentStatus = "Unpaid",
             Notes = request.Notes,
+            Lang = !string.IsNullOrWhiteSpace(request.Lang) ? request.Lang.Trim() : "es",
             CreatedAt = DateTimeService.GetCostaRicaNow()
         };
 
@@ -205,6 +206,8 @@ public class CreateManualInvoiceRequest
     public decimal Amount { get; set; }
     public string? Description { get; set; }
     public string? Notes { get; set; }
+    /// <summary>Language for PDF: "en" (English) or "es" (Spanish). Defaults to "es" if not provided.</summary>
+    public string? Lang { get; set; }
 }
 
 /// <summary>
