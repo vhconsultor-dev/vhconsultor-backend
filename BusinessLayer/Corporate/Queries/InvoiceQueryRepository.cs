@@ -31,7 +31,7 @@ public class InvoiceQueryRepository
                 i.InvoiceId, i.ContractId, i.InvoiceNumber, i.InvoiceDate, i.DueDate,
                 i.SubTotal, i.Tax, i.Total, i.CurrencyCode, i.Status, i.PaymentStatus,
                 i.PaidDate, i.PaidBy, i.PaymentMethodId, i.PaymentReference,
-                i.DepositNumber, i.TransferNumber, i.Notes, i.CreatedAt, i.UpdatedAt,
+                i.DepositNumber, i.TransferNumber, i.Notes, i.Lang, i.CreatedAt, i.UpdatedAt,
                 i.LastModifiedBy
             FROM [Corporate].[Invoices] i
             WHERE 1=1";
@@ -188,7 +188,7 @@ public class InvoiceQueryRepository
                 i.InvoiceId, i.ContractId, i.InvoiceNumber, i.InvoiceDate, i.DueDate,
                 i.SubTotal, i.Tax, i.Total, i.CurrencyCode, i.Status, i.PaymentStatus,
                 i.PaidDate, i.PaidBy, i.PaymentMethodId, i.PaymentReference,
-                i.DepositNumber, i.TransferNumber, i.Notes, i.CreatedAt, i.UpdatedAt,
+                i.DepositNumber, i.TransferNumber, i.Notes, i.Lang, i.CreatedAt, i.UpdatedAt,
                 i.LastModifiedBy
             FROM [Corporate].[Invoices] i
             WHERE i.InvoiceId = @InvoiceId";

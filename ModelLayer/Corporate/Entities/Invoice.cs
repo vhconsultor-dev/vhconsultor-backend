@@ -23,6 +23,8 @@ public class Invoice
     public string? DepositNumber { get; set; }
     public string? TransferNumber { get; set; }
     public string? Notes { get; set; }
+    /// <summary>Language for PDF generation: "en" (English) or "es" (Spanish).</summary>
+    public string? Lang { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public string? LastModifiedBy { get; set; }

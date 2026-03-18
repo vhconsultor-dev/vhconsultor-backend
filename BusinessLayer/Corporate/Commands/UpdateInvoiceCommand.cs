@@ -46,6 +46,8 @@ public class UpdateInvoiceCommand
         invoice.Total = request.Amount;
         invoice.Status = request.Status ?? invoice.Status;
         invoice.Notes = request.Notes;
+        if (!string.IsNullOrWhiteSpace(request.Lang))
+            invoice.Lang = request.Lang.Trim();
         invoice.UpdatedAt = DateTimeService.GetCostaRicaNow();
 
         // 4. Actualizar o crear item
@@ -96,6 +98,8 @@ public class UpdateInvoiceRequest
     public string? Description { get; set; }
     public string? Status { get; set; }
     public string? Notes { get; set; }
+    /// <summary>Language for PDF: "en" (English) or "es" (Spanish).</summary>
+    public string? Lang { get; set; }
 }
 
 /// <summary>

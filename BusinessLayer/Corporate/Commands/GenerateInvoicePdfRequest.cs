@@ -25,6 +25,9 @@ public class GenerateInvoicePdfRequest
     [JsonPropertyName("bill_to_address")]
     public string BillToAddress { get; set; } = string.Empty;
 
+    [JsonPropertyName("invoice_detail")]
+    public string InvoiceDetail { get; set; } = string.Empty;
+
     [JsonPropertyName("invoice_no")]
     public string InvoiceNo { get; set; } = string.Empty;
 
@@ -37,6 +40,12 @@ public class GenerateInvoicePdfRequest
     [JsonPropertyName("footer")]
     public string Footer { get; set; } = string.Empty;
 
+    [JsonPropertyName("taxRate")]
+    public decimal? TaxRate { get; set; }
+
+    [JsonPropertyName("otherAmount")]
+    public decimal? OtherAmount { get; set; }
+
     [JsonPropertyName("balance")]
     public string Balance { get; set; } = string.Empty;
 
@@ -45,6 +54,9 @@ public class GenerateInvoicePdfRequest
 
     [JsonPropertyName("currency")]
     public string Currency { get; set; } = "$";
+
+    [JsonPropertyName("lang")]
+    public string Lang { get; set; } = "es";
 }
 
 /// <summary>
