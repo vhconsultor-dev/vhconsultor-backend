@@ -74,6 +74,9 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Comm
 
 // Amazon Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Commands.GenerateAccessTokenCommand>, BusinessLayer.Amazon.Validators.GenerateAccessTokenValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Commands.GenerateVendorAccessTokenCommand>, BusinessLayer.Amazon.Validators.GenerateVendorAccessTokenValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Commands.GenerateVendorAccessTokenByCustomerCommand>, BusinessLayer.Amazon.Validators.GenerateVendorAccessTokenByCustomerValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Vendor.Reports.Models.GenerateVendorTrafficReportRequest>, BusinessLayer.Amazon.Vendor.Reports.Validators.GenerateVendorTrafficReportValidator>();
 
 // Auth Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.LoginCommand>, BusinessLayer.Shared.Validators.LoginCommandValidator>();
@@ -138,6 +141,18 @@ builder.Services.Configure<BusinessLayer.Amazon.AmazonSettings>(builder.Configur
 builder.Services.AddHttpClient<ApplicationLayer.Amazon.AmazonAuthService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+// Registrar HttpClient para Amazon Vendor con configuración específica
+builder.Services.AddHttpClient<ApplicationLayer.Amazon.AmazonVendorAuthService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+// Registrar HttpClient para Vendor Reports con configuración específica
+builder.Services.AddHttpClient<ApplicationLayer.Amazon.Vendor.Reports.VendorReportService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(60);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
 });
 #endregion
@@ -210,6 +225,8 @@ builder.Services.AddScoped<ApplicationLayer.Ecommerce.CustomerSubmissionService>
 
 // Amazon Services
 builder.Services.AddScoped<ApplicationLayer.Amazon.AmazonAuthService>();
+builder.Services.AddScoped<ApplicationLayer.Amazon.AmazonVendorAuthService>();
+builder.Services.AddScoped<ApplicationLayer.Amazon.Vendor.Reports.VendorReportService>();
 
 // Corporate Services
 builder.Services.AddScoped<ApplicationLayer.Corporate.CustomerService>();
