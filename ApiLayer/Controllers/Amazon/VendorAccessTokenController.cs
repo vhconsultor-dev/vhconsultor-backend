@@ -103,9 +103,9 @@ public class VendorAccessTokenController : ControllerBase
     }
 
     /// <summary>
-    /// Genera un nuevo access token de Vendor buscando el refresh token por CustomerId
+    /// Genera un nuevo access token de Vendor validando credenciales de Brand Partner
     /// </summary>
-    /// <param name="command">Comando con el CustomerId</param>
+    /// <param name="command">Comando con email y password del usuario Brand Partner</param>
     /// <returns>Access token generado</returns>
     [HttpPost("generate-token-by-customer")]
     [Authorize]

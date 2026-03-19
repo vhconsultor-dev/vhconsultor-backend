@@ -2,6 +2,9 @@ using System.Text.Json;
 using BusinessLayer.Amazon.Commands;
 using BusinessLayer.Amazon.Models;
 using BusinessLayer.Corporate.Queries;
+using BusinessLayer.BrandPartner.Queries;
+using BusinessLayer.BrandPartner.Commands;
+using ModelLayer.Shared;
 
 namespace ApplicationLayer.Amazon;
 
@@ -13,15 +16,21 @@ public class AmazonVendorAuthService
     private readonly HttpClient _httpClient;
     private readonly CustomerQueryRepository _customerQueryRepository;
     private readonly AmazonAccountQueryRepository _amazonAccountQueryRepository;
+    private readonly BrandPartnerUserQueryRepository _brandPartnerUserQueryRepository;
+    private readonly BrandPartnerUserCommandRepository _brandPartnerUserCommandRepository;
 
     public AmazonVendorAuthService(
         HttpClient httpClient,
         CustomerQueryRepository customerQueryRepository,
-        AmazonAccountQueryRepository amazonAccountQueryRepository)
+        AmazonAccountQueryRepository amazonAccountQueryRepository,
+        BrandPartnerUserQueryRepository brandPartnerUserQueryRepository,
+        BrandPartnerUserCommandRepository brandPartnerUserCommandRepository)
     {
         _httpClient = httpClient;
         _customerQueryRepository = customerQueryRepository;
         _amazonAccountQueryRepository = amazonAccountQueryRepository;
+        _brandPartnerUserQueryRepository = brandPartnerUserQueryRepository;
+        _brandPartnerUserCommandRepository = brandPartnerUserCommandRepository;
     }
 
     /// <summary>
@@ -143,7 +152,7 @@ public class AmazonVendorAuthService
     }
 
     /// <summary>
-    /// Genera un nuevo access token de Vendor buscando el refresh token por CustomerId
+    /// Genera un nuevo access token de Vendor validando credenciales de Brand Partner y buscando el refresh token
     /// </summary>
     public async Task<GenerateVendorAccessTokenResult> GenerateVendorAccessTokenByCustomerAsync(
         GenerateVendorAccessTokenByCustomerCommand command,
@@ -154,20 +163,96 @@ public class AmazonVendorAuthService
     {
         try
         {
-            // 1. Validar que el customer existe
-            var customer = await _customerQueryRepository.GetByIdAsync(command.CustomerId);
+            // 1. Buscar usuario por email
+            var user = await _brandPartnerUserQueryRepository.GetByEmailAsync(command.Email);
+            
+            if (user == null)
+            {
+                return new GenerateVendorAccessTokenResult
+                {
+                    Success = false,
+                    Message = "Credenciales inválidas. Email o contraseña incorrectos."
+                };
+            }
+
+            // 2. Verificar que la cuenta esté activa
+            if (!user.IsActive)
+            {
+                return new GenerateVendorAccessTokenResult
+                {
+                    Success = false,
+                    Message = "Cuenta inactiva. Por favor contacte a soporte."
+                };
+            }
+
+            // 3. Verificar si la cuenta está bloqueada
+            if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTimeService.GetCostaRicaNow())
+            {
+                return new GenerateVendorAccessTokenResult
+                {
+                    Success = false,
+                    Message = $"Cuenta bloqueada hasta {user.LockedUntil.Value:yyyy-MM-dd HH:mm:ss}. Demasiados intentos fallidos de inicio de sesión."
+                };
+            }
+
+            // 4. Verificar contraseña
+            var passwordHash = _brandPartnerUserCommandRepository.HashPassword(command.Password);
+            if (user.PasswordHash != passwordHash)
+            {
+                // Incrementar intentos fallidos
+                try
+                {
+                    await _brandPartnerUserCommandRepository.IncrementFailedLoginAttemptsAsync(user.BrandPartnerUserId);
+                }
+                catch
+                {
+                    // Si falla incrementar, continuar
+                }
+
+                var failedAttempts = user.FailedLoginAttempts + 1;
+                if (failedAttempts >= 5)
+                {
+                    return new GenerateVendorAccessTokenResult
+                    {
+                        Success = false,
+                        Message = "Demasiados intentos fallidos. La cuenta ha sido bloqueada por 30 minutos."
+                    };
+                }
+
+                return new GenerateVendorAccessTokenResult
+                {
+                    Success = false,
+                    Message = $"Credenciales inválidas. Intentos restantes: {5 - failedAttempts}"
+                };
+            }
+
+            // 5. Resetear intentos fallidos tras login exitoso
+            try
+            {
+                await _brandPartnerUserCommandRepository.ResetFailedLoginAttemptsAsync(user.BrandPartnerUserId);
+            }
+            catch
+            {
+                // Si falla resetear, continuar
+            }
+
+            // 6. Obtener CustomerId del usuario autenticado
+            var customerId = user.CustomerId;
+
+            // 7. Validar que el customer existe
+            var customer = await _customerQueryRepository.GetByIdAsync(customerId);
             if (customer == null)
             {
                 return new GenerateVendorAccessTokenResult
                 {
                     Success = false,
-                    Message = $"No se encontró el cliente con ID {command.CustomerId}. Verifica que el CustomerId sea correcto."
+                    Message = $"No se encontró el cliente asociado a este usuario. CustomerId: {customerId}."
                 };
             }
 
-            // 2. Buscar la cuenta de Amazon asociada al customer que sea Vendor y esté activa
+            // 8. Buscar la cuenta de Amazon asociada al customer que sea Vendor y esté activa
             var amazonAccounts = await _amazonAccountQueryRepository.GetAmazonAccountsAsync(
-                customerId: command.CustomerId,
+                customerId: customerId,
                 isVendor: true,
                 isActive: true);
 
@@ -178,12 +263,12 @@ public class AmazonVendorAuthService
                 return new GenerateVendorAccessTokenResult
                 {
                     Success = false,
-                    Message = $"No se encontró una cuenta de Amazon Vendor activa para el cliente '{customer.CompanyName}' (ID: {command.CustomerId}). " +
+                    Message = $"No se encontró una cuenta de Amazon Vendor activa para el cliente '{customer.CompanyName}' (ID: {customerId}). " +
                              "Verifica que el cliente tenga una cuenta de Amazon configurada como Vendor (IsVendor = true) y que esté activa."
                 };
             }
 
-            // 3. Validar que tenga refresh token
+            // 9. Validar que tenga refresh token
             if (string.IsNullOrWhiteSpace(amazonAccount.RefreshToken))
             {
                 return new GenerateVendorAccessTokenResult
@@ -194,7 +279,7 @@ public class AmazonVendorAuthService
                 };
             }
 
-            // 4. Preparar el request body
+            // 10. Preparar el request body para Amazon
             var requestBody = new Dictionary<string, string>
             {
                 { "grant_type", grantType },
@@ -205,7 +290,7 @@ public class AmazonVendorAuthService
 
             var content = new FormUrlEncodedContent(requestBody);
             
-            // 5. Configurar headers necesarios
+            // 11. Configurar headers necesarios
             var request = new HttpRequestMessage(HttpMethod.Post, amazonTokenUrl)
             {
                 Content = content
@@ -214,7 +299,7 @@ public class AmazonVendorAuthService
             request.Headers.Add("Accept", "application/json");
             request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-www-form-urlencoded");
 
-            // 6. Hacer la petición a Amazon
+            // 12. Hacer la petición a Amazon
             var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
@@ -283,7 +368,7 @@ public class AmazonVendorAuthService
             return new GenerateVendorAccessTokenResult
             {
                 Success = true,
-                Message = $"Vendor access token generado exitosamente para el cliente '{customer.CompanyName}' (CustomerId: {command.CustomerId})",
+                Message = $"Vendor access token generado exitosamente para el cliente '{customer.CompanyName}' (CustomerId: {customerId})",
                 AccessToken = tokenResponse.access_token,
                 RefreshToken = tokenResponse.refresh_token ?? amazonAccount.RefreshToken,
                 TokenType = tokenResponse.token_type ?? "bearer",
