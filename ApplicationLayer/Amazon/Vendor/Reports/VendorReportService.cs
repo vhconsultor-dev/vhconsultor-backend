@@ -81,7 +81,8 @@ public class VendorReportService
                 path: path,
                 timestamp: timestamp,
                 dateStamp: dateStamp,
-                requestBody: jsonBody);
+                requestBody: jsonBody,
+                accessToken: accessToken);
 
             // Agregar headers de autenticación AWS
             foreach (var header in signedHeaders)
@@ -162,14 +163,17 @@ public class VendorReportService
         string path,
         string timestamp,
         string dateStamp,
-        string requestBody)
+        string requestBody,
+        string accessToken)
     {
         var algorithm = "AWS4-HMAC-SHA256";
         var credentialScope = $"{dateStamp}/{awsRegion}/{serviceName}/aws4_request";
 
         // Paso 1: Crear canonical request
-        var canonicalHeaders = $"host:{host}\nx-amz-date:{timestamp}\n";
-        var signedHeaders = "host;x-amz-date";
+        // IMPORTANTE: Los headers deben estar en orden alfabético
+        // host -> x-amz-access-token -> x-amz-date
+        var canonicalHeaders = $"host:{host}\nx-amz-access-token:{accessToken}\nx-amz-date:{timestamp}\n";
+        var signedHeaders = "host;x-amz-access-token;x-amz-date";
         
         var payloadHash = ComputeSha256Hash(requestBody);
         
@@ -261,7 +265,8 @@ public class VendorReportService
                 host: host,
                 path: path,
                 timestamp: timestamp,
-                dateStamp: dateStamp);
+                dateStamp: dateStamp,
+                accessToken: accessToken);
 
             // Agregar headers de autenticación AWS
             foreach (var header in signedHeaders)
@@ -361,14 +366,17 @@ public class VendorReportService
         string host,
         string path,
         string timestamp,
-        string dateStamp)
+        string dateStamp,
+        string accessToken)
     {
         var algorithm = "AWS4-HMAC-SHA256";
         var credentialScope = $"{dateStamp}/{awsRegion}/{serviceName}/aws4_request";
 
         // Paso 1: Crear canonical request (para GET, el payload es una cadena vacía)
-        var canonicalHeaders = $"host:{host}\nx-amz-date:{timestamp}\n";
-        var signedHeaders = "host;x-amz-date";
+        // IMPORTANTE: Los headers deben estar en orden alfabético
+        // host -> x-amz-access-token -> x-amz-date
+        var canonicalHeaders = $"host:{host}\nx-amz-access-token:{accessToken}\nx-amz-date:{timestamp}\n";
+        var signedHeaders = "host;x-amz-access-token;x-amz-date";
         
         var payloadHash = ComputeSha256Hash(""); // Empty payload for GET
         
@@ -427,7 +435,8 @@ public class VendorReportService
                 host: uri.Host,
                 path: uri.AbsolutePath,
                 timestamp: timestamp,
-                dateStamp: dateStamp);
+                dateStamp: dateStamp,
+                accessToken: accessToken);
 
             foreach (var header in awsHeaders)
                 httpRequest.Headers.TryAddWithoutValidation(header.Key, header.Value);
