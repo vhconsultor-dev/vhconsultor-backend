@@ -151,6 +151,139 @@ public class VendorReportService
     }
 
     /// <summary>
+    /// Genera un reporte de inventario de Vendor en Amazon
+    /// </summary>
+    public async Task<GenerateReportResult> GenerateVendorInventoryReportAsync(
+        GenerateVendorInventoryReportRequest request,
+        string accessToken,
+        string accessKey,
+        string secretKey,
+        string awsRegion,
+        string serviceName,
+        string reportsUrl)
+    {
+        try
+        {
+            // Preparar el body del request
+            var requestBody = new
+            {
+                reportType = request.ReportType,
+                marketplaceIds = request.MarketplaceIds,
+                dataStartTime = request.DataStartTime,
+                dataEndTime = request.DataEndTime,
+                reportOptions = new
+                {
+                    reportPeriod = request.ReportOptions?.ReportPeriod ?? "WEEK",
+                    sellingProgram = request.ReportOptions?.SellingProgram ?? "RETAIL",
+                    distributorView = request.ReportOptions?.DistributorView ?? "MANUFACTURING"
+                }
+            };
+
+            var jsonBody = JsonSerializer.Serialize(requestBody, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            var content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
+
+            // Crear el request HTTP
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, reportsUrl)
+            {
+                Content = content
+            };
+
+            // Agregar headers requeridos
+            httpRequest.Headers.Add("x-amz-access-token", accessToken);
+            httpRequest.Headers.Add("Accept", "application/json");
+
+            // Parsear la URL para obtener host y path
+            var uri = new Uri(reportsUrl);
+            var host = uri.Host;
+            var path = uri.AbsolutePath;
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMddTHHmmssZ");
+            var dateStamp = DateTime.UtcNow.ToString("yyyyMMdd");
+
+            // Generar firma AWS Signature V4
+            var signedHeaders = GenerateAwsSignature(
+                httpRequest: httpRequest,
+                accessKey: accessKey,
+                secretKey: secretKey,
+                awsRegion: awsRegion,
+                serviceName: serviceName,
+                host: host,
+                path: path,
+                timestamp: timestamp,
+                dateStamp: dateStamp,
+                requestBody: jsonBody,
+                accessToken: accessToken);
+
+            // Agregar headers de autenticación AWS
+            foreach (var header in signedHeaders)
+            {
+                httpRequest.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+
+            // Hacer la petición a Amazon
+            var response = await _httpClient.SendAsync(httpRequest);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                
+                return new GenerateReportResult
+                {
+                    Success = false,
+                    Message = $"Amazon respondió con error. Status: {response.StatusCode}. Detalle: {errorContent}"
+                };
+            }
+
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var reportResponse = JsonSerializer.Deserialize<AmazonReportResponse>(responseContent,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (reportResponse == null || string.IsNullOrEmpty(reportResponse.ReportId))
+            {
+                return new GenerateReportResult
+                {
+                    Success = false,
+                    Message = "Amazon respondió correctamente pero no devolvió un Report ID válido"
+                };
+            }
+
+            return new GenerateReportResult
+            {
+                Success = true,
+                Message = "Reporte de inventario generado exitosamente",
+                ReportId = reportResponse.ReportId
+            };
+        }
+        catch (HttpRequestException ex)
+        {
+            return new GenerateReportResult
+            {
+                Success = false,
+                Message = $"Error de conexión con Amazon: {ex.Message}"
+            };
+        }
+        catch (TaskCanceledException ex)
+        {
+            return new GenerateReportResult
+            {
+                Success = false,
+                Message = $"La petición a Amazon excedió el tiempo de espera: {ex.Message}"
+            };
+        }
+        catch (Exception ex)
+        {
+            return new GenerateReportResult
+            {
+                Success = false,
+                Message = $"Error inesperado al generar el reporte: {ex.Message}"
+            };
+        }
+    }
+
+    /// <summary>
     /// Genera la firma AWS Signature V4 para autenticar el request
     /// </summary>
     private Dictionary<string, string> GenerateAwsSignature(

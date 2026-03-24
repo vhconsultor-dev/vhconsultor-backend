@@ -77,6 +77,7 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Comm
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Commands.GenerateVendorAccessTokenCommand>, BusinessLayer.Amazon.Validators.GenerateVendorAccessTokenValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Commands.GenerateVendorAccessTokenByCustomerCommand>, BusinessLayer.Amazon.Validators.GenerateVendorAccessTokenByCustomerValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Vendor.Reports.Models.GenerateVendorTrafficReportRequest>, BusinessLayer.Amazon.Vendor.Reports.Validators.GenerateVendorTrafficReportValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Amazon.Vendor.Reports.Models.GenerateVendorInventoryReportRequest>, BusinessLayer.Amazon.Vendor.Reports.Validators.GenerateVendorInventoryReportValidator>();
 
 // Auth Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.LoginCommand>, BusinessLayer.Shared.Validators.LoginCommandValidator>();

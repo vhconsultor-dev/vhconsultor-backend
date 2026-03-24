@@ -30,6 +30,91 @@ public class VendorReportsController : ControllerBase
     }
 
     /// <summary>
+    /// Genera un reporte de inventario de Vendor (GET_VENDOR_INVENTORY_REPORT)
+    /// </summary>
+    /// <param name="request">Datos del reporte a generar</param>
+    /// <param name="accessToken">Access token de Amazon (x-amz-access-token header)</param>
+    /// <returns>Report ID generado por Amazon</returns>
+    [HttpPost("vendor-inventory")]
+    [Authorize]
+    public async Task<IActionResult> GenerateVendorInventoryReport(
+        [FromBody] GenerateVendorInventoryReportRequest request,
+        [FromHeader(Name = "x-amz-access-token")] string accessToken)
+    {
+        // Validar el access token
+        if (string.IsNullOrEmpty(accessToken))
+        {
+            var errorResponse = ResponseStructure<object>.BadRequest(
+                "El header 'x-amz-access-token' es requerido. Debes proporcionar el access token de Amazon generado previamente.");
+            return BadRequest(errorResponse);
+        }
+
+        // Validación del request usando FluentValidation
+        var validationResult = await _validationService.ValidateAsync(request);
+        if (!validationResult.IsValid)
+        {
+            var errorResponse = ResponseStructure<object>.ValidationError(
+                string.Join(", ", validationResult.Errors));
+            return BadRequest(errorResponse);
+        }
+
+        // Leer configuración de variables de entorno de Azure
+        var vendorReportsSettings = _configuration.GetSection("AmazonVendorReports");
+        var accessKey = vendorReportsSettings["AccessKey"] ?? string.Empty;
+        var secretKey = vendorReportsSettings["SecretKey"] ?? string.Empty;
+        var awsRegion = vendorReportsSettings["AwsRegion"] ?? "eu-west-1";
+        var serviceName = vendorReportsSettings["ServiceName"] ?? "execute-api";
+        var reportsUrl = vendorReportsSettings["BaseUrl"] ?? "https://sellingpartnerapi-eu.amazon.com/reports/2021-06-30";
+        var reportsEndpointUrl = $"{reportsUrl.TrimEnd('/')}/reports";
+
+        // Validar que las variables de entorno estén configuradas
+        if (string.IsNullOrEmpty(accessKey))
+        {
+            var errorResponse = ResponseStructure<object>.BadRequest(
+                "La variable de entorno AmazonVendorReports__AccessKey no está configurada en Azure");
+            return BadRequest(errorResponse);
+        }
+
+        if (string.IsNullOrEmpty(secretKey))
+        {
+            var errorResponse = ResponseStructure<object>.BadRequest(
+                "La variable de entorno AmazonVendorReports__SecretKey no está configurada en Azure");
+            return BadRequest(errorResponse);
+        }
+
+        try
+        {
+            var result = await _vendorReportService.GenerateVendorInventoryReportAsync(
+                request,
+                accessToken,
+                accessKey,
+                secretKey,
+                awsRegion,
+                serviceName,
+                reportsEndpointUrl);
+
+            if (!result.Success)
+            {
+                var errorResponse = ResponseStructure<object>.BadRequest(result.Message);
+                return BadRequest(errorResponse);
+            }
+
+            var response = ResponseStructure<object>.Success(
+                new
+                {
+                    reportId = result.ReportId
+                },
+                result.Message);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error($"Error al generar el reporte de inventario: {ex.Message}");
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    /// <summary>
     /// Genera un reporte de tráfico de Vendor (GET_VENDOR_TRAFFIC_REPORT)
     /// </summary>
     /// <param name="request">Datos del reporte a generar</param>
