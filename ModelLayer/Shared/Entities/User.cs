@@ -15,6 +15,7 @@ public class User
     public string? ProfilePictureUrl { get; set; }
     public bool IsCorporate { get; set; }
     public bool IsBrandPartner { get; set; }
+    public bool IsSuperAdmin { get; set; }
     public bool IsActive { get; set; }
     public bool EmailVerified { get; set; }
     public int FailedLoginAttempts { get; set; }

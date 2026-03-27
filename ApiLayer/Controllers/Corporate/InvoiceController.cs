@@ -58,6 +58,7 @@ public class InvoiceController : ControllerBase
     /// If invoices already exist, it will generate only the missing ones.
     /// </remarks>
     [HttpPost("generate-fixed/{contractId}")]
+    [RequirePermission("corporate.invoices.create")]
     public async Task<IActionResult> GenerateFixedInvoices(int contractId)
     {
         var request = new GenerateInvoicesRequest { ContractId = contractId };
@@ -131,6 +132,7 @@ public class InvoiceController : ControllerBase
     /// <param name="request">Invoice data for the PDF (items, company and bill-to info, dates, etc.).</param>
     /// <returns>PDF file (application/pdf).</returns>
     [HttpPost("generate-pdf")]
+    [RequirePermission("corporate.invoices.read")]
     public async Task<IActionResult> GenerateInvoicePdf([FromBody] GenerateInvoicePdfRequest request)
     {
         var validationResult = await _validationService.ValidateAsync(request);
@@ -182,6 +184,7 @@ public class InvoiceController : ControllerBase
     /// <param name="pdfFile">Invoice PDF file to attach (optional but recommended).</param>
     /// <returns>Success or error response.</returns>
     [HttpPost("send-email")]
+    [RequirePermission("corporate.invoices.update")]
     [DisableRequestSizeLimit]
     [RequestFormLimits(MultipartBodyLengthLimit = 10485760)] // 10 MB
     public async Task<IActionResult> SendInvoiceEmail(
@@ -304,6 +307,7 @@ public class InvoiceController : ControllerBase
     /// <param name="request">Datos de la factura</param>
     /// <returns>Resultado de la creación</returns>
     [HttpPost("create-manual")]
+    [RequirePermission("corporate.invoices.create")]
     public async Task<IActionResult> CreateManualInvoice([FromBody] CreateManualInvoiceRequest request)
     {
         // Validación usando FluentValidation
@@ -361,6 +365,7 @@ public class InvoiceController : ControllerBase
     /// The user can then manually edit each invoice to set the correct amount.
     /// </remarks>
     [HttpPost("generate-percentage/{contractId}")]
+    [RequirePermission("corporate.invoices.create")]
     public async Task<IActionResult> GeneratePercentageInvoices(int contractId)
     {
         var request = new GeneratePercentageInvoicesRequest { ContractId = contractId };
@@ -425,6 +430,7 @@ public class InvoiceController : ControllerBase
     /// <param name="request">Datos actualizados</param>
     /// <returns>Resultado de la actualización</returns>
     [HttpPut("{invoiceId}")]
+    [RequirePermission("corporate.invoices.update")]
     public async Task<IActionResult> UpdateInvoice(int invoiceId, [FromBody] UpdateInvoiceRequest request)
     {
         // Validación usando FluentValidation
@@ -479,6 +485,7 @@ public class InvoiceController : ControllerBase
     /// <param name="request">Datos del pago</param>
     /// <returns>Resultado de la operación</returns>
     [HttpPut("{invoiceId}/mark-as-paid")]
+    [RequirePermission("corporate.invoices.update")]
     public async Task<IActionResult> MarkInvoiceAsPaid(int invoiceId, [FromBody] MarkInvoiceAsPaidRequest request)
     {
         // Validación usando FluentValidation
@@ -588,6 +595,7 @@ public class InvoiceController : ControllerBase
     /// - GET /api/corporate/invoice?contractId=CONT-001&amp;pageNumber=1&amp;pageSize=10 (con paginación)
     /// </remarks>
     [HttpGet]
+    [RequirePermission("corporate.invoices.read")]
     public async Task<IActionResult> GetInvoices(
         [FromQuery] int? invoiceId = null,
         [FromQuery] int? contractId = null,
@@ -650,6 +658,7 @@ public class InvoiceController : ControllerBase
     /// <param name="invoiceId">ID de la factura</param>
     /// <returns>Detalle de la factura</returns>
     [HttpGet("{invoiceId}")]
+    [RequirePermission("corporate.invoices.read")]
     public async Task<IActionResult> GetInvoiceById(int invoiceId)
     {
         try
@@ -687,6 +696,7 @@ public class InvoiceController : ControllerBase
     /// <param name="contractId">ID del contrato</param>
     /// <returns>Resumen de facturas (totales, pagadas, pendientes, vencidas)</returns>
     [HttpGet("summary/{contractId}")]
+    [RequirePermission("corporate.invoices.read")]
     public async Task<IActionResult> GetInvoiceSummaryByContract(int contractId)
     {
         try
@@ -727,6 +737,7 @@ public class InvoiceController : ControllerBase
     /// - Invoice(s) must not have attachments
     /// </remarks>
     [HttpDelete]
+    [RequirePermission("corporate.invoices.delete")]
     public async Task<IActionResult> DeleteInvoices(
         [FromQuery] int? invoiceId = null,
         [FromQuery] int? contractId = null)
@@ -807,6 +818,7 @@ public class InvoiceController : ControllerBase
     /// Files are stored in Azure Blob Storage under: InvoicesAttachment/{InvoiceNumber}/
     /// </remarks>
     [HttpPost("{invoiceId}/attachments")]
+    [RequirePermission("corporate.invoices.update")]
     [DisableRequestSizeLimit]
     [RequestFormLimits(MultipartBodyLengthLimit = 10485760)]
     [Consumes("multipart/form-data")]
@@ -894,6 +906,7 @@ public class InvoiceController : ControllerBase
     /// The operation is permanent and cannot be undone.
     /// </remarks>
     [HttpDelete("attachments/{attachmentId}")]
+    [RequirePermission("corporate.invoices.update")]
     public async Task<IActionResult> DeleteAttachment(int attachmentId)
     {
         try
@@ -936,6 +949,7 @@ public class InvoiceController : ControllerBase
     /// The operation is permanent and cannot be undone.
     /// </remarks>
     [HttpDelete("{invoiceId}/attachments")]
+    [RequirePermission("corporate.invoices.update")]
     public async Task<IActionResult> DeleteAllAttachmentsForInvoice(int invoiceId)
     {
         try

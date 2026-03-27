@@ -29,7 +29,7 @@ public class UserQueryRepository
         const string sql = @"
             SELECT 
                 UserId, FirstName, LastName, Email, Username, PasswordHash,
-                PhoneNumber, ProfilePictureUrl, IsCorporate, IsBrandPartner,
+                PhoneNumber, ProfilePictureUrl, IsCorporate, IsBrandPartner, IsSuperAdmin,
                 IsActive, EmailVerified, FailedLoginAttempts, LockedUntil,
                 LastLogin, LastLoginIP, LastLoginLocation, LastLoginCountry,
                 LastLoginCity, LastLoginUserAgent, CreatedAt, UpdatedAt,
@@ -52,7 +52,7 @@ public class UserQueryRepository
         const string sql = @"
             SELECT 
                 UserId, FirstName, LastName, Email, Username, PasswordHash,
-                PhoneNumber, ProfilePictureUrl, IsCorporate, IsBrandPartner,
+                PhoneNumber, ProfilePictureUrl, IsCorporate, IsBrandPartner, IsSuperAdmin,
                 IsActive, EmailVerified, FailedLoginAttempts, LockedUntil,
                 LastLogin, LastLoginIP, LastLoginLocation, LastLoginCountry,
                 LastLoginCity, LastLoginUserAgent, CreatedAt, UpdatedAt,
@@ -82,7 +82,7 @@ public class UserQueryRepository
         var sql = @"
             SELECT 
                 UserId, FirstName, LastName, Email, Username, PasswordHash,
-                PhoneNumber, ProfilePictureUrl, IsCorporate, IsBrandPartner,
+                PhoneNumber, ProfilePictureUrl, IsCorporate, IsBrandPartner, IsSuperAdmin,
                 IsActive, EmailVerified, FailedLoginAttempts, LockedUntil,
                 LastLogin, LastLoginIP, LastLoginLocation, LastLoginCountry,
                 LastLoginCity, LastLoginUserAgent, CreatedAt, UpdatedAt,

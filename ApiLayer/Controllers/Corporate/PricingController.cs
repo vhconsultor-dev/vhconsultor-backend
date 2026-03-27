@@ -29,6 +29,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 1: Obtener rangos de pricing por porcentaje
     /// </summary>
     [HttpGet("budget-ranges")]
+    [RequirePermission("corporate.settings.pricing.read")]
     public async Task<IActionResult> GetBudgetRanges(
         [FromQuery] int? serviceId = null,
         [FromQuery] int? businessTypeId = null,
@@ -59,6 +60,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 2: Obtener un rango de pricing por porcentaje específico
     /// </summary>
     [HttpGet("budget-ranges/{id}")]
+    [RequirePermission("corporate.settings.pricing.read")]
     public async Task<IActionResult> GetBudgetRangeById(int id)
     {
         try
@@ -90,6 +92,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 6: Obtener rangos de pricing por valor fijo
     /// </summary>
     [HttpGet("ad-budget-ranges")]
+    [RequirePermission("corporate.settings.pricing.read")]
     public async Task<IActionResult> GetAdBudgetRanges(
         [FromQuery] int? serviceId = null,
         [FromQuery] int? businessTypeId = null,
@@ -120,6 +123,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 7: Obtener un rango de pricing por valor fijo específico
     /// </summary>
     [HttpGet("ad-budget-ranges/{id}")]
+    [RequirePermission("corporate.settings.pricing.read")]
     public async Task<IActionResult> GetAdBudgetRangeById(int id)
     {
         try
@@ -155,6 +159,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 3: Crear nuevo rango de pricing por porcentaje
     /// </summary>
     [HttpPost("budget-ranges")]
+    [RequirePermission("corporate.settings.pricing.create")]
     public async Task<IActionResult> CreateBudgetRange([FromBody] CreateServiceBudgetRangeCommand command)
     {
         // Validación usando FluentValidation
@@ -194,6 +199,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 8: Crear nuevo rango de pricing por valor fijo
     /// </summary>
     [HttpPost("ad-budget-ranges")]
+    [RequirePermission("corporate.settings.pricing.create")]
     public async Task<IActionResult> CreateAdBudgetRange([FromBody] CreateServiceAdBudgetRangeCommand command)
     {
         // Validación usando FluentValidation
@@ -233,6 +239,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 11: Calcular comisión basada en porcentaje
     /// </summary>
     [HttpPost("calculate-percentage")]
+    [RequirePermission("corporate.settings.pricing.read")]
     public async Task<IActionResult> CalculatePercentage([FromBody] CalculatePercentageCommand command)
     {
         // Validación usando FluentValidation
@@ -280,6 +287,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT CALCULADORA: Calcular pricing basado en businessType, platform, service y budget
     /// </summary>
     [HttpPost("calculate")]
+    [RequirePermission("corporate.settings.pricing.read")]
     public async Task<IActionResult> CalculatePricing([FromBody] CalculatePricingCommand command)
     {
         // Validación usando FluentValidation
@@ -370,6 +378,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 12: Obtener valor fijo basado en presupuesto de publicidad
     /// </summary>
     [HttpPost("calculate-fixed")]
+    [RequirePermission("corporate.settings.pricing.read")]
     public async Task<IActionResult> CalculateFixed([FromBody] CalculateFixedCommand command)
     {
         // Validación usando FluentValidation
@@ -420,6 +429,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 4: Actualizar rango de pricing por porcentaje
     /// </summary>
     [HttpPut("budget-ranges/{id}")]
+    [RequirePermission("corporate.settings.pricing.update")]
     public async Task<IActionResult> UpdateBudgetRange(int id, [FromBody] UpdateServiceBudgetRangeCommand command)
     {
         // Validación usando FluentValidation
@@ -456,6 +466,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 9: Actualizar rango de pricing por valor fijo
     /// </summary>
     [HttpPut("ad-budget-ranges/{id}")]
+    [RequirePermission("corporate.settings.pricing.update")]
     public async Task<IActionResult> UpdateAdBudgetRange(int id, [FromBody] UpdateServiceAdBudgetRangeCommand command)
     {
         // Validación usando FluentValidation
@@ -496,6 +507,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 5: Eliminar/Desactivar rango de pricing por porcentaje
     /// </summary>
     [HttpDelete("budget-ranges/{id}")]
+    [RequirePermission("corporate.settings.pricing.delete")]
     public async Task<IActionResult> DeleteBudgetRange(int id)
     {
         try
@@ -523,6 +535,7 @@ public class PricingController : ControllerBase
     /// ENDPOINT 10: Eliminar/Desactivar rango de pricing por valor fijo
     /// </summary>
     [HttpDelete("ad-budget-ranges/{id}")]
+    [RequirePermission("corporate.settings.pricing.delete")]
     public async Task<IActionResult> DeleteAdBudgetRange(int id)
     {
         try

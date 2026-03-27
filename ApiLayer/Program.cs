@@ -16,7 +16,11 @@ builder.Configuration
 #endregion
 
 #region ConfigurationController
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+    {
+        // Filter global de permisos RBAC — verifica el atributo [RequirePermission] en cada endpoint
+        options.Filters.Add<ApiLayer.Tools.RequirePermissionFilter>();
+    })
     .AddJsonOptions(x => x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles)
     .ConfigureApiBehaviorOptions(options =>
     {

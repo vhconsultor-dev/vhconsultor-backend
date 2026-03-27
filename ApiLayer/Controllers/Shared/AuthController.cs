@@ -61,8 +61,9 @@ public class AuthController : ControllerBase
             var response = ResponseStructure<object>.Success(
                 new
                 {
-                    user = result.User,
-                    message = result.Message
+                    user         = result.User,
+                    sessionToken = result.SessionToken,
+                    message      = result.Message
                 },
                 result.Message);
             return Ok(response);
@@ -81,6 +82,7 @@ public class AuthController : ControllerBase
     /// <returns>Información del usuario creado</returns>
     [HttpPost("register")]
     [Authorize]
+    [RequirePermission("corporate.settings.users.create")]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserCommand command)
     {
         // Validación usando FluentValidation
@@ -166,6 +168,7 @@ public class AuthController : ControllerBase
     /// <param name="userId">ID of the user whose password will be reset.</param>
     [HttpPost("admin/reset-password/{userId}")]
     [Authorize]
+    [RequirePermission("corporate.settings.users.reset_password")]
     public async Task<IActionResult> AdminResetPassword(int userId)
     {
         try
@@ -214,6 +217,7 @@ public class AuthController : ControllerBase
     /// <returns>Resultado del bloqueo</returns>
     [HttpPost("lock-account")]
     [Authorize]
+    [RequirePermission("corporate.settings.users.lock_unlock")]
     public async Task<IActionResult> LockAccount([FromBody] LockAccountCommand command)
     {
         // Validación usando FluentValidation
@@ -258,6 +262,7 @@ public class AuthController : ControllerBase
     /// <returns>Resultado del desbloqueo</returns>
     [HttpPost("unlock-account")]
     [Authorize]
+    [RequirePermission("corporate.settings.users.lock_unlock")]
     public async Task<IActionResult> UnlockAccount([FromBody] UnlockAccountCommand command)
     {
         // Validación usando FluentValidation
@@ -308,6 +313,7 @@ public class AuthController : ControllerBase
     /// <returns>Lista de usuarios que coinciden con los criterios</returns>
     [HttpGet("users")]
     [Authorize]
+    [RequirePermission("corporate.settings.users.read")]
     public async Task<IActionResult> GetUsers(
         [FromQuery] int? userId = null,
         [FromQuery] string? email = null,

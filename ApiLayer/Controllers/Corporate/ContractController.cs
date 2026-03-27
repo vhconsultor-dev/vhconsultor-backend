@@ -48,6 +48,7 @@ public class ContractController : ControllerBase
     /// <param name="request">Datos del contrato</param>
     /// <returns>ID del contrato creado</returns>
     [HttpPost]
+    [RequirePermission("corporate.contracts.create")]
     public async Task<IActionResult> CreateContract([FromBody] CreateContractRequest request)
     {
         // Validación usando FluentValidation
@@ -90,6 +91,7 @@ public class ContractController : ControllerBase
     /// <param name="request">Datos actualizados del contrato</param>
     /// <returns>Resultado de la operación</returns>
     [HttpPut("{contractId}")]
+    [RequirePermission("corporate.contracts.update")]
     public async Task<IActionResult> UpdateContract(int contractId, [FromBody] UpdateContractRequest request)
     {
         // Validación usando FluentValidation
@@ -150,6 +152,7 @@ public class ContractController : ControllerBase
     /// <param name="deletedBy">Usuario que elimina (opcional)</param>
     /// <returns>Resultado de la operación</returns>
     [HttpDelete("{contractId}")]
+    [RequirePermission("corporate.contracts.delete")]
     public async Task<IActionResult> DeleteContract(int contractId, [FromQuery] string? deletedBy = null)
     {
         try
@@ -216,6 +219,7 @@ public class ContractController : ControllerBase
     /// <param name="endDateTo">Fecha de fin hasta</param>
     /// <returns>Lista de contracts que coinciden con los criterios</returns>
     [HttpGet]
+    [RequirePermission("corporate.contracts.read")]
     public async Task<IActionResult> GetContracts(
         [FromQuery] int? contractId = null,
         [FromQuery] int? customerId = null,
@@ -291,6 +295,7 @@ public class ContractController : ControllerBase
     /// </summary>
     /// <returns>Lista de contratos activos</returns>
     [HttpGet("active")]
+    [RequirePermission("corporate.contracts.read")]
     public async Task<IActionResult> GetActiveContracts()
     {
         try
@@ -337,6 +342,7 @@ public class ContractController : ControllerBase
     /// Solo se actualiza el campo SignedDocumentUrl del contrato, los demás campos permanecen sin cambios.
     /// </remarks>
     [HttpPost("{contractId}/upload-signed-document")]
+    [RequirePermission("corporate.contracts.update")]
     [DisableRequestSizeLimit]
     [RequestFormLimits(MultipartBodyLengthLimit = 10485760)] // 10 MB
     [Consumes("multipart/form-data")]
@@ -415,6 +421,7 @@ public class ContractController : ControllerBase
     /// <param name="request">Datos del contrato para generar el PDF</param>
     /// <returns>Archivo PDF del contrato</returns>
     [HttpPost("generate-pdf")]
+    [RequirePermission("corporate.contracts.read")]
     public async Task<IActionResult> GenerateContractPdf([FromBody] GenerateContractPdfRequest request)
     {
         // Validación usando FluentValidation
@@ -459,6 +466,7 @@ public class ContractController : ControllerBase
     /// La URL debe ser válida y pertenecer al contenedor de Azure Storage configurado.
     /// </remarks>
     [HttpGet("document-url")]
+    [RequirePermission("corporate.contracts.read")]
     public IActionResult GetContractDocumentUrlWithSas([FromQuery] string documentUrl)
     {
         try
@@ -553,6 +561,7 @@ public class ContractController : ControllerBase
     /// El correo usa una plantilla de SendGrid configurada en las variables de entorno.
     /// </remarks>
     [HttpPost("send-contract-email")]
+    [RequirePermission("corporate.contracts.update")]
     [DisableRequestSizeLimit]
     [RequestFormLimits(MultipartBodyLengthLimit = 10485760)] // 10 MB
     public async Task<IActionResult> SendContractEmail(

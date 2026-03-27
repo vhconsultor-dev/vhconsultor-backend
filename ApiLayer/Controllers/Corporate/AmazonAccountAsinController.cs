@@ -41,6 +41,7 @@ public class AmazonAccountAsinController : ControllerBase
     /// <param name="replenishmentCategoryId">Filtrar por ReplenishmentCategoryId (opcional)</param>
     /// <returns>Lista paginada de ASINs con información de catálogos</returns>
     [HttpGet]
+    [RequirePermission("corporate.settings.amazon_account_asins.read")]
     public async Task<IActionResult> GetAsinsPaginated(
         [FromQuery] int amazonAccountId,
         [FromQuery] int pageNumber = 1,
@@ -98,6 +99,7 @@ public class AmazonAccountAsinController : ControllerBase
     /// <param name="request">amazonAccountId y archivo Excel (excelFile)</param>
     /// <returns>Resultado de la carga con estadísticas</returns>
     [HttpPost("bulk-upload")]
+    [RequirePermission("corporate.settings.amazon_account_asins.import")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> BulkUpload([FromForm] BulkUploadAmazonAccountAsinsRequest request)
     {

@@ -27,6 +27,42 @@ public class JwtService
     #region Public Methods
     
     /// <summary>
+    /// Genera un JWT de sesión para un usuario Corporate autenticado.
+    /// Incluye los permissionKeys efectivos y el flag IsSuperAdmin como claims.
+    /// </summary>
+    public string GenerateUserSessionToken(int userId, bool isSuperAdmin, IEnumerable<string> permissionKeys)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.UTF8.GetBytes(_jwtSettings.SecretKey);
+
+        var claims = new List<Claim>
+        {
+            new Claim("UserId",      userId.ToString()),
+            new Claim("IsSuperAdmin", isSuperAdmin.ToString().ToLower()),
+            new Claim(ClaimTypes.Name, "VHConsultor"),
+            new Claim("Timestamp",   DateTime.UtcNow.ToString("O"))
+        };
+
+        // Un claim "permission" por cada permissionKey efectivo del usuario
+        foreach (var key2 in permissionKeys)
+            claims.Add(new Claim("permission", key2));
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject            = new ClaimsIdentity(claims),
+            Expires            = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationMinutes),
+            Issuer             = _jwtSettings.Issuer,
+            Audience           = _jwtSettings.Audience,
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha256Signature)
+        };
+
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
+    }
+
+    /// <summary>
     /// Genera un JWT basado en un payload encriptado
     /// </summary>
     public async Task<GenerateJwtResponse> GenerateTokenAsync(GenerateJwtCommand command)

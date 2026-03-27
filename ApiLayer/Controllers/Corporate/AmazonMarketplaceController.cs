@@ -38,6 +38,7 @@ public class AmazonMarketplaceController : ControllerBase
     /// <param name="currencyCode">Optional. Partial match on currency code.</param>
     /// <param name="isActive">Optional. Filter by active status (true/false).</param>
     [HttpGet]
+    [RequirePermission("corporate.settings.amazon_marketplaces.read")]
     public async Task<IActionResult> GetAmazonMarketplaces(
         [FromQuery] int? id = null,
         [FromQuery] string? amazonMarketplaceCode = null,
@@ -80,6 +81,7 @@ public class AmazonMarketplaceController : ControllerBase
     /// </summary>
     /// <param name="request">Marketplace data (AmazonMarketplaceCode, CountryCode, CountryName, AmazonRegion, CurrencyCode, IsActive).</param>
     [HttpPost]
+    [RequirePermission("corporate.settings.amazon_marketplaces.create")]
     public async Task<IActionResult> CreateAmazonMarketplace([FromBody] CreateAmazonMarketplaceRequest request)
     {
         var validationResult = await _validationService.ValidateAsync(request);
@@ -119,6 +121,7 @@ public class AmazonMarketplaceController : ControllerBase
     /// <param name="amazonMarketplaceId">ID of the marketplace to update.</param>
     /// <param name="request">Updated data.</param>
     [HttpPut("{amazonMarketplaceId}")]
+    [RequirePermission("corporate.settings.amazon_marketplaces.update")]
     public async Task<IActionResult> UpdateAmazonMarketplace(int amazonMarketplaceId, [FromBody] UpdateAmazonMarketplaceRequest request)
     {
         var validationResult = await _validationService.ValidateAsync(request);

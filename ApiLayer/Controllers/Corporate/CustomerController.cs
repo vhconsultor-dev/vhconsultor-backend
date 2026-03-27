@@ -35,6 +35,7 @@ public class CustomerController : ControllerBase
     /// <param name="request">Datos del customer</param>
     /// <returns>ID del customer creado</returns>
     [HttpPost]
+    [RequirePermission("corporate.customers.create")]
     public async Task<IActionResult> CreateCustomer([FromBody] CreateCustomerRequest request)
     {
         // Validación usando FluentValidation
@@ -85,6 +86,7 @@ public class CustomerController : ControllerBase
     /// <param name="request">Datos actualizados del customer</param>
     /// <returns>Resultado de la operación</returns>
     [HttpPut("{customerId}")]
+    [RequirePermission("corporate.customers.update")]
     public async Task<IActionResult> UpdateCustomer(int customerId, [FromBody] UpdateCustomerRequest request)
     {
         // Validación usando FluentValidation
@@ -153,6 +155,7 @@ public class CustomerController : ControllerBase
     /// <param name="customerId">ID del customer a eliminar</param>
     /// <returns>Resultado de la operación</returns>
     [HttpDelete("{customerId}")]
+    [RequirePermission("corporate.customers.delete")]
     public async Task<IActionResult> DeleteCustomer(int customerId)
     {
         try
@@ -217,6 +220,7 @@ public class CustomerController : ControllerBase
     /// <param name="city">Ciudad para filtrar</param>
     /// <returns>Lista de customers que coinciden con los criterios</returns>
     [HttpGet]
+    [RequirePermission("corporate.customers.read")]
     public async Task<IActionResult> GetCustomers(
         [FromQuery] int? id = null,
         [FromQuery] string? nit = null,
@@ -341,6 +345,7 @@ public class CustomerController : ControllerBase
     /// <param name="customerId">ID del customer</param>
     /// <returns>Resultado de la operación</returns>
     [HttpPatch("{customerId}/last-contact")]
+    [RequirePermission("corporate.customers.update")]
     public async Task<IActionResult> UpdateLastContactDate(int customerId)
     {
         try

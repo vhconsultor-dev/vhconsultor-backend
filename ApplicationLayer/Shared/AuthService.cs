@@ -17,19 +17,25 @@ public class AuthService
     private readonly UserAuthCommandRepository _authCommandRepository;
     private readonly SendGridService _sendGridService;
     private readonly Microsoft.Extensions.Options.IOptions<BusinessLayer.Shared.SendGridSettings> _sendGridSettings;
+    private readonly RBACQueryRepository _rbacQueryRepository;
+    private readonly JwtService _jwtService;
 
     public AuthService(
         UserQueryRepository userQueryRepository,
         UserLoginHistoryQueryRepository loginHistoryQueryRepository,
         UserAuthCommandRepository authCommandRepository,
         SendGridService sendGridService,
-        Microsoft.Extensions.Options.IOptions<BusinessLayer.Shared.SendGridSettings> sendGridSettings)
+        Microsoft.Extensions.Options.IOptions<BusinessLayer.Shared.SendGridSettings> sendGridSettings,
+        RBACQueryRepository rbacQueryRepository,
+        JwtService jwtService)
     {
         _userQueryRepository = userQueryRepository;
         _loginHistoryQueryRepository = loginHistoryQueryRepository;
         _authCommandRepository = authCommandRepository;
         _sendGridService = sendGridService;
         _sendGridSettings = sendGridSettings;
+        _rbacQueryRepository = rbacQueryRepository;
+        _jwtService = jwtService;
     }
 
     #region Login
@@ -143,6 +149,19 @@ public class AuthService
             command.City, 
             command.UserAgent);
 
+        // Obtener permisos efectivos y generar JWT de sesión con claims
+        // SuperAdmin recibe lista vacía (el filter lo detecta por el claim IsSuperAdmin)
+        IEnumerable<string> permissionKeys = user.IsSuperAdmin
+            ? Enumerable.Empty<string>()
+            : (await _rbacQueryRepository.GetEffectiveUserPermissionsAsync(user.UserId))
+                .Where(p => p.IsActive)
+                .Select(p => p.PermissionKey);
+
+        var sessionToken = _jwtService.GenerateUserSessionToken(
+            user.UserId,
+            user.IsSuperAdmin,
+            permissionKeys);
+
         // Ocultar información sensible
         user.PasswordHash = string.Empty;
 
@@ -150,7 +169,8 @@ public class AuthService
         {
             Success = true,
             Message = "Inicio de sesión exitoso",
-            User = user
+            User = user,
+            SessionToken = sessionToken
         };
     }
 
@@ -561,6 +581,12 @@ public class LoginResult
     public string Message { get; set; } = string.Empty;
     public User? User { get; set; }
     public DateTime? LockedUntil { get; set; }
+    /// <summary>
+    /// JWT de sesión con los permission claims del usuario.
+    /// El frontend debe usar este token en el header Authorization: Bearer {SessionToken}
+    /// para todas las llamadas subsiguientes a la API.
+    /// </summary>
+    public string? SessionToken { get; set; }
 }
 
 public class ChangePasswordResult
