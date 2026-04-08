@@ -172,12 +172,13 @@ public class RBACService
         return await _queryRepository.GetUserRolesAsync(userId, roleId, isActive);
     }
 
-    public async Task<int> AssignRoleToUserAsync(int userId, int roleId, int? assignedBy = null, DateTime? expiresAt = null)
+    public async Task<int> AssignRoleToUserAsync(int userId, int roleId, int applicationId = 0, int? assignedBy = null, DateTime? expiresAt = null)
     {
         var userRole = new UserRole
         {
             UserId = userId,
             RoleId = roleId,
+            ApplicationId = applicationId,
             AssignedBy = assignedBy,
             AssignedAt = DateTimeService.GetCostaRicaNow(),
             ExpiresAt = expiresAt,

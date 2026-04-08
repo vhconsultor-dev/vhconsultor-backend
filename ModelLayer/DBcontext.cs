@@ -408,6 +408,7 @@ public class DBcontext : DbContext
             entity.ToTable("Permissions", "Global");
             entity.HasKey(e => e.PermissionId);
             entity.Property(e => e.PermissionId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ApplicationId).IsRequired();
             entity.Property(e => e.ResourceId).IsRequired();
             entity.Property(e => e.ActionId).IsRequired();
             entity.Property(e => e.PermissionName).HasMaxLength(200).IsRequired();
@@ -451,6 +452,7 @@ public class DBcontext : DbContext
             entity.ToTable("UserRoles", "Global");
             entity.HasKey(e => e.UserRoleId);
             entity.Property(e => e.UserRoleId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ApplicationId).IsRequired();
             entity.Property(e => e.UserId).IsRequired();
             entity.Property(e => e.RoleId).IsRequired();
             entity.Property(e => e.AssignedBy);

@@ -7,6 +7,7 @@ namespace ModelLayer.Shared.Entities;
 public class Permission
 {
     public int PermissionId { get; set; }
+    public int ApplicationId { get; set; }
     public int ResourceId { get; set; }
     public int ActionId { get; set; }
     public string PermissionName { get; set; } = string.Empty;

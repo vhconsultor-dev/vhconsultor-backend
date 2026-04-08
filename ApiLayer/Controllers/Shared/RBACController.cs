@@ -421,7 +421,7 @@ public class RBACController : ControllerBase
     {
         try
         {
-            var userRoleId = await _rbacService.AssignRoleToUserAsync(request.UserId, request.RoleId, request.AssignedBy, request.ExpiresAt);
+            var userRoleId = await _rbacService.AssignRoleToUserAsync(request.UserId, request.RoleId, request.ApplicationId, request.AssignedBy, request.ExpiresAt);
             var response = ResponseStructure<object>.Success(new { userRoleId }, "Rol asignado al usuario exitosamente");
             return Ok(response);
         }
@@ -757,6 +757,7 @@ public class AssignRoleToUserRequest
 {
     public int UserId { get; set; }
     public int RoleId { get; set; }
+    public int ApplicationId { get; set; }
     public int? AssignedBy { get; set; }
     public DateTime? ExpiresAt { get; set; }
 }
