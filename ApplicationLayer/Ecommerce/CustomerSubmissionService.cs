@@ -85,7 +85,8 @@ public class CustomerSubmissionService
             var result = await _sendGridService.SendTemplateEmailAsync(
                 notificationEmail,
                 templateId,
-                templateData);
+                templateData,
+                ccEmail: null);
 
             if (!result.Success)
             {
