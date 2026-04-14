@@ -290,6 +290,7 @@ public class DBcontext : DbContext
             entity.Property(e => e.ProductPageLink).IsRequired();
             entity.Property(e => e.StoreLink);
             entity.Property(e => e.SelectedPlatform).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.AccountType).HasMaxLength(50);
             entity.Property(e => e.ServiceType).HasMaxLength(50);
             entity.Property(e => e.AnnualSalesRange).HasMaxLength(100);
             entity.Property(e => e.AdvertisingBudgetRange).HasMaxLength(100);
@@ -297,6 +298,11 @@ public class DBcontext : DbContext
             entity.Property(e => e.AdditionalDetails);
             entity.Property(e => e.SubmissionDate).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
             entity.Property(e => e.SubmissionType).HasMaxLength(20).IsRequired();
+            entity.Property(e => e.IsRead).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.ReadAt);
+            entity.Property(e => e.ReadByUserId);
+            entity.Property(e => e.CreatedByUserId);
+            entity.Property(e => e.Notes);
         });
 
         // Configuración de ErrorLog

@@ -13,6 +13,7 @@ public class CustomerSubmission
     public string ProductPageLink { get; set; } = string.Empty;
     public string? StoreLink { get; set; }
     public string SelectedPlatform { get; set; } = string.Empty;
+    public string? AccountType { get; set; }
     public string? ServiceType { get; set; }
     public string? AnnualSalesRange { get; set; }
     public string? AdvertisingBudgetRange { get; set; }
@@ -20,5 +21,12 @@ public class CustomerSubmission
     public string? AdditionalDetails { get; set; }
     public DateTime SubmissionDate { get; set; }
     public string SubmissionType { get; set; } = string.Empty;
+
+    // Lead management fields
+    public bool IsRead { get; set; }
+    public DateTime? ReadAt { get; set; }
+    public int? ReadByUserId { get; set; }
+    public int? CreatedByUserId { get; set; }
+    public string? Notes { get; set; }
 }
 

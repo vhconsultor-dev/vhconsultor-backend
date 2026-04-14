@@ -10,7 +10,7 @@
         "projectUniqueName": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ApplicationLayer/ApplicationLayer.csproj",
         "projectName": "ApplicationLayer",
         "projectPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ApplicationLayer/ApplicationLayer.csproj",
-        "packagesPath": "/Users/afajardop/.nuget/packages/",
+        "packagesPath": "/var/folders/3g/txmm3jdd0k7fh8f0zd593bg80000gn/T/cursor-sandbox-cache/7c6892c4814f1d58ed53f43c0d7bf5b4/nuget",
         "outputPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ApplicationLayer/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
@@ -102,7 +102,7 @@
         "projectUniqueName": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj",
         "projectName": "BusinessLayer",
         "projectPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj",
-        "packagesPath": "/Users/afajardop/.nuget/packages/",
+        "packagesPath": "/var/folders/3g/txmm3jdd0k7fh8f0zd593bg80000gn/T/cursor-sandbox-cache/7c6892c4814f1d58ed53f43c0d7bf5b4/nuget",
         "outputPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
@@ -202,7 +202,7 @@
         "projectUniqueName": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/ModelLayer.csproj",
         "projectName": "ModelLayer",
         "projectPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/ModelLayer.csproj",
-        "packagesPath": "/Users/afajardop/.nuget/packages/",
+        "packagesPath": "/var/folders/3g/txmm3jdd0k7fh8f0zd593bg80000gn/T/cursor-sandbox-cache/7c6892c4814f1d58ed53f43c0d7bf5b4/nuget",
         "outputPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [

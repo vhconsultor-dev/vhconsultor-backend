@@ -25,4 +25,16 @@ public class SendGridSettings
     /// Variables: fullName, username (email), password (contraseña temporal)
     /// </summary>
     public string BrandPartnerResetPasswordTemplateId { get; set; } = string.Empty;
+    /// <summary>
+    /// Template ID for contact form submission email (lead notification).
+    /// Variables: submittedAt, source, firstName, lastName, email, phone, country,
+    /// brandName, numberOfListings, productPageUrl, storeUrl, platform, accountType,
+    /// serviceType, annualSalesRange, advertisingBudgetRange, promotionalBudgetRange,
+    /// additionalDetails, leadId
+    /// </summary>
+    public string ContactFormTemplateId { get; set; } = string.Empty;
+    /// <summary>
+    /// Internal notification email address to receive contact form submissions.
+    /// </summary>
+    public string ContactFormNotificationEmail { get; set; } = string.Empty;
 }

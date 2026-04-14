@@ -2,28 +2,20 @@ using ModelLayer;
 using ModelLayer.Ecommerce.Entities;
 using ModelLayer.Shared;
 
-namespace BusinessLayer.Ecommerce.Commands;
+namespace BusinessLayer.Corporate.Commands;
 
-/// <summary>
-/// Command para crear una nueva CustomerSubmission usando Entity Framework
-/// </summary>
-public class CreateCustomerSubmissionCommand
+public class CreateLeadCommand
 {
     private readonly DBcontext _context;
 
-    public CreateCustomerSubmissionCommand(DBcontext context)
+    public CreateLeadCommand(DBcontext context)
     {
         _context = context;
     }
 
-    /// <summary>
-    /// Ejecuta la creación de una nueva Customer Submission
-    /// </summary>
-    /// <param name="request">Datos de la submission</param>
-    /// <returns>ID de la submission creada</returns>
-    public async Task<int> ExecuteAsync(CreateCustomerSubmissionRequest request)
+    public async Task<int> ExecuteAsync(CreateLeadRequest request)
     {
-        var submission = new CustomerSubmission
+        var lead = new CustomerSubmission
         {
             FirstName = request.FirstName,
             LastName = request.LastName,
@@ -42,20 +34,20 @@ public class CreateCustomerSubmissionCommand
             PromotionalBudgetRange = request.PromotionalBudgetRange,
             AdditionalDetails = request.AdditionalDetails,
             SubmissionDate = DateTimeService.GetCostaRicaNow(),
-            SubmissionType = request.SubmissionType
+            SubmissionType = "corporate_manual",
+            IsRead = false,
+            CreatedByUserId = request.CreatedByUserId,
+            Notes = request.Notes
         };
 
-        _context.CustomerSubmissions.Add(submission);
+        _context.CustomerSubmissions.Add(lead);
         await _context.SaveChangesAsync();
-        
-        return submission.SubmissionID;
+
+        return lead.SubmissionID;
     }
 }
 
-/// <summary>
-/// Request para crear una Customer Submission
-/// </summary>
-public class CreateCustomerSubmissionRequest
+public class CreateLeadRequest
 {
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
@@ -73,6 +65,6 @@ public class CreateCustomerSubmissionRequest
     public string? AdvertisingBudgetRange { get; set; }
     public string? PromotionalBudgetRange { get; set; }
     public string? AdditionalDetails { get; set; }
-    public string SubmissionType { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+    public int? CreatedByUserId { get; set; }
 }
-

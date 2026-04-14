@@ -92,6 +92,8 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Comm
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Commands.UpdatePermissionRequest>, BusinessLayer.Shared.Validators.UpdatePermissionValidator>();
 
 // Corporate Validators
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateLeadRequest>, BusinessLayer.Corporate.Validators.CreateLeadValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateLeadRequest>, BusinessLayer.Corporate.Validators.UpdateLeadValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateCustomerRequest>, BusinessLayer.Corporate.Validators.CreateCustomerValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateCustomerRequest>, BusinessLayer.Corporate.Validators.UpdateCustomerValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateContractRequest>, BusinessLayer.Corporate.Validators.CreateContractValidator>();
@@ -230,6 +232,7 @@ builder.Services.AddScoped<ApplicationLayer.Amazon.AmazonVendorAuthService>();
 builder.Services.AddScoped<ApplicationLayer.Amazon.Vendor.Reports.VendorReportService>();
 
 // Corporate Services
+builder.Services.AddScoped<ApplicationLayer.Corporate.LeadService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.CustomerService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.CountryService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.IndustrySectorService>();
@@ -280,6 +283,10 @@ builder.Services.AddScoped<BusinessLayer.Amazon.Queries.AmazonTokenQueryReposito
 
 // Corporate CQRS Repositories
 // Commands
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateLeadCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateLeadCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.MarkLeadAsReadCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateLeadNotesCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateCustomerCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateCustomerCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteCustomerCommand>();
@@ -300,6 +307,7 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteInvoicesComman
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UploadInvoiceAttachmentCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteInvoiceAttachmentCommand>();
 // Queries
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.LeadQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CustomerQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CountryQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.IndustrySectorQueryRepository>();
