@@ -46,6 +46,11 @@ public class DBcontext : DbContext
     public DbSet<BrandPartnerUser> BrandPartnerUsers { get; set; }
     public DbSet<BrandPartnerUserLoginHistory> BrandPartnerUserLoginHistory { get; set; }
     public DbSet<BrandPartnerTwoFactorCode> BrandPartnerTwoFactorCodes { get; set; }
+    public DbSet<InventoryItem> InventoryItems { get; set; }
+    public DbSet<SettlementHeader> SettlementHeaders { get; set; }
+    public DbSet<SettlementDetail> SettlementDetails { get; set; }
+    public DbSet<InventorySnapshot> InventorySnapshots { get; set; }
+    public DbSet<InventoryMovement> InventoryMovements { get; set; }
     
     // Shared DbSets
     public DbSet<ErrorLog> ErrorLogs { get; set; }
@@ -773,6 +778,140 @@ public class DBcontext : DbContext
             
             entity.HasIndex(e => e.BrandPartnerUserId);
             entity.HasIndex(e => e.ExpiresAt).HasFilter("IsUsed = 0");
+        });
+
+        // Configuración de InventoryItem (BrandPartner)
+        modelBuilder.Entity<InventoryItem>(entity =>
+        {
+            entity.ToTable("InventoryItems", "BrandPartner");
+            entity.HasKey(e => e.InventoryItemId);
+            entity.Property(e => e.InventoryItemId).ValueGeneratedOnAdd();
+            entity.Property(e => e.AmazonAccountId).IsRequired();
+            entity.Property(e => e.Sku).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Asin).HasMaxLength(20);
+            entity.Property(e => e.ProductName).HasMaxLength(500);
+            entity.Property(e => e.PrepOwner).HasMaxLength(30);
+            entity.Property(e => e.LabelingOwner).HasMaxLength(30);
+            entity.Property(e => e.UnitsPerBox).HasColumnType("decimal(10,2)");
+            entity.Property(e => e.NumberOfBoxes);
+            entity.Property(e => e.BoxLengthIn).HasColumnType("decimal(10,2)");
+            entity.Property(e => e.BoxWidthIn).HasColumnType("decimal(10,2)");
+            entity.Property(e => e.BoxHeightIn).HasColumnType("decimal(10,2)");
+            entity.Property(e => e.BoxWeightLb).HasColumnType("decimal(10,2)");
+            entity.Property(e => e.QuantityOnHand).IsRequired().HasDefaultValue(0);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.UpdatedAt);
+            
+            entity.HasIndex(e => new { e.AmazonAccountId, e.Sku }).IsUnique();
+        });
+
+        // Configuración de SettlementHeader (BrandPartner)
+        modelBuilder.Entity<SettlementHeader>(entity =>
+        {
+            entity.ToTable("SettlementHeaders", "BrandPartner");
+            entity.HasKey(e => e.SettlementHeaderId);
+            entity.Property(e => e.SettlementHeaderId).ValueGeneratedOnAdd();
+            entity.Property(e => e.AmazonAccountId).IsRequired();
+            entity.Property(e => e.SettlementId).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.SettlementStartDate);
+            entity.Property(e => e.SettlementEndDate);
+            entity.Property(e => e.DepositDate);
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Currency).HasMaxLength(10);
+            entity.Property(e => e.SourceFileName).HasMaxLength(500);
+            entity.Property(e => e.ImportedAt).IsRequired().HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETUTCDATE()");
+            
+            entity.HasIndex(e => new { e.AmazonAccountId, e.SettlementId }).IsUnique();
+        });
+
+        // Configuración de SettlementDetail (BrandPartner)
+        modelBuilder.Entity<SettlementDetail>(entity =>
+        {
+            entity.ToTable("SettlementDetails", "BrandPartner");
+            entity.HasKey(e => e.SettlementDetailId);
+            entity.Property(e => e.SettlementDetailId).ValueGeneratedOnAdd();
+            entity.Property(e => e.SettlementHeaderId).IsRequired();
+            entity.Property(e => e.RowNumber);
+            entity.Property(e => e.TransactionType).HasMaxLength(100);
+            entity.Property(e => e.OrderId).HasMaxLength(50);
+            entity.Property(e => e.MerchantOrderId).HasMaxLength(50);
+            entity.Property(e => e.AdjustmentId).HasMaxLength(100);
+            entity.Property(e => e.ShipmentId).HasMaxLength(100);
+            entity.Property(e => e.MarketplaceName).HasMaxLength(100);
+            entity.Property(e => e.ShipmentFeeType).HasMaxLength(100);
+            entity.Property(e => e.ShipmentFeeAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.OrderFeeType).HasMaxLength(100);
+            entity.Property(e => e.OrderFeeAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.FulfillmentId).HasMaxLength(100);
+            entity.Property(e => e.PostedDate);
+            entity.Property(e => e.OrderItemCode).HasMaxLength(100);
+            entity.Property(e => e.MerchantOrderItemId).HasMaxLength(100);
+            entity.Property(e => e.MerchantAdjustmentItemId).HasMaxLength(100);
+            entity.Property(e => e.Sku).HasMaxLength(100);
+            entity.Property(e => e.QuantityPurchased).HasColumnType("decimal(18,4)");
+            entity.Property(e => e.PriceType).HasMaxLength(100);
+            entity.Property(e => e.PriceAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.ItemRelatedFeeType).HasMaxLength(150);
+            entity.Property(e => e.ItemRelatedFeeAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MiscFeeAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.OtherFeeAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.OtherFeeReasonDescription).HasMaxLength(255);
+            entity.Property(e => e.PromotionId).HasMaxLength(100);
+            entity.Property(e => e.PromotionType).HasMaxLength(100);
+            entity.Property(e => e.PromotionAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.DirectPaymentType).HasMaxLength(100);
+            entity.Property(e => e.DirectPaymentAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.OtherAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.AffectsInventory).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.InventoryDelta);
+            entity.Property(e => e.RowHash).HasMaxLength(50);
+            entity.Property(e => e.RawRowJson);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETUTCDATE()");
+            
+            entity.HasIndex(e => e.SettlementHeaderId);
+            entity.HasIndex(e => new { e.SettlementHeaderId, e.RowHash }).HasFilter("RowHash IS NOT NULL");
+        });
+
+        // Configuración de InventorySnapshot (BrandPartner)
+        modelBuilder.Entity<InventorySnapshot>(entity =>
+        {
+            entity.ToTable("InventorySnapshots", "BrandPartner");
+            entity.HasKey(e => e.InventorySnapshotId);
+            entity.Property(e => e.InventorySnapshotId).ValueGeneratedOnAdd();
+            entity.Property(e => e.SettlementHeaderId).IsRequired();
+            entity.Property(e => e.InventoryItemId).IsRequired();
+            entity.Property(e => e.Sku).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.QuantityBeforeSettlement).IsRequired();
+            entity.Property(e => e.QuantityDeltaSettlement).IsRequired();
+            entity.Property(e => e.QuantityAfterSettlement).IsRequired();
+            entity.Property(e => e.SnapshotDate).IsRequired().HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETUTCDATE()");
+            
+            entity.HasIndex(e => new { e.SettlementHeaderId, e.InventoryItemId }).IsUnique();
+        });
+
+        // Configuración de InventoryMovement (BrandPartner)
+        modelBuilder.Entity<InventoryMovement>(entity =>
+        {
+            entity.ToTable("InventoryMovements", "BrandPartner");
+            entity.HasKey(e => e.InventoryMovementId);
+            entity.Property(e => e.InventoryMovementId).ValueGeneratedOnAdd();
+            entity.Property(e => e.InventoryItemId).IsRequired();
+            entity.Property(e => e.SettlementHeaderId);
+            entity.Property(e => e.SettlementDetailId);
+            entity.Property(e => e.MovementType).HasMaxLength(30).IsRequired();
+            entity.Property(e => e.ReasonCode).HasMaxLength(50);
+            entity.Property(e => e.QuantityBefore).IsRequired();
+            entity.Property(e => e.QuantityDelta).IsRequired();
+            entity.Property(e => e.QuantityAfter).IsRequired();
+            entity.Property(e => e.ReferenceType).HasMaxLength(30);
+            entity.Property(e => e.ReferenceId).HasMaxLength(100);
+            entity.Property(e => e.Comments).HasMaxLength(1000);
+            entity.Property(e => e.CreatedBy).HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETUTCDATE()");
+            
+            entity.HasIndex(e => new { e.InventoryItemId, e.CreatedAt });
         });
     }
 } 

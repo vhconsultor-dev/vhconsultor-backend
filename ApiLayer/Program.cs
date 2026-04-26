@@ -129,6 +129,12 @@ builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.BrandPartnerLog
 builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.VerifyTwoFactorCodeValidator>();
 builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.ResetPasswordBrandPartnerValidator>();
 builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.ChangePasswordBrandPartnerValidator>();
+// Brand Partner Inventory & Settlement Validators
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.BulkUploadInventoryValidator>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.BulkUploadSettlementValidator>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.CreateInventoryItemValidator>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.UpdateInventoryItemValidator>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Validators.AdjustInventoryManualValidator>();
 #endregion
 
 #region Azure Storage Configuration
@@ -346,6 +352,23 @@ builder.Services.AddScoped<BusinessLayer.BrandPartner.Commands.BrandPartnerTwoFa
 builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.BrandPartnerUserQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.BrandPartnerLoginHistoryQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.BrandPartnerTwoFactorCodeQueryRepository>();
+
+// Brand Partner Inventory & Settlement CQRS
+// Commands
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Commands.BulkUploadInventoryCommand>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Commands.BulkUploadSettlementCommand>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Commands.CreateInventoryItemCommand>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Commands.UpdateInventoryItemCommand>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Commands.AdjustInventoryManualCommand>();
+// Queries
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.InventoryItemQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.SettlementHeaderQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.SettlementDetailQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.InventorySnapshotQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.BrandPartner.Queries.InventoryMovementQueryRepository>();
+// Services
+builder.Services.AddScoped<ApplicationLayer.BrandPartner.InventoryService>();
+builder.Services.AddScoped<ApplicationLayer.BrandPartner.SettlementService>();
 #endregion
 
 #region SwaggerConfig
