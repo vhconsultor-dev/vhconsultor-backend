@@ -55,7 +55,10 @@ public class SettlementController : ControllerBase
 
             if (!result.Success)
             {
-                return BadRequest(ResponseStructure<BulkUploadSettlementResult>.BadRequest(
+                return BadRequest(new ResponseStructure<BulkUploadSettlementResult>(
+                    false,
+                    400,
+                    result,
                     result.MessageEN,
                     "BULK_UPLOAD_FAILED",
                     result.MessageES

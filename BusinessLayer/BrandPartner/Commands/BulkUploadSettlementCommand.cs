@@ -214,6 +214,7 @@ public class BulkUploadSettlementCommand
                     {
                         result.Success = false;
                         result.MissingSKUs = missingSKUs;
+                        result.MissingSkuDetails = BuildMissingSkuDetails(missingSKUs, settlementRows);
                         result.MessageEN = $"Cannot process settlement {settlementId}. The following {missingSKUs.Count} SKU(s) do not exist in inventory: [{string.Join(", ", missingSKUs)}]. " +
                                           "Please create these SKUs first using the inventory bulk upload or manual creation endpoint.";
                         result.MessageES = $"No se puede procesar el settlement {settlementId}. Los siguientes {missingSKUs.Count} SKU(s) no existen en el inventario: [{string.Join(", ", missingSKUs)}]. " +
@@ -520,6 +521,33 @@ public class BulkUploadSettlementCommand
         if (decimal.TryParse(value, out var result)) return result;
         return null;
     }
+
+    private List<MissingSkuDetail> BuildMissingSkuDetails(List<string> missingSkus, List<SettlementRowData> settlementRows)
+    {
+        return settlementRows
+            .Where(r => !string.IsNullOrWhiteSpace(r.Sku) && missingSkus.Contains(r.Sku!))
+            .GroupBy(r => r.Sku!)
+            .Select(g => new MissingSkuDetail
+            {
+                Sku = g.Key,
+                TotalRows = g.Count(),
+                TotalQuantityPurchased = g.Sum(x => x.QuantityPurchased ?? 0),
+                Transactions = g.Select(x => new MissingSkuTransactionInfo
+                {
+                    RowNumber = x.RowNumber,
+                    TransactionType = x.TransactionType,
+                    OrderId = x.OrderId,
+                    MerchantOrderId = x.MerchantOrderId,
+                    QuantityPurchased = x.QuantityPurchased,
+                    PostedDate = x.PostedDate?.ToString("yyyy-MM-dd HH:mm:ss"),
+                    MarketplaceName = x.MarketplaceName,
+                    PriceType = x.PriceType,
+                    PriceAmount = x.PriceAmount
+                }).ToList()
+            })
+            .OrderBy(x => x.Sku)
+            .ToList();
+    }
 }
 
 /// <summary>
@@ -580,8 +608,30 @@ public class BulkUploadSettlementResult
     public int LinesCreated { get; set; }
     public int SkusAffected { get; set; }
     public List<string> MissingSKUs { get; set; } = new();
+    public List<MissingSkuDetail> MissingSkuDetails { get; set; } = new();
     public List<SettlementLineRequiringAdjustment> LinesRequiringManualAdjustment { get; set; } = new();
     public List<BulkUploadSettlementError> Errores { get; set; } = new();
+}
+
+public class MissingSkuDetail
+{
+    public string Sku { get; set; } = string.Empty;
+    public int TotalRows { get; set; }
+    public decimal TotalQuantityPurchased { get; set; }
+    public List<MissingSkuTransactionInfo> Transactions { get; set; } = new();
+}
+
+public class MissingSkuTransactionInfo
+{
+    public int RowNumber { get; set; }
+    public string? TransactionType { get; set; }
+    public string? OrderId { get; set; }
+    public string? MerchantOrderId { get; set; }
+    public decimal? QuantityPurchased { get; set; }
+    public string? PostedDate { get; set; }
+    public string? MarketplaceName { get; set; }
+    public string? PriceType { get; set; }
+    public decimal? PriceAmount { get; set; }
 }
 
 /// <summary>
