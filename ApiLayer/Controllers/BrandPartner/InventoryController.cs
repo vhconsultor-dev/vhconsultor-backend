@@ -14,7 +14,7 @@ namespace ApiLayer.Controllers.BrandPartner;
 public class InventoryController : ControllerBase
 {
     private readonly InventoryService _inventoryService;
-    private readonly ErrorLogService _errorLogService;
+    private readonly IErrorLogService _errorLogService;
     private readonly BulkUploadInventoryValidator _bulkUploadInventoryValidator;
     private readonly CreateInventoryItemValidator _createInventoryItemValidator;
     private readonly UpdateInventoryItemValidator _updateInventoryItemValidator;
@@ -22,7 +22,7 @@ public class InventoryController : ControllerBase
 
     public InventoryController(
         InventoryService inventoryService,
-        ErrorLogService errorLogService,
+        IErrorLogService errorLogService,
         BulkUploadInventoryValidator bulkUploadInventoryValidator,
         CreateInventoryItemValidator createInventoryItemValidator,
         UpdateInventoryItemValidator updateInventoryItemValidator,
@@ -121,7 +121,7 @@ public class InventoryController : ControllerBase
 
             var inventoryItemId = await _inventoryService.CreateInventoryItemAsync(request);
 
-            return Ok(ResponseStructure<long>.Success(
+            return StatusCode(201, ResponseStructure<long>.Success(
                 inventoryItemId,
                 201,
                 "Inventory item created successfully.",

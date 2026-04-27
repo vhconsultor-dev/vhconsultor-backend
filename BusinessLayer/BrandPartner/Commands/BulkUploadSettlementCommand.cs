@@ -279,6 +279,7 @@ public class BulkUploadSettlementCommand
                                 if (inventoryItem.QuantityOnHand + inventoryDelta < 0)
                                 {
                                     // No procesar inventario, agregar a lista de ajuste manual
+                                    int deltaForReport = inventoryDelta; // Guardar delta ANTES de ponerlo en 0
                                     affectsInventory = false;
                                     inventoryDelta = 0;
 
@@ -287,27 +288,31 @@ public class BulkUploadSettlementCommand
                                         RowNumber = rowData.RowNumber,
                                         Sku = rowData.Sku,
                                         TransactionType = rowData.TransactionType,
-                                        QuantityRequired = Math.Abs(inventoryDelta),
+                                        QuantityRequired = Math.Abs(deltaForReport),
                                         QuantityAvailable = inventoryItem.QuantityOnHand,
-                                        Deficit = Math.Abs(inventoryItem.QuantityOnHand + inventoryDelta),
+                                        Deficit = Math.Abs(inventoryItem.QuantityOnHand + deltaForReport),
                                         OrderId = rowData.OrderId,
                                         PostedDate = rowData.PostedDate?.ToString("yyyy-MM-dd"),
-                                        MessageEN = $"Insufficient inventory: SKU {rowData.Sku} requires {Math.Abs(inventoryDelta)} units but only {inventoryItem.QuantityOnHand} available. Deficit: {Math.Abs(inventoryItem.QuantityOnHand + inventoryDelta)} units. Manual adjustment needed.",
-                                        MessageES = $"Inventario insuficiente: SKU {rowData.Sku} requiere {Math.Abs(inventoryDelta)} unidades pero solo hay {inventoryItem.QuantityOnHand} disponibles. Déficit: {Math.Abs(inventoryItem.QuantityOnHand + inventoryDelta)} unidades. Se requiere ajuste manual."
+                                        MessageEN = $"Insufficient inventory: SKU {rowData.Sku} requires {Math.Abs(deltaForReport)} units but only {inventoryItem.QuantityOnHand} available. Deficit: {Math.Abs(inventoryItem.QuantityOnHand + deltaForReport)} units. Manual adjustment needed.",
+                                        MessageES = $"Inventario insuficiente: SKU {rowData.Sku} requiere {Math.Abs(deltaForReport)} unidades pero solo hay {inventoryItem.QuantityOnHand} disponibles. Déficit: {Math.Abs(inventoryItem.QuantityOnHand + deltaForReport)} unidades. Se requiere ajuste manual."
                                     });
                                 }
                                 else
                                 {
                                     // Sí podemos aplicar el movimiento
-                                    int qtyBefore = inventoryItem.QuantityOnHand;
-                                    inventoryItem.QuantityOnHand += inventoryDelta;
-                                    inventoryItem.UpdatedAt = DateTimeService.GetCostaRicaNow();
-
-                                    // Guardar para snapshot
+                                    // Guardar para snapshot ANTES de actualizar
                                     if (!skusAffected.ContainsKey(inventoryItem.InventoryItemId))
                                     {
-                                        skusAffected[inventoryItem.InventoryItemId] = inventoryItem;
+                                        skusAffected[inventoryItem.InventoryItemId] = new InventoryItem
+                                        {
+                                            InventoryItemId = inventoryItem.InventoryItemId,
+                                            Sku = inventoryItem.Sku,
+                                            QuantityOnHand = inventoryItem.QuantityOnHand // cantidad ANTES
+                                        };
                                     }
+                                    
+                                    inventoryItem.QuantityOnHand += inventoryDelta;
+                                    inventoryItem.UpdatedAt = DateTimeService.GetCostaRicaNow();
                                 }
                             }
                         }
@@ -354,7 +359,6 @@ public class BulkUploadSettlementCommand
                             CreatedAt = DateTimeService.GetCostaRicaNow()
                         };
                         _context.SettlementDetails.Add(detail);
-                        await _context.SaveChangesAsync();
 
                         // Si afectó inventario, crear InventoryMovement
                         if (affectsInventory && inventoryItemId.HasValue && inventoryDelta != 0)
@@ -375,11 +379,10 @@ public class BulkUploadSettlementCommand
                                     ReferenceType = "SettlementDetail",
                                     ReferenceId = detail.SettlementDetailId.ToString(),
                                     Comments = $"Settlement {settlementId} | {rowData.TransactionType} {rowData.OrderId} | SKU {rowData.Sku}",
-                                    CreatedBy = $"system:settlement-import",
+                                    CreatedBy = currentUser,
                                     CreatedAt = DateTimeService.GetCostaRicaNow()
                                 };
                                 _context.InventoryMovements.Add(movement);
-                                await _context.SaveChangesAsync();
                             }
                         }
 
@@ -408,20 +411,31 @@ public class BulkUploadSettlementCommand
                 // ==== FASE 4: Crear snapshots ====
                 foreach (var kvp in skusAffected)
                 {
-                    var item = kvp.Value;
-                    var snapshot = new InventorySnapshot
+                    var itemSnapshot = kvp.Value; // Esta es la cantidad ANTES
+                    var currentItem = await _context.InventoryItems.FindAsync(kvp.Key);
+                    
+                    if (currentItem != null)
                     {
-                        SettlementHeaderId = header.SettlementHeaderId,
-                        InventoryItemId = item.InventoryItemId,
-                        Sku = item.Sku,
-                        QuantityBeforeSettlement = item.QuantityOnHand, // ya está actualizado
-                        QuantityDeltaSettlement = 0, // calcular delta total
-                        QuantityAfterSettlement = item.QuantityOnHand,
-                        SnapshotDate = DateTimeService.GetCostaRicaNow(),
-                        CreatedAt = DateTimeService.GetCostaRicaNow()
-                    };
-                    _context.InventorySnapshots.Add(snapshot);
+                        int qtyBefore = itemSnapshot.QuantityOnHand;
+                        int qtyAfter = currentItem.QuantityOnHand;
+                        int delta = qtyAfter - qtyBefore;
+                        
+                        var snapshot = new InventorySnapshot
+                        {
+                            SettlementHeaderId = header.SettlementHeaderId,
+                            InventoryItemId = currentItem.InventoryItemId,
+                            Sku = currentItem.Sku,
+                            QuantityBeforeSettlement = qtyBefore,
+                            QuantityDeltaSettlement = delta,
+                            QuantityAfterSettlement = qtyAfter,
+                            SnapshotDate = DateTimeService.GetCostaRicaNow(),
+                            CreatedAt = DateTimeService.GetCostaRicaNow()
+                        };
+                        _context.InventorySnapshots.Add(snapshot);
+                    }
                 }
+                
+                // Guardar todo en una sola transacción
                 await _context.SaveChangesAsync();
 
                 result.SkusAffected = skusAffected.Count;

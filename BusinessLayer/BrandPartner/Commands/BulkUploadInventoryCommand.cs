@@ -117,6 +117,26 @@ public class BulkUploadInventoryCommand
                     headers.Add(headerCell ?? "");
                 }
 
+                // Validar que los headers esperados estén presentes
+                var missingHeaders = new List<string>();
+                for (int i = 0; i < expectedHeaders.Count && i < headers.Count; i++)
+                {
+                    if (!string.Equals(headers[i], expectedHeaders[i], StringComparison.OrdinalIgnoreCase))
+                    {
+                        missingHeaders.Add(expectedHeaders[i]);
+                    }
+                }
+
+                if (missingHeaders.Any())
+                {
+                    throw new BulkUploadInventoryValidationException(
+                        $"Invalid Excel headers. Expected headers in order: [{string.Join(", ", expectedHeaders)}]. " +
+                        $"Please ensure your Excel file has the correct column headers.",
+                        "INVALID_HEADERS",
+                        "Verify the Excel file structure matches the expected format."
+                    );
+                }
+
                 // Procesar filas
                 int totalRows = worksheet.Dimension.End.Row;
                 result.TotalFilasLeidas = totalRows - 1; // excluir header
@@ -160,6 +180,9 @@ public class BulkUploadInventoryCommand
 
                         if (existingItem != null)
                         {
+                            // Guardar cantidad ANTES de actualizar
+                            int qtyBefore = existingItem.QuantityOnHand;
+                            
                             // Idempotente: actualizar
                             existingItem.ProductName = null; // asumiendo que no viene en este Excel
                             existingItem.PrepOwner = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
@@ -175,14 +198,15 @@ public class BulkUploadInventoryCommand
 
                             await _context.SaveChangesAsync();
 
-                            // Crear movimiento INITIAL_LOAD o ADJUSTMENT
+                            // Crear movimiento con datos correctos
+                            int delta = quantity - qtyBefore;
                             var movement = new InventoryMovement
                             {
                                 InventoryItemId = existingItem.InventoryItemId,
                                 MovementType = "ADJUSTMENT",
                                 ReasonCode = "BULK_UPDATE",
-                                QuantityBefore = existingItem.QuantityOnHand, // ya está actualizado
-                                QuantityDelta = 0, // no sabemos el delta
+                                QuantityBefore = qtyBefore,
+                                QuantityDelta = delta,
                                 QuantityAfter = quantity,
                                 ReferenceType = "BulkInventoryUpload",
                                 Comments = $"Bulk upload update from file: {excelFile.FileName}",

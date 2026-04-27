@@ -14,12 +14,12 @@ namespace ApiLayer.Controllers.BrandPartner;
 public class SettlementController : ControllerBase
 {
     private readonly SettlementService _settlementService;
-    private readonly ErrorLogService _errorLogService;
+    private readonly IErrorLogService _errorLogService;
     private readonly BulkUploadSettlementValidator _bulkUploadSettlementValidator;
 
     public SettlementController(
         SettlementService settlementService,
-        ErrorLogService errorLogService,
+        IErrorLogService errorLogService,
         BulkUploadSettlementValidator bulkUploadSettlementValidator)
     {
         _settlementService = settlementService;
