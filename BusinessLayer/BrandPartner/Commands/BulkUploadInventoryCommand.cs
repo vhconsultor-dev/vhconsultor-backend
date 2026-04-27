@@ -63,7 +63,7 @@ public class BulkUploadInventoryCommand
             await excelFile.CopyToAsync(stream);
             stream.Position = 0;
 
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            ExcelPackage.License.SetNonCommercialOrganization("VHConsultor");
 
             ExcelPackage package;
             try

@@ -82,6 +82,20 @@ public class SettlementController : ControllerBase
                 buvEx.MessageES
             ));
         }
+        catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("ExcelPackage.License", StringComparison.OrdinalIgnoreCase))
+        {
+            var errorNumber = await _errorLogService.LogErrorAsync(
+                ioEx,
+                HttpContext,
+                "BulkUploadSettlement"
+            );
+
+            return BadRequest(ResponseStructure<BulkUploadSettlementResult>.BadRequest(
+                "The Excel processing component is not configured correctly. Please contact support.",
+                errorNumber,
+                "El componente de procesamiento de Excel no esta configurado correctamente. Por favor contacte a soporte."
+            ));
+        }
         catch (Exception ex)
         {
             var errorNumber = await _errorLogService.LogErrorAsync(
