@@ -96,4 +96,12 @@ public class InventoryService
     {
         return await _inventoryMovementQueryRepository.GetByInventoryItemAsync(inventoryItemId, filters);
     }
+
+    /// <summary>
+    /// Obtener movimientos de inventario por AmazonAccount + InventoryItem (auditoría)
+    /// </summary>
+    public async Task<IEnumerable<InventoryMovement>> GetInventoryMovementsByAccountAsync(int amazonAccountId, long inventoryItemId, InventoryMovementFilters filters)
+    {
+        return await _inventoryMovementQueryRepository.GetByAccountAndInventoryItemAsync(amazonAccountId, inventoryItemId, filters);
+    }
 }

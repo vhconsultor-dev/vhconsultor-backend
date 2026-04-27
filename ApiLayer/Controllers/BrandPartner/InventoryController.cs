@@ -410,4 +410,53 @@ public class InventoryController : ControllerBase
             ));
         }
     }
+
+    /// <summary>
+    /// Obtener movimientos de inventario por AmazonAccount + InventoryItem (auditoría)
+    /// </summary>
+    [HttpGet("account/{amazonAccountId}/items/{inventoryItemId}/movements")]
+    public async Task<ActionResult<ResponseStructure>> GetInventoryMovementsByAccount(
+        int amazonAccountId,
+        long inventoryItemId,
+        [FromQuery] string? movementType,
+        [FromQuery] DateTime? dateFrom,
+        [FromQuery] DateTime? dateTo,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 100)
+    {
+        try
+        {
+            var filters = new InventoryMovementFilters
+            {
+                MovementType = movementType,
+                DateFrom = dateFrom,
+                DateTo = dateTo,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            var movements = await _inventoryService.GetInventoryMovementsByAccountAsync(amazonAccountId, inventoryItemId, filters);
+
+            return Ok(ResponseStructure<object>.Success(
+                new { movements, pageNumber, pageSize, count = movements.Count() },
+                "Inventory movements retrieved successfully.",
+                "Movimientos de inventario obtenidos exitosamente."
+            ));
+        }
+        catch (Exception ex)
+        {
+            var errorNumber = await _errorLogService.LogErrorAsync(
+                ex,
+                HttpContext,
+                "GetInventoryMovementsByAccount"
+            );
+
+            return StatusCode(500, ResponseStructure.Error(
+                "An unexpected error occurred while retrieving inventory movements.",
+                500,
+                errorNumber,
+                "Ocurrio un error inesperado al obtener los movimientos de inventario."
+            ));
+        }
+    }
 }
