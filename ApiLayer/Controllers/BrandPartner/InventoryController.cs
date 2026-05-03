@@ -37,11 +37,11 @@ public class InventoryController : ControllerBase
     }
 
     /// <summary>
-    /// Carga masiva de inventario desde Excel
+    /// Carga masiva de inventario desde datos JSON
     /// </summary>
     [HttpPost("bulk-upload")]
     public async Task<ActionResult<ResponseStructure<BulkUploadInventoryResult>>> BulkUploadInventory(
-        [FromForm] BulkUploadInventoryRequest request)
+        [FromBody] BulkUploadInventoryRequest request)
     {
         try
         {
@@ -57,10 +57,7 @@ public class InventoryController : ControllerBase
             }
 
             var currentUser = HttpContext.User.Identity?.Name ?? "system";
-            var result = await _inventoryService.BulkUploadInventoryAsync(
-                request.AmazonAccountId,
-                request.ExcelFile,
-                currentUser);
+            var result = await _inventoryService.BulkUploadInventoryAsync(request, currentUser);
 
             return Ok(ResponseStructure<BulkUploadInventoryResult>.Success(
                 result,
@@ -80,20 +77,6 @@ public class InventoryController : ControllerBase
                 buvEx.Message,
                 errorNumber,
                 buvEx.Message
-            ));
-        }
-        catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("ExcelPackage.License", StringComparison.OrdinalIgnoreCase))
-        {
-            var errorNumber = await _errorLogService.LogErrorAsync(
-                ioEx,
-                HttpContext,
-                "BulkUploadInventory"
-            );
-
-            return BadRequest(ResponseStructure<BulkUploadInventoryResult>.BadRequest(
-                "The Excel processing component is not configured correctly. Please contact support.",
-                errorNumber,
-                "El componente de procesamiento de Excel no esta configurado correctamente. Por favor contacte a soporte."
             ));
         }
         catch (Exception ex)

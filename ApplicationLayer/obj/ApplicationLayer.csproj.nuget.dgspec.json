@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ApplicationLayer/ApplicationLayer.csproj": {}
+    "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/ApplicationLayer.csproj": {}
   },
   "projects": {
-    "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ApplicationLayer/ApplicationLayer.csproj": {
+    "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/ApplicationLayer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ApplicationLayer/ApplicationLayer.csproj",
+        "projectUniqueName": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/ApplicationLayer.csproj",
         "projectName": "ApplicationLayer",
-        "projectPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ApplicationLayer/ApplicationLayer.csproj",
-        "packagesPath": "/var/folders/3g/txmm3jdd0k7fh8f0zd593bg80000gn/T/cursor-sandbox-cache/7c6892c4814f1d58ed53f43c0d7bf5b4/nuget",
-        "outputPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ApplicationLayer/obj/",
+        "projectPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/ApplicationLayer.csproj",
+        "packagesPath": "/Users/jamartinezu/.nuget/packages/",
+        "outputPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ApplicationLayer/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/afajardop/.nuget/NuGet/NuGet.Config"
+          "/Users/jamartinezu/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -26,8 +26,8 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj": {
-                "projectPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj"
+              "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj": {
+                "projectPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj"
               }
             }
           }
@@ -41,7 +41,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
@@ -92,21 +93,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.416/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj": {
+    "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj",
+        "projectUniqueName": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj",
         "projectName": "BusinessLayer",
-        "projectPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj",
-        "packagesPath": "/var/folders/3g/txmm3jdd0k7fh8f0zd593bg80000gn/T/cursor-sandbox-cache/7c6892c4814f1d58ed53f43c0d7bf5b4/nuget",
-        "outputPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/BusinessLayer/obj/",
+        "projectPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/BusinessLayer.csproj",
+        "packagesPath": "/Users/jamartinezu/.nuget/packages/",
+        "outputPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/BusinessLayer/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/afajardop/.nuget/NuGet/NuGet.Config"
+          "/Users/jamartinezu/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -118,8 +119,8 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/ModelLayer.csproj": {
-                "projectPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/ModelLayer.csproj"
+              "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/ModelLayer.csproj": {
+                "projectPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/ModelLayer.csproj"
               }
             }
           }
@@ -133,7 +134,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
@@ -192,21 +194,21 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.416/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/ModelLayer.csproj": {
+    "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/ModelLayer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/ModelLayer.csproj",
+        "projectUniqueName": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/ModelLayer.csproj",
         "projectName": "ModelLayer",
-        "projectPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/ModelLayer.csproj",
-        "packagesPath": "/var/folders/3g/txmm3jdd0k7fh8f0zd593bg80000gn/T/cursor-sandbox-cache/7c6892c4814f1d58ed53f43c0d7bf5b4/nuget",
-        "outputPath": "/Users/afajardop/Git/ASP.NET Core/vhconsultor-backend/ModelLayer/obj/",
+        "projectPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/ModelLayer.csproj",
+        "packagesPath": "/Users/jamartinezu/.nuget/packages/",
+        "outputPath": "/Users/jamartinezu/Documents/GitHub/vhconsultor-backend/ModelLayer/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/afajardop/.nuget/NuGet/NuGet.Config"
+          "/Users/jamartinezu/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -229,7 +231,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
         "net8.0": {
@@ -272,7 +275,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.416/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.301/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

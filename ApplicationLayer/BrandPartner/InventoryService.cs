@@ -1,6 +1,5 @@
 using BusinessLayer.BrandPartner.Commands;
 using BusinessLayer.BrandPartner.Queries;
-using Microsoft.AspNetCore.Http;
 using ModelLayer.BrandPartner.Entities;
 
 namespace ApplicationLayer.BrandPartner;
@@ -34,11 +33,11 @@ public class InventoryService
     }
 
     /// <summary>
-    /// Carga masiva de inventario desde Excel
+    /// Carga masiva de inventario desde datos JSON
     /// </summary>
-    public async Task<BulkUploadInventoryResult> BulkUploadInventoryAsync(int amazonAccountId, IFormFile excelFile, string currentUser)
+    public async Task<BulkUploadInventoryResult> BulkUploadInventoryAsync(BulkUploadInventoryRequest request, string currentUser)
     {
-        return await _bulkUploadInventoryCommand.ExecuteAsync(amazonAccountId, excelFile, currentUser);
+        return await _bulkUploadInventoryCommand.ExecuteAsync(request, currentUser);
     }
 
     /// <summary>

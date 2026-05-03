@@ -1,15 +1,13 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ModelLayer;
 using ModelLayer.BrandPartner.Entities;
 using ModelLayer.Shared;
-using OfficeOpenXml;
 using System.Text.Json;
 
 namespace BusinessLayer.BrandPartner.Commands;
 
 /// <summary>
-/// Command para carga inicial masiva de inventario desde Excel
+/// Command para carga inicial masiva de inventario desde datos JSON
 /// </summary>
 public class BulkUploadInventoryCommand
 {
@@ -20,7 +18,7 @@ public class BulkUploadInventoryCommand
         _context = context;
     }
 
-    public async Task<BulkUploadInventoryResult> ExecuteAsync(int amazonAccountId, IFormFile excelFile, string currentUser)
+    public async Task<BulkUploadInventoryResult> ExecuteAsync(BulkUploadInventoryRequest request, string currentUser)
     {
         var result = new BulkUploadInventoryResult
         {
@@ -30,258 +28,266 @@ public class BulkUploadInventoryCommand
         try
         {
             // Validar que el AmazonAccount existe
-            var accountExists = await _context.AmazonAccounts.AnyAsync(a => a.AmazonAccountId == amazonAccountId);
+            var accountExists = await _context.AmazonAccounts.AnyAsync(a => a.AmazonAccountId == request.AmazonAccountId);
             if (!accountExists)
             {
                 throw new BulkUploadInventoryValidationException(
-                    $"Amazon Account with ID {amazonAccountId} does not exist.",
+                    $"Amazon Account with ID {request.AmazonAccountId} does not exist.",
                     "ACCOUNT_NOT_FOUND",
                     "Please verify that the Amazon Account ID is correct."
                 );
             }
 
-            if (excelFile.Length == 0)
+            // Validar que hay items para procesar
+            if (request.InventoryItems == null || !request.InventoryItems.Any())
             {
                 throw new BulkUploadInventoryValidationException(
-                    "The uploaded file is empty (0 bytes).",
-                    "EMPTY_FILE",
-                    "Please select a valid Excel file with data."
+                    "No inventory items provided for processing.",
+                    "NO_ITEMS",
+                    "Please provide at least one inventory item to upload."
                 );
             }
 
-            const long maxFileSize = 10 * 1024 * 1024; // 10 MB
-            if (excelFile.Length > maxFileSize)
+            // Validar límite de items por request
+            const int maxItemsPerRequest = 1000;
+            if (request.InventoryItems.Count > maxItemsPerRequest)
             {
                 throw new BulkUploadInventoryValidationException(
-                    $"File size ({excelFile.Length / (1024.0 * 1024.0):F2} MB) exceeds maximum of 10 MB.",
-                    "FILE_TOO_LARGE",
-                    "Please reduce the file size."
+                    $"Too many items in request ({request.InventoryItems.Count}). Maximum allowed is {maxItemsPerRequest}.",
+                    "TOO_MANY_ITEMS",
+                    $"Please split your request into smaller batches of {maxItemsPerRequest} items or less."
                 );
             }
 
-            using var stream = new MemoryStream();
-            await excelFile.CopyToAsync(stream);
-            stream.Position = 0;
+            result.TotalFilasLeidas = request.InventoryItems.Count;
 
-            ExcelPackage.License.SetNonCommercialOrganization("VHConsultor");
-
-            ExcelPackage package;
-            try
+            // Procesar cada item
+            for (int index = 0; index < request.InventoryItems.Count; index++)
             {
-                package = new ExcelPackage(stream);
-            }
-            catch (Exception ex)
-            {
-                throw new BulkUploadInventoryValidationException(
-                    "Failed to open Excel file. The file may be corrupted.",
-                    "INVALID_EXCEL_FORMAT",
-                    $"Please ensure the file is valid Excel (.xlsx). Error: {ex.Message}"
-                );
-            }
+                var itemRequest = request.InventoryItems[index];
+                int rowNumber = index + 1; // Para que coincida con la fila del Excel original
 
-            using (package)
-            {
-                if (package.Workbook.Worksheets.Count == 0)
+                try
                 {
-                    throw new BulkUploadInventoryValidationException(
-                        "The Excel file does not contain any worksheets.",
-                        "NO_WORKSHEETS",
-                        "Please ensure the Excel file contains at least one worksheet with data."
-                    );
-                }
-
-                var worksheet = package.Workbook.Worksheets[0];
-
-                if (worksheet.Dimension == null)
-                {
-                    throw new BulkUploadInventoryValidationException(
-                        "The worksheet is empty.",
-                        "EMPTY_WORKSHEET",
-                        "Please provide a worksheet with headers and data rows."
-                    );
-                }
-
-                // Headers esperados
-                var expectedHeaders = new List<string>
-                {
-                    "Merchant SKU", "Quantity", "Prep owner", "Labeling owner",
-                    "Units per box", "Number of boxes", "Box length (in)", "Box width (in)",
-                    "Box height (in)", "Box weight (lb)"
-                };
-
-                // Verificar headers
-                var headers = new List<string>();
-                for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
-                {
-                    var headerCell = worksheet.Cells[1, col].Value?.ToString()?.Trim();
-                    headers.Add(headerCell ?? "");
-                }
-
-                // Validar que los headers esperados estén presentes
-                var missingHeaders = new List<string>();
-                for (int i = 0; i < expectedHeaders.Count && i < headers.Count; i++)
-                {
-                    if (!string.Equals(headers[i], expectedHeaders[i], StringComparison.OrdinalIgnoreCase))
-                    {
-                        missingHeaders.Add(expectedHeaders[i]);
-                    }
-                }
-
-                if (missingHeaders.Any())
-                {
-                    throw new BulkUploadInventoryValidationException(
-                        $"Invalid Excel headers. Expected headers in order: [{string.Join(", ", expectedHeaders)}]. " +
-                        $"Please ensure your Excel file has the correct column headers.",
-                        "INVALID_HEADERS",
-                        "Verify the Excel file structure matches the expected format."
-                    );
-                }
-
-                // Procesar filas
-                int totalRows = worksheet.Dimension.End.Row;
-                result.TotalFilasLeidas = totalRows - 1; // excluir header
-
-                for (int row = 2; row <= totalRows; row++)
-                {
-                    try
-                    {
-                        var sku = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
-                        if (string.IsNullOrWhiteSpace(sku))
-                        {
-                            result.RegistrosConError++;
-                            result.Errores.Add(new BulkUploadInventoryError
-                            {
-                                Fila = row,
-                                Sku = "",
-                                Error = "SKU is required",
-                                ErrorCode = "MISSING_SKU"
-                            });
-                            continue;
-                        }
-
-                        var quantityStr = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
-                        int quantity = 0;
-                        if (!string.IsNullOrEmpty(quantityStr) && !int.TryParse(quantityStr, out quantity))
-                        {
-                            result.RegistrosConError++;
-                            result.Errores.Add(new BulkUploadInventoryError
-                            {
-                                Fila = row,
-                                Sku = sku,
-                                Error = "Quantity must be a valid integer",
-                                ErrorCode = "INVALID_QUANTITY"
-                            });
-                            continue;
-                        }
-
-                        // Buscar si el SKU ya existe para esta cuenta
-                        var existingItem = await _context.InventoryItems
-                            .FirstOrDefaultAsync(i => i.AmazonAccountId == amazonAccountId && i.Sku == sku);
-
-                        if (existingItem != null)
-                        {
-                            // Guardar cantidad ANTES de actualizar
-                            int qtyBefore = existingItem.QuantityOnHand;
-                            
-                            // Idempotente: actualizar
-                            existingItem.ProductName = null; // asumiendo que no viene en este Excel
-                            existingItem.PrepOwner = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
-                            existingItem.LabelingOwner = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
-                            existingItem.UnitsPerBox = ParseDecimal(worksheet.Cells[row, 5].Value?.ToString());
-                            existingItem.NumberOfBoxes = ParseInt(worksheet.Cells[row, 6].Value?.ToString());
-                            existingItem.BoxLengthIn = ParseDecimal(worksheet.Cells[row, 7].Value?.ToString());
-                            existingItem.BoxWidthIn = ParseDecimal(worksheet.Cells[row, 8].Value?.ToString());
-                            existingItem.BoxHeightIn = ParseDecimal(worksheet.Cells[row, 9].Value?.ToString());
-                            existingItem.BoxWeightLb = ParseDecimal(worksheet.Cells[row, 10].Value?.ToString());
-                            existingItem.QuantityOnHand = quantity;
-                            existingItem.UpdatedAt = DateTimeService.GetCostaRicaNow();
-
-                            await _context.SaveChangesAsync();
-
-                            // Crear movimiento con datos correctos
-                            int delta = quantity - qtyBefore;
-                            var movement = new InventoryMovement
-                            {
-                                InventoryItemId = existingItem.InventoryItemId,
-                                MovementType = "ADJUSTMENT",
-                                ReasonCode = "BULK_UPDATE",
-                                QuantityBefore = qtyBefore,
-                                QuantityDelta = delta,
-                                QuantityAfter = quantity,
-                                ReferenceType = "BulkInventoryUpload",
-                                Comments = $"Bulk upload update from file: {excelFile.FileName}",
-                                CreatedBy = currentUser,
-                                CreatedAt = DateTimeService.GetCostaRicaNow()
-                            };
-                            _context.InventoryMovements.Add(movement);
-                            await _context.SaveChangesAsync();
-
-                            result.RegistrosActualizados++;
-                        }
-                        else
-                        {
-                            // Crear nuevo
-                            var newItem = new InventoryItem
-                            {
-                                AmazonAccountId = amazonAccountId,
-                                Sku = sku,
-                                PrepOwner = worksheet.Cells[row, 3].Value?.ToString()?.Trim(),
-                                LabelingOwner = worksheet.Cells[row, 4].Value?.ToString()?.Trim(),
-                                UnitsPerBox = ParseDecimal(worksheet.Cells[row, 5].Value?.ToString()),
-                                NumberOfBoxes = ParseInt(worksheet.Cells[row, 6].Value?.ToString()),
-                                BoxLengthIn = ParseDecimal(worksheet.Cells[row, 7].Value?.ToString()),
-                                BoxWidthIn = ParseDecimal(worksheet.Cells[row, 8].Value?.ToString()),
-                                BoxHeightIn = ParseDecimal(worksheet.Cells[row, 9].Value?.ToString()),
-                                BoxWeightLb = ParseDecimal(worksheet.Cells[row, 10].Value?.ToString()),
-                                QuantityOnHand = quantity,
-                                CreatedAt = DateTimeService.GetCostaRicaNow()
-                            };
-                            _context.InventoryItems.Add(newItem);
-                            await _context.SaveChangesAsync();
-
-                            // Crear movimiento INITIAL_LOAD
-                            var movement = new InventoryMovement
-                            {
-                                InventoryItemId = newItem.InventoryItemId,
-                                MovementType = "INITIAL_LOAD",
-                                ReasonCode = "BULK_UPLOAD",
-                                QuantityBefore = 0,
-                                QuantityDelta = quantity,
-                                QuantityAfter = quantity,
-                                ReferenceType = "BulkInventoryUpload",
-                                Comments = $"Initial load from file: {excelFile.FileName}",
-                                CreatedBy = currentUser,
-                                CreatedAt = DateTimeService.GetCostaRicaNow()
-                            };
-                            _context.InventoryMovements.Add(movement);
-                            await _context.SaveChangesAsync();
-
-                            result.RegistrosCargadosOk++;
-                        }
-                    }
-                    catch (DbUpdateException dbEx)
-                    {
-                        result.RegistrosConError++;
-                        var innerMessage = dbEx.InnerException?.Message ?? dbEx.Message;
-                        result.Errores.Add(new BulkUploadInventoryError
-                        {
-                            Fila = row,
-                            Sku = worksheet.Cells[row, 1].Value?.ToString() ?? "",
-                            Error = $"Database error: {innerMessage}",
-                            ErrorCode = "DB_ERROR"
-                        });
-                    }
-                    catch (Exception ex)
+                    // Validaciones básicas por item
+                    if (string.IsNullOrWhiteSpace(itemRequest.Sku))
                     {
                         result.RegistrosConError++;
                         result.Errores.Add(new BulkUploadInventoryError
                         {
-                            Fila = row,
-                            Sku = worksheet.Cells[row, 1].Value?.ToString() ?? "",
-                            Error = ex.Message,
-                            ErrorCode = "PROCESSING_ERROR"
+                            Fila = rowNumber,
+                            Sku = "",
+                            Error = "SKU is required",
+                            ErrorCode = "MISSING_SKU"
                         });
+                        continue;
                     }
+
+                    // Limpiar el SKU
+                    itemRequest.Sku = itemRequest.Sku.Trim();
+
+                    // Validar cantidad
+                    if (itemRequest.Quantity < 0)
+                    {
+                        result.RegistrosConError++;
+                        result.Errores.Add(new BulkUploadInventoryError
+                        {
+                            Fila = rowNumber,
+                            Sku = itemRequest.Sku,
+                            Error = "Quantity cannot be negative",
+                            ErrorCode = "INVALID_QUANTITY"
+                        });
+                        continue;
+                    }
+
+                    // Validar valores numéricos opcionales
+                    if (itemRequest.UnitsPerBox.HasValue && itemRequest.UnitsPerBox.Value < 0)
+                    {
+                        result.RegistrosConError++;
+                        result.Errores.Add(new BulkUploadInventoryError
+                        {
+                            Fila = rowNumber,
+                            Sku = itemRequest.Sku,
+                            Error = "Units per box cannot be negative",
+                            ErrorCode = "INVALID_UNITS_PER_BOX"
+                        });
+                        continue;
+                    }
+
+                    if (itemRequest.NumberOfBoxes.HasValue && itemRequest.NumberOfBoxes.Value < 0)
+                    {
+                        result.RegistrosConError++;
+                        result.Errores.Add(new BulkUploadInventoryError
+                        {
+                            Fila = rowNumber,
+                            Sku = itemRequest.Sku,
+                            Error = "Number of boxes cannot be negative",
+                            ErrorCode = "INVALID_NUMBER_OF_BOXES"
+                        });
+                        continue;
+                    }
+
+                    // Validar dimensiones de caja si están presentes
+                    if (itemRequest.BoxLengthIn.HasValue && itemRequest.BoxLengthIn.Value <= 0)
+                    {
+                        result.RegistrosConError++;
+                        result.Errores.Add(new BulkUploadInventoryError
+                        {
+                            Fila = rowNumber,
+                            Sku = itemRequest.Sku,
+                            Error = "Box length must be greater than 0",
+                            ErrorCode = "INVALID_BOX_LENGTH"
+                        });
+                        continue;
+                    }
+
+                    if (itemRequest.BoxWidthIn.HasValue && itemRequest.BoxWidthIn.Value <= 0)
+                    {
+                        result.RegistrosConError++;
+                        result.Errores.Add(new BulkUploadInventoryError
+                        {
+                            Fila = rowNumber,
+                            Sku = itemRequest.Sku,
+                            Error = "Box width must be greater than 0",
+                            ErrorCode = "INVALID_BOX_WIDTH"
+                        });
+                        continue;
+                    }
+
+                    if (itemRequest.BoxHeightIn.HasValue && itemRequest.BoxHeightIn.Value <= 0)
+                    {
+                        result.RegistrosConError++;
+                        result.Errores.Add(new BulkUploadInventoryError
+                        {
+                            Fila = rowNumber,
+                            Sku = itemRequest.Sku,
+                            Error = "Box height must be greater than 0",
+                            ErrorCode = "INVALID_BOX_HEIGHT"
+                        });
+                        continue;
+                    }
+
+                    if (itemRequest.BoxWeightLb.HasValue && itemRequest.BoxWeightLb.Value <= 0)
+                    {
+                        result.RegistrosConError++;
+                        result.Errores.Add(new BulkUploadInventoryError
+                        {
+                            Fila = rowNumber,
+                            Sku = itemRequest.Sku,
+                            Error = "Box weight must be greater than 0",
+                            ErrorCode = "INVALID_BOX_WEIGHT"
+                        });
+                        continue;
+                    }
+
+                    // Buscar si el SKU ya existe para esta cuenta
+                    var existingItem = await _context.InventoryItems
+                        .FirstOrDefaultAsync(i => i.AmazonAccountId == request.AmazonAccountId && i.Sku == itemRequest.Sku);
+
+                    if (existingItem != null)
+                    {
+                        // Guardar cantidad ANTES de actualizar
+                        int qtyBefore = existingItem.QuantityOnHand;
+                        
+                        // Idempotente: actualizar
+                        existingItem.ProductName = itemRequest.ProductName?.Trim();
+                        existingItem.PrepOwner = itemRequest.PrepOwner?.Trim();
+                        existingItem.LabelingOwner = itemRequest.LabelingOwner?.Trim();
+                        existingItem.UnitsPerBox = itemRequest.UnitsPerBox;
+                        existingItem.NumberOfBoxes = itemRequest.NumberOfBoxes;
+                        existingItem.BoxLengthIn = itemRequest.BoxLengthIn;
+                        existingItem.BoxWidthIn = itemRequest.BoxWidthIn;
+                        existingItem.BoxHeightIn = itemRequest.BoxHeightIn;
+                        existingItem.BoxWeightLb = itemRequest.BoxWeightLb;
+                        existingItem.QuantityOnHand = itemRequest.Quantity;
+                        existingItem.UpdatedAt = DateTimeService.GetCostaRicaNow();
+
+                        await _context.SaveChangesAsync();
+
+                        // Crear movimiento con datos correctos
+                        int delta = itemRequest.Quantity - qtyBefore;
+                        var movement = new InventoryMovement
+                        {
+                            InventoryItemId = existingItem.InventoryItemId,
+                            MovementType = "ADJUSTMENT",
+                            ReasonCode = "BULK_UPDATE",
+                            QuantityBefore = qtyBefore,
+                            QuantityDelta = delta,
+                            QuantityAfter = itemRequest.Quantity,
+                            ReferenceType = "BulkInventoryUpload",
+                            Comments = $"Bulk upload update from JSON data",
+                            CreatedBy = currentUser,
+                            CreatedAt = DateTimeService.GetCostaRicaNow()
+                        };
+                        _context.InventoryMovements.Add(movement);
+                        await _context.SaveChangesAsync();
+
+                        result.RegistrosActualizados++;
+                    }
+                    else
+                    {
+                        // Crear nuevo
+                        var newItem = new InventoryItem
+                        {
+                            AmazonAccountId = request.AmazonAccountId,
+                            Sku = itemRequest.Sku,
+                            ProductName = itemRequest.ProductName?.Trim(),
+                            PrepOwner = itemRequest.PrepOwner?.Trim(),
+                            LabelingOwner = itemRequest.LabelingOwner?.Trim(),
+                            UnitsPerBox = itemRequest.UnitsPerBox,
+                            NumberOfBoxes = itemRequest.NumberOfBoxes,
+                            BoxLengthIn = itemRequest.BoxLengthIn,
+                            BoxWidthIn = itemRequest.BoxWidthIn,
+                            BoxHeightIn = itemRequest.BoxHeightIn,
+                            BoxWeightLb = itemRequest.BoxWeightLb,
+                            QuantityOnHand = itemRequest.Quantity,
+                            CreatedAt = DateTimeService.GetCostaRicaNow()
+                        };
+                        _context.InventoryItems.Add(newItem);
+                        await _context.SaveChangesAsync();
+
+                        // Crear movimiento INITIAL_LOAD
+                        var movement = new InventoryMovement
+                        {
+                            InventoryItemId = newItem.InventoryItemId,
+                            MovementType = "INITIAL_LOAD",
+                            ReasonCode = "BULK_UPLOAD",
+                            QuantityBefore = 0,
+                            QuantityDelta = itemRequest.Quantity,
+                            QuantityAfter = itemRequest.Quantity,
+                            ReferenceType = "BulkInventoryUpload",
+                            Comments = $"Initial load from JSON data",
+                            CreatedBy = currentUser,
+                            CreatedAt = DateTimeService.GetCostaRicaNow()
+                        };
+                        _context.InventoryMovements.Add(movement);
+                        await _context.SaveChangesAsync();
+
+                        result.RegistrosCargadosOk++;
+                    }
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    result.RegistrosConError++;
+                    var innerMessage = dbEx.InnerException?.Message ?? dbEx.Message;
+                    result.Errores.Add(new BulkUploadInventoryError
+                    {
+                        Fila = rowNumber,
+                        Sku = itemRequest?.Sku ?? "",
+                        Error = $"Database error: {innerMessage}",
+                        ErrorCode = "DB_ERROR"
+                    });
+                }
+                catch (Exception ex)
+                {
+                    result.RegistrosConError++;
+                    result.Errores.Add(new BulkUploadInventoryError
+                    {
+                        Fila = rowNumber,
+                        Sku = itemRequest?.Sku ?? "",
+                        Error = ex.Message,
+                        ErrorCode = "PROCESSING_ERROR"
+                    });
                 }
             }
 
@@ -301,20 +307,6 @@ public class BulkUploadInventoryCommand
         }
 
         return result;
-    }
-
-    private decimal? ParseDecimal(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return null;
-        if (decimal.TryParse(value, out var result)) return result;
-        return null;
-    }
-
-    private int? ParseInt(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return null;
-        if (int.TryParse(value, out var result)) return result;
-        return null;
     }
 }
 
@@ -361,10 +353,28 @@ public class BulkUploadInventoryValidationException : Exception
 }
 
 /// <summary>
-/// Request para bulk upload de inventario
+/// Request para bulk upload de inventario con datos JSON
 /// </summary>
 public class BulkUploadInventoryRequest
 {
     public int AmazonAccountId { get; set; }
-    public IFormFile ExcelFile { get; set; } = null!;
+    public List<InventoryItemRequest> InventoryItems { get; set; } = new();
+}
+
+/// <summary>
+/// Datos de un item de inventario individual para bulk upload
+/// </summary>
+public class InventoryItemRequest
+{
+    public string Sku { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public string? ProductName { get; set; }
+    public string? PrepOwner { get; set; }
+    public string? LabelingOwner { get; set; }
+    public decimal? UnitsPerBox { get; set; }
+    public int? NumberOfBoxes { get; set; }
+    public decimal? BoxLengthIn { get; set; }
+    public decimal? BoxWidthIn { get; set; }
+    public decimal? BoxHeightIn { get; set; }
+    public decimal? BoxWeightLb { get; set; }
 }
