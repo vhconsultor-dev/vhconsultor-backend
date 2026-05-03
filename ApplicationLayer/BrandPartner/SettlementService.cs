@@ -1,6 +1,5 @@
 using BusinessLayer.BrandPartner.Commands;
 using BusinessLayer.BrandPartner.Queries;
-using Microsoft.AspNetCore.Http;
 using ModelLayer.BrandPartner.Entities;
 
 namespace ApplicationLayer.BrandPartner;
@@ -28,11 +27,11 @@ public class SettlementService
     }
 
     /// <summary>
-    /// Carga masiva de settlement desde Excel de Amazon
+    /// Carga masiva de settlement desde datos JSON de Amazon
     /// </summary>
-    public async Task<BulkUploadSettlementResult> BulkUploadSettlementAsync(int amazonAccountId, IFormFile excelFile, string currentUser)
+    public async Task<BulkUploadSettlementResult> BulkUploadSettlementAsync(BulkUploadSettlementRequest request, string currentUser)
     {
-        return await _bulkUploadSettlementCommand.ExecuteAsync(amazonAccountId, excelFile, currentUser);
+        return await _bulkUploadSettlementCommand.ExecuteAsync(request, currentUser);
     }
 
     /// <summary>

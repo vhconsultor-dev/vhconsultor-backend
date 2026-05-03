@@ -1,9 +1,7 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ModelLayer;
 using ModelLayer.BrandPartner.Entities;
 using ModelLayer.Shared;
-using OfficeOpenXml;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -11,7 +9,7 @@ using System.Text.Json;
 namespace BusinessLayer.BrandPartner.Commands;
 
 /// <summary>
-/// Command para carga masiva de settlement desde Excel de Amazon
+/// Command para carga masiva de settlement desde datos JSON de Amazon
 /// Implementa validaciones estrictas e idempotencia por hash de línea
 /// </summary>
 public class BulkUploadSettlementCommand
@@ -23,7 +21,7 @@ public class BulkUploadSettlementCommand
         _context = context;
     }
 
-    public async Task<BulkUploadSettlementResult> ExecuteAsync(int amazonAccountId, IFormFile excelFile, string currentUser)
+    public async Task<BulkUploadSettlementResult> ExecuteAsync(BulkUploadSettlementRequest request, string currentUser)
     {
         var result = new BulkUploadSettlementResult
         {
@@ -33,212 +31,181 @@ public class BulkUploadSettlementCommand
         try
         {
             // ==== VALIDACIÓN 1: Amazon Account existe ====
-            var accountExists = await _context.AmazonAccounts.AnyAsync(a => a.AmazonAccountId == amazonAccountId);
+            var accountExists = await _context.AmazonAccounts.AnyAsync(a => a.AmazonAccountId == request.AmazonAccountId);
             if (!accountExists)
             {
                 throw new BulkUploadSettlementValidationException(
-                    $"Amazon Account with ID {amazonAccountId} does not exist.",
-                    $"La cuenta Amazon con ID {amazonAccountId} no existe.",
+                    $"Amazon Account with ID {request.AmazonAccountId} does not exist.",
+                    $"La cuenta Amazon con ID {request.AmazonAccountId} no existe.",
                     "ACCOUNT_NOT_FOUND",
                     "Please verify that the Amazon Account ID is correct."
                 );
             }
 
-            if (excelFile.Length == 0)
+            // ==== VALIDACIÓN 2: Hay datos para procesar ====
+            if (request.SettlementTransactions == null || !request.SettlementTransactions.Any())
             {
                 throw new BulkUploadSettlementValidationException(
-                    "The uploaded file is empty (0 bytes).",
-                    "El archivo subido está vacío (0 bytes).",
-                    "EMPTY_FILE",
-                    "Please select a valid Excel file with data."
+                    "No settlement transactions provided for processing.",
+                    "No se proporcionaron transacciones de settlement para procesar.",
+                    "NO_TRANSACTIONS",
+                    "Please provide at least one settlement transaction to upload."
                 );
             }
 
-            const long maxFileSize = 10 * 1024 * 1024; // 10 MB
-            if (excelFile.Length > maxFileSize)
+            // ==== VALIDACIÓN 3: Límite de transacciones ====
+            const int maxTransactionsPerRequest = 5000;
+            if (request.SettlementTransactions.Count > maxTransactionsPerRequest)
             {
                 throw new BulkUploadSettlementValidationException(
-                    $"File size ({excelFile.Length / (1024.0 * 1024.0):F2} MB) exceeds maximum of 10 MB.",
-                    $"El tamaño del archivo ({excelFile.Length / (1024.0 * 1024.0):F2} MB) excede el máximo de 10 MB.",
-                    "FILE_TOO_LARGE",
-                    "Please reduce the file size."
+                    $"Too many transactions in request ({request.SettlementTransactions.Count}). Maximum allowed is {maxTransactionsPerRequest}.",
+                    $"Demasiadas transacciones en el request ({request.SettlementTransactions.Count}). El máximo permitido es {maxTransactionsPerRequest}.",
+                    "TOO_MANY_TRANSACTIONS",
+                    $"Please split your request into smaller batches of {maxTransactionsPerRequest} transactions or less."
                 );
             }
 
-            using var stream = new MemoryStream();
-            await excelFile.CopyToAsync(stream);
-            stream.Position = 0;
-
-            ExcelPackage.License.SetNonCommercialOrganization("VHConsultor");
-
-            ExcelPackage package;
-            try
-            {
-                package = new ExcelPackage(stream);
-            }
-            catch (Exception ex)
+            // ==== VALIDACIÓN 4: Settlement ID consistente ====
+            var settlementIds = request.SettlementTransactions.Select(t => t.SettlementId).Distinct().ToList();
+            if (settlementIds.Count != 1)
             {
                 throw new BulkUploadSettlementValidationException(
-                    "Failed to open Excel file. The file may be corrupted.",
-                    "No se pudo abrir el archivo Excel. El archivo puede estar corrupto.",
-                    "INVALID_EXCEL_FORMAT",
-                    $"Please ensure the file is valid Excel (.xlsx). Error: {ex.Message}"
+                    $"All transactions must have the same settlement-id. Found {settlementIds.Count} different settlement IDs: [{string.Join(", ", settlementIds)}].",
+                    $"Todas las transacciones deben tener el mismo settlement-id. Se encontraron {settlementIds.Count} settlement IDs diferentes: [{string.Join(", ", settlementIds)}].",
+                    "INCONSISTENT_SETTLEMENT_ID",
+                    "Ensure all transactions belong to the same settlement batch."
                 );
             }
 
-            using (package)
+            string settlementId = settlementIds.First();
+            if (string.IsNullOrWhiteSpace(settlementId))
             {
-                if (package.Workbook.Worksheets.Count == 0)
+                throw new BulkUploadSettlementValidationException(
+                    "Settlement ID cannot be empty or null.",
+                    "El Settlement ID no puede estar vacío o nulo.",
+                    "MISSING_SETTLEMENT_ID",
+                    "Please provide a valid settlement ID for all transactions."
+                );
+            }
+
+            result.SettlementId = settlementId;
+
+            // ==== VALIDACIÓN 5: Settlement-id NO duplicado ====
+            var existingHeader = await _context.SettlementHeaders
+                .FirstOrDefaultAsync(h => h.AmazonAccountId == request.AmazonAccountId && h.SettlementId == settlementId);
+
+            if (existingHeader != null)
+            {
+                throw new BulkUploadSettlementValidationException(
+                    $"Settlement ID {settlementId} has already been processed for this Amazon account. " +
+                    $"Settlement was imported on {existingHeader.ImportedAt:yyyy-MM-dd HH:mm:ss}. " +
+                    "If you need to reprocess, please delete the existing settlement first.",
+                    $"El Settlement ID {settlementId} ya fue procesado para esta cuenta Amazon. " +
+                    $"El settlement fue importado el {existingHeader.ImportedAt:yyyy-MM-dd HH:mm:ss}. " +
+                    "Si necesita reprocesar, por favor elimine el settlement existente primero.",
+                    "SETTLEMENT_ALREADY_EXISTS",
+                    "Delete the existing settlement or verify you are uploading the correct file."
+                );
+            }
+
+            // ==== PROCESAR Y VALIDAR DATOS ====
+            result.TotalLinesProcessed = request.SettlementTransactions.Count;
+            var settlementRows = new List<SettlementRowData>();
+            var skusInFile = new HashSet<string>();
+
+            for (int index = 0; index < request.SettlementTransactions.Count; index++)
+            {
+                var transaction = request.SettlementTransactions[index];
+                int rowNumber = index + 1; // Para referencias consistentes
+
+                var rowData = new SettlementRowData
                 {
-                    throw new BulkUploadSettlementValidationException(
-                        "The Excel file does not contain any worksheets.",
-                        "El archivo Excel no contiene hojas de cálculo.",
-                        "NO_WORKSHEETS",
-                        "Please ensure the Excel file contains at least one worksheet with data."
-                    );
-                }
-
-                var worksheet = package.Workbook.Worksheets[0];
-
-                if (worksheet.Dimension == null)
-                {
-                    throw new BulkUploadSettlementValidationException(
-                        "The worksheet is empty.",
-                        "La hoja de cálculo está vacía.",
-                        "EMPTY_WORKSHEET",
-                        "Please provide a worksheet with headers and data rows."
-                    );
-                }
-
-                // Extraer settlement-id de la primera fila de datos
-                string? settlementId = worksheet.Cells[2, 1].Value?.ToString()?.Trim();
-                if (string.IsNullOrWhiteSpace(settlementId))
-                {
-                    throw new BulkUploadSettlementValidationException(
-                        "Cannot determine settlement-id from the Excel file. First data row is missing settlement-id.",
-                        "No se puede determinar el settlement-id del archivo Excel. La primera fila de datos no tiene settlement-id.",
-                        "MISSING_SETTLEMENT_ID",
-                        "Please ensure the first data row contains a valid settlement-id in column A."
-                    );
-                }
-
-                result.SettlementId = settlementId;
-
-                // ==== VALIDACIÓN 2: Settlement-id NO duplicado ====
-                var existingHeader = await _context.SettlementHeaders
-                    .FirstOrDefaultAsync(h => h.AmazonAccountId == amazonAccountId && h.SettlementId == settlementId);
-
-                if (existingHeader != null)
-                {
-                    throw new BulkUploadSettlementValidationException(
-                        $"Settlement ID {settlementId} has already been processed for this Amazon account. " +
-                        $"Settlement was imported on {existingHeader.ImportedAt:yyyy-MM-dd HH:mm:ss}. " +
-                        "If you need to reprocess, please delete the existing settlement first.",
-                        $"El Settlement ID {settlementId} ya fue procesado para esta cuenta Amazon. " +
-                        $"El settlement fue importado el {existingHeader.ImportedAt:yyyy-MM-dd HH:mm:ss}. " +
-                        "Si necesita reprocesar, por favor elimine el settlement existente primero.",
-                        "SETTLEMENT_ALREADY_EXISTS",
-                        "Delete the existing settlement or verify you are uploading the correct file."
-                    );
-                }
-
-                // ==== PARSEAR TODAS LAS LÍNEAS ====
-                int totalRows = worksheet.Dimension.End.Row;
-                result.TotalLinesProcessed = totalRows - 1; // excluir header
-
-                var settlementRows = new List<SettlementRowData>();
-                var skusInFile = new HashSet<string>();
-
-                for (int row = 2; row <= totalRows; row++)
-                {
-                    var rowData = new SettlementRowData
-                    {
-                        RowNumber = row,
-                        SettlementId = worksheet.Cells[row, 1].Value?.ToString()?.Trim(),
-                        SettlementStartDate = ParseDateTime(worksheet.Cells[row, 2].Value?.ToString()),
-                        SettlementEndDate = ParseDateTime(worksheet.Cells[row, 3].Value?.ToString()),
-                        DepositDate = ParseDateTime(worksheet.Cells[row, 4].Value?.ToString()),
-                        TotalAmount = ParseDecimal(worksheet.Cells[row, 5].Value?.ToString()),
-                        Currency = worksheet.Cells[row, 6].Value?.ToString()?.Trim(),
-                        TransactionType = worksheet.Cells[row, 7].Value?.ToString()?.Trim(),
-                        OrderId = worksheet.Cells[row, 8].Value?.ToString()?.Trim(),
-                        MerchantOrderId = worksheet.Cells[row, 9].Value?.ToString()?.Trim(),
-                        AdjustmentId = worksheet.Cells[row, 10].Value?.ToString()?.Trim(),
-                        ShipmentId = worksheet.Cells[row, 11].Value?.ToString()?.Trim(),
-                        MarketplaceName = worksheet.Cells[row, 12].Value?.ToString()?.Trim(),
-                        ShipmentFeeType = worksheet.Cells[row, 13].Value?.ToString()?.Trim(),
-                        ShipmentFeeAmount = ParseDecimal(worksheet.Cells[row, 14].Value?.ToString()),
-                        OrderFeeType = worksheet.Cells[row, 15].Value?.ToString()?.Trim(),
-                        OrderFeeAmount = ParseDecimal(worksheet.Cells[row, 16].Value?.ToString()),
-                        FulfillmentId = worksheet.Cells[row, 17].Value?.ToString()?.Trim(),
-                        PostedDate = ParseDateTime(worksheet.Cells[row, 18].Value?.ToString()),
-                        OrderItemCode = worksheet.Cells[row, 19].Value?.ToString()?.Trim(),
-                        MerchantOrderItemId = worksheet.Cells[row, 20].Value?.ToString()?.Trim(),
-                        MerchantAdjustmentItemId = worksheet.Cells[row, 21].Value?.ToString()?.Trim(),
-                        Sku = worksheet.Cells[row, 22].Value?.ToString()?.Trim(),
-                        QuantityPurchased = ParseDecimal(worksheet.Cells[row, 23].Value?.ToString()),
-                        PriceType = worksheet.Cells[row, 24].Value?.ToString()?.Trim(),
-                        PriceAmount = ParseDecimal(worksheet.Cells[row, 25].Value?.ToString()),
-                        ItemRelatedFeeType = worksheet.Cells[row, 26].Value?.ToString()?.Trim(),
-                        ItemRelatedFeeAmount = ParseDecimal(worksheet.Cells[row, 27].Value?.ToString()),
-                        MiscFeeAmount = ParseDecimal(worksheet.Cells[row, 28].Value?.ToString()),
-                        OtherFeeAmount = ParseDecimal(worksheet.Cells[row, 29].Value?.ToString()),
-                        OtherFeeReasonDescription = worksheet.Cells[row, 30].Value?.ToString()?.Trim(),
-                        PromotionId = worksheet.Cells[row, 31].Value?.ToString()?.Trim(),
-                        PromotionType = worksheet.Cells[row, 32].Value?.ToString()?.Trim(),
-                        PromotionAmount = ParseDecimal(worksheet.Cells[row, 33].Value?.ToString()),
-                        DirectPaymentType = worksheet.Cells[row, 34].Value?.ToString()?.Trim(),
-                        DirectPaymentAmount = ParseDecimal(worksheet.Cells[row, 35].Value?.ToString()),
-                        OtherAmount = ParseDecimal(worksheet.Cells[row, 36].Value?.ToString())
-                    };
-
-                    settlementRows.Add(rowData);
-
-                    if (!string.IsNullOrWhiteSpace(rowData.Sku))
-                    {
-                        skusInFile.Add(rowData.Sku);
-                    }
-                }
-
-                // ==== FASE 1: Validar TODOS los SKUs existen ====
-                if (skusInFile.Count > 0)
-                {
-                    var existingSkus = await _context.InventoryItems
-                        .Where(i => i.AmazonAccountId == amazonAccountId && skusInFile.Contains(i.Sku))
-                        .Select(i => i.Sku)
-                        .ToListAsync();
-
-                    var missingSKUs = skusInFile.Except(existingSkus).OrderBy(s => s).ToList();
-
-                    if (missingSKUs.Any())
-                    {
-                        result.Success = false;
-                        result.MissingSKUs = missingSKUs;
-                        result.MissingSkuDetails = BuildMissingSkuDetails(missingSKUs, settlementRows);
-                        result.MessageEN = $"Cannot process settlement {settlementId}. The following {missingSKUs.Count} SKU(s) do not exist in inventory: [{string.Join(", ", missingSKUs)}]. " +
-                                          "Please create these SKUs first using the inventory bulk upload or manual creation endpoint.";
-                        result.MessageES = $"No se puede procesar el settlement {settlementId}. Los siguientes {missingSKUs.Count} SKU(s) no existen en el inventario: [{string.Join(", ", missingSKUs)}]. " +
-                                          "Por favor cree estos SKUs primero usando la carga masiva de inventario o el endpoint de creación manual.";
-                        return result;
-                    }
-                }
-
-                // ==== CREAR SETTLEMENT HEADER ====
-                var header = new SettlementHeader
-                {
-                    AmazonAccountId = amazonAccountId,
-                    SettlementId = settlementId,
-                    SettlementStartDate = settlementRows.FirstOrDefault()?.SettlementStartDate,
-                    SettlementEndDate = settlementRows.FirstOrDefault()?.SettlementEndDate,
-                    DepositDate = settlementRows.FirstOrDefault()?.DepositDate,
-                    TotalAmount = settlementRows.FirstOrDefault()?.TotalAmount,
-                    Currency = settlementRows.FirstOrDefault()?.Currency,
-                    SourceFileName = excelFile.FileName,
-                    ImportedAt = DateTimeService.GetCostaRicaNow(),
-                    CreatedAt = DateTimeService.GetCostaRicaNow()
+                    RowNumber = rowNumber,
+                    SettlementId = transaction.SettlementId?.Trim(),
+                    SettlementStartDate = transaction.SettlementStartDate,
+                    SettlementEndDate = transaction.SettlementEndDate,
+                    DepositDate = transaction.DepositDate,
+                    TotalAmount = transaction.TotalAmount,
+                    Currency = transaction.Currency?.Trim(),
+                    TransactionType = transaction.TransactionType?.Trim(),
+                    OrderId = transaction.OrderId?.Trim(),
+                    MerchantOrderId = transaction.MerchantOrderId?.Trim(),
+                    AdjustmentId = transaction.AdjustmentId?.Trim(),
+                    ShipmentId = transaction.ShipmentId?.Trim(),
+                    MarketplaceName = transaction.MarketplaceName?.Trim(),
+                    ShipmentFeeType = transaction.ShipmentFeeType?.Trim(),
+                    ShipmentFeeAmount = transaction.ShipmentFeeAmount,
+                    OrderFeeType = transaction.OrderFeeType?.Trim(),
+                    OrderFeeAmount = transaction.OrderFeeAmount,
+                    FulfillmentId = transaction.FulfillmentId?.Trim(),
+                    PostedDate = transaction.PostedDate,
+                    OrderItemCode = transaction.OrderItemCode?.Trim(),
+                    MerchantOrderItemId = transaction.MerchantOrderItemId?.Trim(),
+                    MerchantAdjustmentItemId = transaction.MerchantAdjustmentItemId?.Trim(),
+                    Sku = transaction.Sku?.Trim(),
+                    QuantityPurchased = transaction.QuantityPurchased,
+                    PriceType = transaction.PriceType?.Trim(),
+                    PriceAmount = transaction.PriceAmount,
+                    ItemRelatedFeeType = transaction.ItemRelatedFeeType?.Trim(),
+                    ItemRelatedFeeAmount = transaction.ItemRelatedFeeAmount,
+                    MiscFeeAmount = transaction.MiscFeeAmount,
+                    OtherFeeAmount = transaction.OtherFeeAmount,
+                    OtherFeeReasonDescription = transaction.OtherFeeReasonDescription?.Trim(),
+                    PromotionId = transaction.PromotionId?.Trim(),
+                    PromotionType = transaction.PromotionType?.Trim(),
+                    PromotionAmount = transaction.PromotionAmount,
+                    DirectPaymentType = transaction.DirectPaymentType?.Trim(),
+                    DirectPaymentAmount = transaction.DirectPaymentAmount,
+                    OtherAmount = transaction.OtherAmount
                 };
-                _context.SettlementHeaders.Add(header);
-                await _context.SaveChangesAsync();
+
+                settlementRows.Add(rowData);
+
+                if (!string.IsNullOrWhiteSpace(rowData.Sku))
+                {
+                    skusInFile.Add(rowData.Sku);
+                }
+            }
+
+            // ==== FASE 1: Validar TODOS los SKUs existen ====
+            if (skusInFile.Count > 0)
+            {
+                var existingSkus = await _context.InventoryItems
+                    .Where(i => i.AmazonAccountId == request.AmazonAccountId && skusInFile.Contains(i.Sku))
+                    .Select(i => i.Sku)
+                    .ToListAsync();
+
+                var missingSKUs = skusInFile.Except(existingSkus).OrderBy(s => s).ToList();
+
+                if (missingSKUs.Any())
+                {
+                    result.Success = false;
+                    result.MissingSKUs = missingSKUs;
+                    result.MissingSkuDetails = BuildMissingSkuDetails(missingSKUs, settlementRows);
+                    result.MessageEN = $"Cannot process settlement {settlementId}. The following {missingSKUs.Count} SKU(s) do not exist in inventory: [{string.Join(", ", missingSKUs)}]. " +
+                                      "Please create these SKUs first using the inventory bulk upload or manual creation endpoint.";
+                    result.MessageES = $"No se puede procesar el settlement {settlementId}. Los siguientes {missingSKUs.Count} SKU(s) no existen en el inventario: [{string.Join(", ", missingSKUs)}]. " +
+                                      "Por favor cree estos SKUs primero usando la carga masiva de inventario o el endpoint de creación manual.";
+                    return result;
+                }
+            }
+
+            // ==== CREAR SETTLEMENT HEADER ====
+            var header = new SettlementHeader
+            {
+                AmazonAccountId = request.AmazonAccountId,
+                SettlementId = settlementId,
+                SettlementStartDate = settlementRows.FirstOrDefault()?.SettlementStartDate,
+                SettlementEndDate = settlementRows.FirstOrDefault()?.SettlementEndDate,
+                DepositDate = settlementRows.FirstOrDefault()?.DepositDate,
+                TotalAmount = settlementRows.FirstOrDefault()?.TotalAmount,
+                Currency = settlementRows.FirstOrDefault()?.Currency,
+                SourceFileName = "JSON_IMPORT",
+                ImportedAt = DateTimeService.GetCostaRicaNow(),
+                CreatedAt = DateTimeService.GetCostaRicaNow()
+            };
+            _context.SettlementHeaders.Add(header);
+            await _context.SaveChangesAsync();
 
                 // ==== PROCESAR LÍNEAS CON IDEMPOTENCIA ====
                 var skusAffected = new Dictionary<long, InventoryItem>();
@@ -269,7 +236,7 @@ public class BulkUploadSettlementCommand
                         if (affectsInventory && !string.IsNullOrWhiteSpace(rowData.Sku))
                         {
                             var inventoryItem = await _context.InventoryItems
-                                .FirstOrDefaultAsync(i => i.AmazonAccountId == amazonAccountId && i.Sku == rowData.Sku);
+                                .FirstOrDefaultAsync(i => i.AmazonAccountId == request.AmazonAccountId && i.Sku == rowData.Sku);
 
                             if (inventoryItem != null)
                             {
@@ -436,26 +403,25 @@ public class BulkUploadSettlementCommand
                     }
                 }
                 
-                // Guardar todo en una sola transacción
-                await _context.SaveChangesAsync();
+            // Guardar todo en una sola transacción
+            await _context.SaveChangesAsync();
 
-                result.SkusAffected = skusAffected.Count;
-                result.LinesRequiringManualAdjustment = manualAdjustmentList;
+            result.SkusAffected = skusAffected.Count;
+            result.LinesRequiringManualAdjustment = manualAdjustmentList;
 
-                if (manualAdjustmentList.Any())
-                {
-                    result.MessageEN = $"Settlement {settlementId} was processed with warnings. {result.LinesCreated} lines applied, {result.LinesSkipped} lines skipped (already processed), " +
-                                      $"{manualAdjustmentList.Count} lines require manual adjustment because they would leave inventory negative. " +
-                                      $"Please review the linesRequiringManualAdjustment field for details.";
-                    result.MessageES = $"El settlement {settlementId} se procesó con advertencias. {result.LinesCreated} líneas aplicadas, {result.LinesSkipped} líneas omitidas (ya procesadas), " +
-                                      $"{manualAdjustmentList.Count} líneas requieren ajuste manual porque la operación dejaría el inventario en negativo. " +
-                                      $"Revise el campo linesRequiringManualAdjustment para detalles.";
-                }
-                else
-                {
-                    result.MessageEN = $"Settlement {settlementId} processed successfully. {result.LinesCreated} lines applied, {result.LinesSkipped} lines skipped (already processed), {result.SkusAffected} SKUs affected.";
-                    result.MessageES = $"Settlement {settlementId} procesado exitosamente. {result.LinesCreated} líneas aplicadas, {result.LinesSkipped} líneas omitidas (ya procesadas), {result.SkusAffected} SKUs afectados.";
-                }
+            if (manualAdjustmentList.Any())
+            {
+                result.MessageEN = $"Settlement {settlementId} was processed with warnings. {result.LinesCreated} lines applied, {result.LinesSkipped} lines skipped (already processed), " +
+                                  $"{manualAdjustmentList.Count} lines require manual adjustment because they would leave inventory negative. " +
+                                  $"Please review the linesRequiringManualAdjustment field for details.";
+                result.MessageES = $"El settlement {settlementId} se procesó con advertencias. {result.LinesCreated} líneas aplicadas, {result.LinesSkipped} líneas omitidas (ya procesadas), " +
+                                  $"{manualAdjustmentList.Count} líneas requieren ajuste manual porque la operación dejaría el inventario en negativo. " +
+                                  $"Revise el campo linesRequiringManualAdjustment para detalles.";
+            }
+            else
+            {
+                result.MessageEN = $"Settlement {settlementId} processed successfully. {result.LinesCreated} lines applied, {result.LinesSkipped} lines skipped (already processed), {result.SkusAffected} SKUs affected.";
+                result.MessageES = $"Settlement {settlementId} procesado exitosamente. {result.LinesCreated} líneas aplicadas, {result.LinesSkipped} líneas omitidas (ya procesadas), {result.SkusAffected} SKUs afectados.";
             }
         }
         catch (BulkUploadSettlementValidationException)
@@ -508,19 +474,6 @@ public class BulkUploadSettlementCommand
         return 0;
     }
 
-    private DateTime? ParseDateTime(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return null;
-        if (DateTime.TryParse(value, out var result)) return result;
-        return null;
-    }
-
-    private decimal? ParseDecimal(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return null;
-        if (decimal.TryParse(value, out var result)) return result;
-        return null;
-    }
 
     private List<MissingSkuDetail> BuildMissingSkuDetails(List<string> missingSkus, List<SettlementRowData> settlementRows)
     {
@@ -680,10 +633,53 @@ public class BulkUploadSettlementValidationException : Exception
 }
 
 /// <summary>
-/// Request para bulk upload de settlement
+/// Request para bulk upload de settlement con datos JSON
 /// </summary>
 public class BulkUploadSettlementRequest
 {
     public int AmazonAccountId { get; set; }
-    public IFormFile ExcelFile { get; set; } = null!;
+    public List<SettlementTransactionRequest> SettlementTransactions { get; set; } = new();
+}
+
+/// <summary>
+/// Datos de una transacción de settlement individual para bulk upload
+/// </summary>
+public class SettlementTransactionRequest
+{
+    public string SettlementId { get; set; } = string.Empty;
+    public DateTime? SettlementStartDate { get; set; }
+    public DateTime? SettlementEndDate { get; set; }
+    public DateTime? DepositDate { get; set; }
+    public decimal? TotalAmount { get; set; }
+    public string? Currency { get; set; }
+    public string? TransactionType { get; set; }
+    public string? OrderId { get; set; }
+    public string? MerchantOrderId { get; set; }
+    public string? AdjustmentId { get; set; }
+    public string? ShipmentId { get; set; }
+    public string? MarketplaceName { get; set; }
+    public string? ShipmentFeeType { get; set; }
+    public decimal? ShipmentFeeAmount { get; set; }
+    public string? OrderFeeType { get; set; }
+    public decimal? OrderFeeAmount { get; set; }
+    public string? FulfillmentId { get; set; }
+    public DateTime? PostedDate { get; set; }
+    public string? OrderItemCode { get; set; }
+    public string? MerchantOrderItemId { get; set; }
+    public string? MerchantAdjustmentItemId { get; set; }
+    public string? Sku { get; set; }
+    public decimal? QuantityPurchased { get; set; }
+    public string? PriceType { get; set; }
+    public decimal? PriceAmount { get; set; }
+    public string? ItemRelatedFeeType { get; set; }
+    public decimal? ItemRelatedFeeAmount { get; set; }
+    public decimal? MiscFeeAmount { get; set; }
+    public decimal? OtherFeeAmount { get; set; }
+    public string? OtherFeeReasonDescription { get; set; }
+    public string? PromotionId { get; set; }
+    public string? PromotionType { get; set; }
+    public decimal? PromotionAmount { get; set; }
+    public string? DirectPaymentType { get; set; }
+    public decimal? DirectPaymentAmount { get; set; }
+    public decimal? OtherAmount { get; set; }
 }

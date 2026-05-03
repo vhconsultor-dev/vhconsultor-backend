@@ -28,11 +28,11 @@ public class SettlementController : ControllerBase
     }
 
     /// <summary>
-    /// Carga masiva de settlement desde Excel de Amazon
+    /// Carga masiva de settlement desde datos JSON de Amazon
     /// </summary>
     [HttpPost("bulk-upload")]
     public async Task<ActionResult<ResponseStructure<BulkUploadSettlementResult>>> BulkUploadSettlement(
-        [FromForm] BulkUploadSettlementRequest request)
+        [FromBody] BulkUploadSettlementRequest request)
     {
         try
         {
@@ -48,10 +48,7 @@ public class SettlementController : ControllerBase
             }
 
             var currentUser = HttpContext.User.Identity?.Name ?? "system";
-            var result = await _settlementService.BulkUploadSettlementAsync(
-                request.AmazonAccountId,
-                request.ExcelFile,
-                currentUser);
+            var result = await _settlementService.BulkUploadSettlementAsync(request, currentUser);
 
             if (!result.Success)
             {
@@ -83,20 +80,6 @@ public class SettlementController : ControllerBase
                 buvEx.Message,
                 errorNumber,
                 buvEx.MessageES
-            ));
-        }
-        catch (InvalidOperationException ioEx) when (ioEx.Message.Contains("ExcelPackage.License", StringComparison.OrdinalIgnoreCase))
-        {
-            var errorNumber = await _errorLogService.LogErrorAsync(
-                ioEx,
-                HttpContext,
-                "BulkUploadSettlement"
-            );
-
-            return BadRequest(ResponseStructure<BulkUploadSettlementResult>.BadRequest(
-                "The Excel processing component is not configured correctly. Please contact support.",
-                errorNumber,
-                "El componente de procesamiento de Excel no esta configurado correctamente. Por favor contacte a soporte."
             ));
         }
         catch (Exception ex)
