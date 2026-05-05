@@ -2,15 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using ModelLayer;
 using ModelLayer.BrandPartner.Entities;
 using ModelLayer.Shared;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 
 namespace BusinessLayer.BrandPartner.Commands;
 
 /// <summary>
 /// Command para carga masiva de settlement desde datos JSON de Amazon
-/// Implementa validaciones estrictas e idempotencia por hash de línea
 /// </summary>
 public class BulkUploadSettlementCommand
 {
@@ -207,43 +203,41 @@ public class BulkUploadSettlementCommand
             _context.SettlementHeaders.Add(header);
             await _context.SaveChangesAsync();
 
-                // ==== PROCESAR LÍNEAS CON IDEMPOTENCIA ====
+                // ==== PROCESAR LÍNEAS ====
                 var skusAffected = new Dictionary<long, InventoryItem>();
                 var manualAdjustmentList = new List<SettlementLineRequiringAdjustment>();
-                var rowHashesAddedInThisRequest = new HashSet<string>();
+                var orderIdsAddedInThisRequest = new HashSet<string>();
                 var pendingInventoryMovements = new List<(SettlementDetail Detail, InventoryMovement Movement)>();
 
                 foreach (var rowData in settlementRows)
                 {
                     try
                     {
-                        // Calcular hash para idempotencia
-                        var rowHash = CalculateRowHash(rowData);
-
-                        // Ya insertada en BD para este header (reintento / proceso previo)
-                        var existsInDatabase = await _context.SettlementDetails
-                            .AnyAsync(d => d.SettlementHeaderId == header.SettlementHeaderId && d.RowHash == rowHash);
-
-                        // Misma fila repetida más arriba en este mismo JSON (SaveChanges aún no ejecutado)
-                        var duplicateEarlierInPayload = rowHashesAddedInThisRequest.Contains(rowHash);
-
-                        if (existsInDatabase || duplicateEarlierInPayload)
+                        // Detectar duplicado por settlementId + orderId
+                        if (!string.IsNullOrWhiteSpace(rowData.OrderId))
                         {
-                            result.LinesSkipped++;
-                            var reason = duplicateEarlierInPayload ? "DUPLICATE_LINE_IN_SAME_REQUEST" : "ALREADY_STORED_FOR_THIS_SETTLEMENT";
-                            result.LinesSkippedDetails.Add(new SettlementLineSkippedDetail
+                            var existsInDatabase = await _context.SettlementDetails
+                                .AnyAsync(d => d.SettlementHeaderId == header.SettlementHeaderId && d.OrderId == rowData.OrderId);
+
+                            var duplicateEarlierInPayload = orderIdsAddedInThisRequest.Contains(rowData.OrderId);
+
+                            if (existsInDatabase || duplicateEarlierInPayload)
                             {
-                                RowNumber = rowData.RowNumber,
-                                SkipReasonCode = reason,
-                                RowHash = rowHash,
-                                MessageEN = duplicateEarlierInPayload
-                                    ? "Duplicate row: an identical line (same RowHash) appears earlier in this request. Only the first occurrence is inserted."
-                                    : "This line was already stored for this settlement import (same RowHash). Skipped to avoid duplicates.",
-                                MessageES = duplicateEarlierInPayload
-                                    ? "Fila duplicada: una línea idéntica (mismo RowHash) aparece antes en esta misma petición. Solo se inserta la primera ocurrencia."
-                                    : "Esta línea ya estaba guardada para este import de settlement (mismo RowHash). Se omitió para evitar duplicados."
-                            });
-                            continue;
+                                result.LinesSkipped++;
+                                var reason = duplicateEarlierInPayload ? "DUPLICATE_ORDER_IN_SAME_REQUEST" : "ORDER_ALREADY_STORED_FOR_THIS_SETTLEMENT";
+                                result.LinesSkippedDetails.Add(new SettlementLineSkippedDetail
+                                {
+                                    RowNumber = rowData.RowNumber,
+                                    SkipReasonCode = reason,
+                                    MessageEN = duplicateEarlierInPayload
+                                        ? $"Duplicate order: OrderId {rowData.OrderId} appears earlier in this request. Only the first occurrence is inserted."
+                                        : $"OrderId {rowData.OrderId} was already stored for this settlement. Skipped to avoid duplicates.",
+                                    MessageES = duplicateEarlierInPayload
+                                        ? $"Orden duplicada: el OrderId {rowData.OrderId} ya aparece antes en esta petición. Solo se inserta la primera ocurrencia."
+                                        : $"El OrderId {rowData.OrderId} ya estaba guardado para este settlement. Se omitió para evitar duplicados."
+                                });
+                                continue;
+                            }
                         }
 
                         // Determinar si afecta inventario
@@ -340,12 +334,11 @@ public class BulkUploadSettlementCommand
                             OtherAmount = rowData.OtherAmount,
                             AffectsInventory = affectsInventory,
                             InventoryDelta = affectsInventory ? inventoryDelta : null,
-                            RowHash = rowHash,
-                            RawRowJson = JsonSerializer.Serialize(rowData),
                             CreatedAt = DateTimeService.GetCostaRicaNow()
                         };
                         _context.SettlementDetails.Add(detail);
-                        rowHashesAddedInThisRequest.Add(rowHash);
+                        if (!string.IsNullOrWhiteSpace(rowData.OrderId))
+                            orderIdsAddedInThisRequest.Add(rowData.OrderId);
 
                         // Movimiento de inventario: se enlaza al SettlementDetailId después del primer SaveChanges
                         // (si no, SettlementDetailId queda 0 y falla la FK contra BrandPartner.SettlementDetails).
@@ -450,9 +443,9 @@ public class BulkUploadSettlementCommand
             result.LinesRequiringManualAdjustment = manualAdjustmentList;
 
             result.LinesSkippedMeaningEN =
-                "linesSkipped counts rows not inserted because the RowHash already existed: either DUPLICATE_LINE_IN_SAME_REQUEST (same line repeated in this JSON) or ALREADY_STORED_FOR_THIS_SETTLEMENT (already saved for this settlement header). See linesSkippedDetails per row.";
+                "linesSkipped counts rows not inserted because the OrderId already existed for this settlement: DUPLICATE_ORDER_IN_SAME_REQUEST (same OrderId repeated in this payload) or ORDER_ALREADY_STORED_FOR_THIS_SETTLEMENT (OrderId already saved for this settlement header). Rows without OrderId are never skipped. See linesSkippedDetails per row.";
             result.LinesSkippedMeaningES =
-                "linesSkipped cuenta filas no insertadas porque el RowHash ya existía: DUPLICATE_LINE_IN_SAME_REQUEST (misma línea repetida en este JSON) o ALREADY_STORED_FOR_THIS_SETTLEMENT (ya guardada para este encabezado de settlement). Ver linesSkippedDetails por fila.";
+                "linesSkipped cuenta filas no insertadas porque el OrderId ya existía para este settlement: DUPLICATE_ORDER_IN_SAME_REQUEST (mismo OrderId repetido en este payload) o ORDER_ALREADY_STORED_FOR_THIS_SETTLEMENT (OrderId ya guardado para este encabezado de settlement). Filas sin OrderId nunca se omiten. Ver linesSkippedDetails por fila.";
 
             if (manualAdjustmentList.Any())
             {
@@ -490,16 +483,6 @@ public class BulkUploadSettlementCommand
         }
 
         return result;
-    }
-
-    private string CalculateRowHash(SettlementRowData row)
-    {
-        var hashInput = $"{row.SettlementId}|{row.OrderId}|{row.Sku}|" +
-                       $"{row.PostedDate:yyyy-MM-dd HH:mm:ss}|{row.PriceAmount}|" +
-                       $"{row.TransactionType}|{row.QuantityPurchased}";
-        using var md5 = MD5.Create();
-        var hashBytes = md5.ComputeHash(Encoding.UTF8.GetBytes(hashInput));
-        return Convert.ToBase64String(hashBytes);
     }
 
     private bool ShouldAffectInventory(SettlementRowData row)
@@ -625,14 +608,13 @@ public class BulkUploadSettlementResult
 }
 
 /// <summary>
-/// Línea omitida por idempotencia (mismo RowHash).
+/// Línea omitida por duplicado de OrderId.
 /// </summary>
 public class SettlementLineSkippedDetail
 {
     public int RowNumber { get; set; }
-    /// <summary>DUPLICATE_LINE_IN_SAME_REQUEST | ALREADY_STORED_FOR_THIS_SETTLEMENT</summary>
+    /// <summary>DUPLICATE_ORDER_IN_SAME_REQUEST | ORDER_ALREADY_STORED_FOR_THIS_SETTLEMENT</summary>
     public string SkipReasonCode { get; set; } = string.Empty;
-    public string RowHash { get; set; } = string.Empty;
     public string MessageEN { get; set; } = string.Empty;
     public string MessageES { get; set; } = string.Empty;
 }
