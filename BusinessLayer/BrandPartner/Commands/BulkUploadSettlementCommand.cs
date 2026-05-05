@@ -211,6 +211,7 @@ public class BulkUploadSettlementCommand
                 var skusAffected = new Dictionary<long, InventoryItem>();
                 var manualAdjustmentList = new List<SettlementLineRequiringAdjustment>();
                 var rowHashesAddedInThisRequest = new HashSet<string>();
+                var pendingInventoryMovements = new List<(SettlementDetail Detail, InventoryMovement Movement)>();
 
                 foreach (var rowData in settlementRows)
                 {
@@ -346,7 +347,8 @@ public class BulkUploadSettlementCommand
                         _context.SettlementDetails.Add(detail);
                         rowHashesAddedInThisRequest.Add(rowHash);
 
-                        // Si afectó inventario, crear InventoryMovement
+                        // Movimiento de inventario: se enlaza al SettlementDetailId después del primer SaveChanges
+                        // (si no, SettlementDetailId queda 0 y falla la FK contra BrandPartner.SettlementDetails).
                         if (affectsInventory && inventoryItemId.HasValue && inventoryDelta != 0)
                         {
                             var inventoryItem = await _context.InventoryItems.FindAsync(inventoryItemId.Value);
@@ -356,19 +358,19 @@ public class BulkUploadSettlementCommand
                                 {
                                     InventoryItemId = inventoryItemId.Value,
                                     SettlementHeaderId = header.SettlementHeaderId,
-                                    SettlementDetailId = detail.SettlementDetailId,
+                                    SettlementDetailId = null,
                                     MovementType = "SETTLEMENT",
                                     ReasonCode = rowData.TransactionType,
                                     QuantityBefore = inventoryItem.QuantityOnHand - inventoryDelta,
                                     QuantityDelta = inventoryDelta,
                                     QuantityAfter = inventoryItem.QuantityOnHand,
                                     ReferenceType = "SettlementDetail",
-                                    ReferenceId = detail.SettlementDetailId.ToString(),
+                                    ReferenceId = null,
                                     Comments = $"Settlement {settlementId} | {rowData.TransactionType} {rowData.OrderId} | SKU {rowData.Sku}",
                                     CreatedBy = currentUser,
                                     CreatedAt = DateTimeService.GetCostaRicaNow()
                                 };
-                                _context.InventoryMovements.Add(movement);
+                                pendingInventoryMovements.Add((detail, movement));
                             }
                         }
 
@@ -394,35 +396,55 @@ public class BulkUploadSettlementCommand
                     }
                 }
 
-                // ==== FASE 4: Crear snapshots ====
-                foreach (var kvp in skusAffected)
+                await using var dbTransaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    var itemSnapshot = kvp.Value; // Esta es la cantidad ANTES
-                    var currentItem = await _context.InventoryItems.FindAsync(kvp.Key);
-                    
-                    if (currentItem != null)
+                    // 1) Persistir detalles + actualizaciones de inventario (genera SettlementDetailId en las entidades rastreadas)
+                    await _context.SaveChangesAsync();
+
+                    foreach (var (detail, movement) in pendingInventoryMovements)
                     {
-                        int qtyBefore = itemSnapshot.QuantityOnHand;
-                        int qtyAfter = currentItem.QuantityOnHand;
-                        int delta = qtyAfter - qtyBefore;
-                        
-                        var snapshot = new InventorySnapshot
-                        {
-                            SettlementHeaderId = header.SettlementHeaderId,
-                            InventoryItemId = currentItem.InventoryItemId,
-                            Sku = currentItem.Sku,
-                            QuantityBeforeSettlement = qtyBefore,
-                            QuantityDeltaSettlement = delta,
-                            QuantityAfterSettlement = qtyAfter,
-                            SnapshotDate = DateTimeService.GetCostaRicaNow(),
-                            CreatedAt = DateTimeService.GetCostaRicaNow()
-                        };
-                        _context.InventorySnapshots.Add(snapshot);
+                        movement.SettlementDetailId = detail.SettlementDetailId;
+                        movement.ReferenceId = detail.SettlementDetailId.ToString();
+                        _context.InventoryMovements.Add(movement);
                     }
+
+                    // ==== FASE 4: Crear snapshots ====
+                    foreach (var kvp in skusAffected)
+                    {
+                        var itemSnapshot = kvp.Value;
+                        var currentItem = await _context.InventoryItems.FindAsync(kvp.Key);
+
+                        if (currentItem != null)
+                        {
+                            int qtyBefore = itemSnapshot.QuantityOnHand;
+                            int qtyAfter = currentItem.QuantityOnHand;
+                            int delta = qtyAfter - qtyBefore;
+
+                            var snapshot = new InventorySnapshot
+                            {
+                                SettlementHeaderId = header.SettlementHeaderId,
+                                InventoryItemId = currentItem.InventoryItemId,
+                                Sku = currentItem.Sku,
+                                QuantityBeforeSettlement = qtyBefore,
+                                QuantityDeltaSettlement = delta,
+                                QuantityAfterSettlement = qtyAfter,
+                                SnapshotDate = DateTimeService.GetCostaRicaNow(),
+                                CreatedAt = DateTimeService.GetCostaRicaNow()
+                            };
+                            _context.InventorySnapshots.Add(snapshot);
+                        }
+                    }
+
+                    // 2) Movimientos de inventario + snapshots
+                    await _context.SaveChangesAsync();
+                    await dbTransaction.CommitAsync();
                 }
-                
-            // Guardar todo en una sola transacción
-            await _context.SaveChangesAsync();
+                catch
+                {
+                    await dbTransaction.RollbackAsync();
+                    throw;
+                }
 
             result.SkusAffected = skusAffected.Count;
             result.LinesRequiringManualAdjustment = manualAdjustmentList;
