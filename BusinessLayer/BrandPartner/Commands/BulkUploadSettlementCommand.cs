@@ -210,6 +210,7 @@ public class BulkUploadSettlementCommand
                 // ==== PROCESAR LÍNEAS CON IDEMPOTENCIA ====
                 var skusAffected = new Dictionary<long, InventoryItem>();
                 var manualAdjustmentList = new List<SettlementLineRequiringAdjustment>();
+                var rowHashesAddedInThisRequest = new HashSet<string>();
 
                 foreach (var rowData in settlementRows)
                 {
@@ -218,14 +219,30 @@ public class BulkUploadSettlementCommand
                         // Calcular hash para idempotencia
                         var rowHash = CalculateRowHash(rowData);
 
-                        // Verificar si ya fue procesada
-                        var exists = await _context.SettlementDetails
+                        // Ya insertada en BD para este header (reintento / proceso previo)
+                        var existsInDatabase = await _context.SettlementDetails
                             .AnyAsync(d => d.SettlementHeaderId == header.SettlementHeaderId && d.RowHash == rowHash);
 
-                        if (exists)
+                        // Misma fila repetida más arriba en este mismo JSON (SaveChanges aún no ejecutado)
+                        var duplicateEarlierInPayload = rowHashesAddedInThisRequest.Contains(rowHash);
+
+                        if (existsInDatabase || duplicateEarlierInPayload)
                         {
                             result.LinesSkipped++;
-                            continue; // ya procesada
+                            var reason = duplicateEarlierInPayload ? "DUPLICATE_LINE_IN_SAME_REQUEST" : "ALREADY_STORED_FOR_THIS_SETTLEMENT";
+                            result.LinesSkippedDetails.Add(new SettlementLineSkippedDetail
+                            {
+                                RowNumber = rowData.RowNumber,
+                                SkipReasonCode = reason,
+                                RowHash = rowHash,
+                                MessageEN = duplicateEarlierInPayload
+                                    ? "Duplicate row: an identical line (same RowHash) appears earlier in this request. Only the first occurrence is inserted."
+                                    : "This line was already stored for this settlement import (same RowHash). Skipped to avoid duplicates.",
+                                MessageES = duplicateEarlierInPayload
+                                    ? "Fila duplicada: una línea idéntica (mismo RowHash) aparece antes en esta misma petición. Solo se inserta la primera ocurrencia."
+                                    : "Esta línea ya estaba guardada para este import de settlement (mismo RowHash). Se omitió para evitar duplicados."
+                            });
+                            continue;
                         }
 
                         // Determinar si afecta inventario
@@ -327,6 +344,7 @@ public class BulkUploadSettlementCommand
                             CreatedAt = DateTimeService.GetCostaRicaNow()
                         };
                         _context.SettlementDetails.Add(detail);
+                        rowHashesAddedInThisRequest.Add(rowHash);
 
                         // Si afectó inventario, crear InventoryMovement
                         if (affectsInventory && inventoryItemId.HasValue && inventoryDelta != 0)
@@ -409,6 +427,11 @@ public class BulkUploadSettlementCommand
             result.SkusAffected = skusAffected.Count;
             result.LinesRequiringManualAdjustment = manualAdjustmentList;
 
+            result.LinesSkippedMeaningEN =
+                "linesSkipped counts rows not inserted because the RowHash already existed: either DUPLICATE_LINE_IN_SAME_REQUEST (same line repeated in this JSON) or ALREADY_STORED_FOR_THIS_SETTLEMENT (already saved for this settlement header). See linesSkippedDetails per row.";
+            result.LinesSkippedMeaningES =
+                "linesSkipped cuenta filas no insertadas porque el RowHash ya existía: DUPLICATE_LINE_IN_SAME_REQUEST (misma línea repetida en este JSON) o ALREADY_STORED_FOR_THIS_SETTLEMENT (ya guardada para este encabezado de settlement). Ver linesSkippedDetails por fila.";
+
             if (manualAdjustmentList.Any())
             {
                 result.MessageEN = $"Settlement {settlementId} was processed with warnings. {result.LinesCreated} lines applied, {result.LinesSkipped} lines skipped (already processed), " +
@@ -422,6 +445,14 @@ public class BulkUploadSettlementCommand
             {
                 result.MessageEN = $"Settlement {settlementId} processed successfully. {result.LinesCreated} lines applied, {result.LinesSkipped} lines skipped (already processed), {result.SkusAffected} SKUs affected.";
                 result.MessageES = $"Settlement {settlementId} procesado exitosamente. {result.LinesCreated} líneas aplicadas, {result.LinesSkipped} líneas omitidas (ya procesadas), {result.SkusAffected} SKUs afectados.";
+            }
+
+            // Ninguna línea aplicada pero hubo errores por fila (ej. esquema BD desactualizado)
+            if (result.LinesCreated == 0 && result.Errores.Count > 0)
+            {
+                result.Success = false;
+                result.MessageEN = $"Settlement {settlementId} could not apply detail lines. {result.Errores.Count} row error(s). First error: {result.Errores.First().Error}";
+                result.MessageES = $"El settlement {settlementId} no pudo aplicar las líneas de detalle. {result.Errores.Count} error(es) por fila. Primer error: {result.Errores.First().Error}";
             }
         }
         catch (BulkUploadSettlementValidationException)
@@ -560,10 +591,28 @@ public class BulkUploadSettlementResult
     public int LinesSkipped { get; set; }
     public int LinesCreated { get; set; }
     public int SkusAffected { get; set; }
+    /// <summary>Bilingual explanation of what linesSkipped means (always present for clarity).</summary>
+    public string LinesSkippedMeaningEN { get; set; } = string.Empty;
+    public string LinesSkippedMeaningES { get; set; } = string.Empty;
+    /// <summary>One entry per skipped row: duplicate in payload or already persisted for this settlement header.</summary>
+    public List<SettlementLineSkippedDetail> LinesSkippedDetails { get; set; } = new();
     public List<string> MissingSKUs { get; set; } = new();
     public List<MissingSkuDetail> MissingSkuDetails { get; set; } = new();
     public List<SettlementLineRequiringAdjustment> LinesRequiringManualAdjustment { get; set; } = new();
     public List<BulkUploadSettlementError> Errores { get; set; } = new();
+}
+
+/// <summary>
+/// Línea omitida por idempotencia (mismo RowHash).
+/// </summary>
+public class SettlementLineSkippedDetail
+{
+    public int RowNumber { get; set; }
+    /// <summary>DUPLICATE_LINE_IN_SAME_REQUEST | ALREADY_STORED_FOR_THIS_SETTLEMENT</summary>
+    public string SkipReasonCode { get; set; } = string.Empty;
+    public string RowHash { get; set; } = string.Empty;
+    public string MessageEN { get; set; } = string.Empty;
+    public string MessageES { get; set; } = string.Empty;
 }
 
 public class MissingSkuDetail
