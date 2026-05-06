@@ -27,6 +27,8 @@ public class DBcontext : DbContext
     public DbSet<Invoice> Invoices { get; set; }
     public DbSet<InvoiceItem> InvoiceItems { get; set; }
     public DbSet<InvoiceAttachment> InvoiceAttachments { get; set; }
+    public DbSet<ManualInvoiceHeader> ManualInvoiceHeaders { get; set; }
+    public DbSet<ManualInvoiceDetail> ManualInvoiceDetails { get; set; }
     public DbSet<AmazonMarketplace> AmazonMarketplaces { get; set; }
     public DbSet<AmazonAccount> AmazonAccounts { get; set; }
     public DbSet<AmazonAccountMarketplace> AmazonAccountMarketplaces { get; set; }
@@ -616,6 +618,68 @@ public class DBcontext : DbContext
             entity.HasOne(e => e.Invoice)
                 .WithMany(i => i.InvoiceAttachments)
                 .HasForeignKey(e => e.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configuración de ManualInvoiceHeader (Corporate)
+        modelBuilder.Entity<ManualInvoiceHeader>(entity =>
+        {
+            entity.ToTable("ManualInvoiceHeaders", "Corporate");
+            entity.HasKey(e => e.ManualInvoiceHeaderId);
+            entity.Property(e => e.ManualInvoiceHeaderId).ValueGeneratedOnAdd();
+            entity.Property(e => e.CustomerId).IsRequired();
+            entity.Property(e => e.InvoiceNumber).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.InvoiceDate).IsRequired();
+            entity.Property(e => e.DueDate).IsRequired();
+            entity.Property(e => e.CurrencyCode).HasMaxLength(10).IsRequired();
+            entity.Property(e => e.ExchangeRate).HasColumnType("decimal(18,6)").IsRequired().HasDefaultValue(1m);
+            entity.Property(e => e.SubTotal).HasColumnType("decimal(15,2)").IsRequired().HasDefaultValue(0m);
+            entity.Property(e => e.DiscountAmount).HasColumnType("decimal(15,2)").IsRequired().HasDefaultValue(0m);
+            entity.Property(e => e.TaxRate).HasColumnType("decimal(5,2)").IsRequired().HasDefaultValue(0m);
+            entity.Property(e => e.TaxAmount).HasColumnType("decimal(15,2)").IsRequired().HasDefaultValue(0m);
+            entity.Property(e => e.Total).HasColumnType("decimal(15,2)").IsRequired().HasDefaultValue(0m);
+            entity.Property(e => e.Status).HasMaxLength(20).IsRequired().HasDefaultValue("Draft");
+            entity.Property(e => e.PaymentStatus).HasMaxLength(20).IsRequired().HasDefaultValue("Unpaid");
+            entity.Property(e => e.PaymentReference).HasMaxLength(200);
+            entity.Property(e => e.DepositNumber).HasMaxLength(100);
+            entity.Property(e => e.TransferNumber).HasMaxLength(100);
+            entity.Property(e => e.BillingName).HasMaxLength(200);
+            entity.Property(e => e.BillingEmail).HasMaxLength(200);
+            entity.Property(e => e.Lang).HasMaxLength(5).IsRequired().HasDefaultValue("es");
+            entity.Property(e => e.LastModifiedBy).HasMaxLength(100);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+
+            entity.HasIndex(e => e.InvoiceNumber).IsUnique();
+            entity.HasIndex(e => e.CustomerId);
+
+            entity.HasOne(e => e.Customer)
+                .WithMany()
+                .HasForeignKey(e => e.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configuración de ManualInvoiceDetail (Corporate)
+        modelBuilder.Entity<ManualInvoiceDetail>(entity =>
+        {
+            entity.ToTable("ManualInvoiceDetails", "Corporate");
+            entity.HasKey(e => e.ManualInvoiceDetailId);
+            entity.Property(e => e.ManualInvoiceDetailId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ManualInvoiceHeaderId).IsRequired();
+            entity.Property(e => e.ServiceDescription).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.UnitLabel).HasMaxLength(50);
+            entity.Property(e => e.Quantity).HasColumnType("decimal(18,4)").IsRequired().HasDefaultValue(1m);
+            entity.Property(e => e.UnitPrice).HasColumnType("decimal(15,2)").IsRequired();
+            entity.Property(e => e.DiscountPercent).HasColumnType("decimal(5,2)").IsRequired().HasDefaultValue(0m);
+            entity.Property(e => e.DiscountAmount).HasColumnType("decimal(15,2)").IsRequired().HasDefaultValue(0m);
+            entity.Property(e => e.LineTotal).HasColumnType("decimal(15,2)").IsRequired();
+            entity.Property(e => e.TaxApplicable).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.DisplayOrder).IsRequired().HasDefaultValue(0);
+            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("DATEADD(hour, -6, GETUTCDATE())");
+
+            entity.HasOne(e => e.Header)
+                .WithMany(h => h.Details)
+                .HasForeignKey(e => e.ManualInvoiceHeaderId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

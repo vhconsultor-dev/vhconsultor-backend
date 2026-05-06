@@ -115,6 +115,8 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 // Invoice Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.GenerateInvoicesRequest>, BusinessLayer.Corporate.Validators.GenerateInvoicesValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkInvoiceAsPaidRequest>, BusinessLayer.Corporate.Validators.MarkInvoiceAsPaidValidator>();
+// Manual Invoice Validators
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateManualInvoiceHeaderRequest>, BusinessLayer.Corporate.Validators.CreateManualInvoiceHeaderValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonMarketplaceRequest>, BusinessLayer.Corporate.Validators.CreateAmazonMarketplaceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonMarketplaceRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonMarketplaceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonAccountRequest>, BusinessLayer.Corporate.Validators.CreateAmazonAccountValidator>();
@@ -254,6 +256,7 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.PricingServiceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.BusinessTypeService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.PlatformService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.InvoiceService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.ManualInvoiceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.BillingReportService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonMarketplaceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountService>();
@@ -330,6 +333,11 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PricingServiceQueryRe
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.BusinessTypeQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.PlatformQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.InvoiceQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateManualInvoiceHeaderCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateManualInvoiceHeaderCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteManualInvoiceHeaderCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.MarkManualInvoiceAsPaidCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.ManualInvoiceQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.BillingReportQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonMarketplaceQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateAmazonMarketplaceCommand>();
