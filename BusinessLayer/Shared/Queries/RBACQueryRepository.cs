@@ -406,17 +406,19 @@ public class RBACQueryRepository
     #region Helper Methods
 
     /// <summary>
-    /// Obtiene todos los permisos efectivos de un usuario (roles + permisos directos - denegaciones)
+    /// Obtiene todos los permisos efectivos de un usuario (roles + permisos directos - denegaciones).
+    /// Si se indica applicationKey, filtra solo los permisos del recurso de esa aplicación.
     /// </summary>
-    public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId)
+    public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId, string? applicationKey = null)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
-        const string sql = @"
+        var sql = @"
             SELECT DISTINCT p.PermissionId, p.ResourceId, p.ActionId, p.PermissionName, p.PermissionKey, p.Description, p.IsActive, p.CreatedAt, p.UpdatedAt
             FROM [Global].[Permissions] p
+            INNER JOIN [Global].[Resources] r ON r.ResourceId = p.ResourceId
             WHERE p.IsActive = 1
             AND (
                 -- Permisos desde roles
@@ -443,10 +445,20 @@ public class RBACQueryRepository
                 FROM [Global].[UserPermissionDenials] upd
                 WHERE upd.UserId = @UserId 
                 AND upd.IsActive = 1
-            )
-            ORDER BY p.PermissionName";
+            )";
 
-        return await connection.QueryAsync<Permission>(sql, new { UserId = userId });
+        if (!string.IsNullOrWhiteSpace(applicationKey))
+        {
+            sql += @"
+            AND r.ApplicationId = (
+                SELECT ApplicationId FROM [Global].[Applications]
+                WHERE ApplicationKey = @ApplicationKey AND IsActive = 1
+            )";
+        }
+
+        sql += " ORDER BY p.PermissionName";
+
+        return await connection.QueryAsync<Permission>(sql, new { UserId = userId, ApplicationKey = applicationKey });
     }
 
     #endregion

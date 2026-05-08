@@ -258,9 +258,9 @@ public class RBACService
 
     #region Helper Methods
 
-    public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId)
+    public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId, string? applicationKey = null)
     {
-        return await _queryRepository.GetEffectiveUserPermissionsAsync(userId);
+        return await _queryRepository.GetEffectiveUserPermissionsAsync(userId, applicationKey);
     }
 
     #endregion

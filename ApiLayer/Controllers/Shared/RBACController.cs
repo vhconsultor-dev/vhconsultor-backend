@@ -297,11 +297,11 @@ public class RBACController : ControllerBase
     /// Obtiene todos los permisos efectivos de un usuario (roles + permisos directos - denegaciones)
     /// </summary>
     [HttpGet("user-effective-permissions/{userId}")]
-    public async Task<IActionResult> GetEffectiveUserPermissions(int userId)
+    public async Task<IActionResult> GetEffectiveUserPermissions(int userId, [FromQuery] string? applicationKey = null)
     {
         try
         {
-            var permissions = await _rbacService.GetEffectiveUserPermissionsAsync(userId);
+            var permissions = await _rbacService.GetEffectiveUserPermissionsAsync(userId, applicationKey);
             var permissionsList = permissions.ToList();
 
             var response = ResponseStructure<object>.Success(permissionsList, $"{permissionsList.Count} permiso(s) efectivo(s) encontrado(s)");
