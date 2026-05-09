@@ -24,50 +24,61 @@ public class RBACQueryRepository
         string? resourceName = null,
         string? resourceKey = null,
         string? module = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        string? applicationKey = null)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
         var sql = @"
-            SELECT ResourceId, ResourceName, ResourceKey, Description, Module, IsActive, CreatedAt, UpdatedAt
-            FROM [Global].[Resources]
+            SELECT r.ResourceId, r.ApplicationId, r.ResourceName, r.ResourceKey, r.Description, r.Module, r.IsActive, r.CreatedAt, r.UpdatedAt
+            FROM [Global].[Resources] r
             WHERE 1=1";
 
         var parameters = new DynamicParameters();
 
         if (resourceId.HasValue)
         {
-            sql += " AND ResourceId = @ResourceId";
+            sql += " AND r.ResourceId = @ResourceId";
             parameters.Add("ResourceId", resourceId.Value);
         }
 
         if (!string.IsNullOrEmpty(resourceName))
         {
-            sql += " AND ResourceName LIKE '%' + @ResourceName + '%'";
+            sql += " AND r.ResourceName LIKE '%' + @ResourceName + '%'";
             parameters.Add("ResourceName", resourceName);
         }
 
         if (!string.IsNullOrEmpty(resourceKey))
         {
-            sql += " AND ResourceKey = @ResourceKey";
+            sql += " AND r.ResourceKey = @ResourceKey";
             parameters.Add("ResourceKey", resourceKey);
         }
 
         if (!string.IsNullOrEmpty(module))
         {
-            sql += " AND Module = @Module";
+            sql += " AND r.Module = @Module";
             parameters.Add("Module", module);
         }
 
         if (isActive.HasValue)
         {
-            sql += " AND IsActive = @IsActive";
+            sql += " AND r.IsActive = @IsActive";
             parameters.Add("IsActive", isActive.Value);
         }
 
-        sql += " ORDER BY ResourceName";
+        if (!string.IsNullOrWhiteSpace(applicationKey))
+        {
+            sql += @"
+            AND r.ApplicationId = (
+                SELECT ApplicationId FROM [Global].[Applications]
+                WHERE ApplicationKey = @ApplicationKey AND IsActive = 1
+            )";
+            parameters.Add("ApplicationKey", applicationKey);
+        }
+
+        sql += " ORDER BY r.ResourceName";
 
         return await connection.QueryAsync<Resource>(sql, parameters);
     }
@@ -138,7 +149,7 @@ public class RBACQueryRepository
         await connection.OpenAsync();
 
         var sql = @"
-            SELECT PermissionId, ResourceId, ActionId, PermissionName, PermissionKey, Description, IsActive, CreatedAt, UpdatedAt
+            SELECT PermissionId, ApplicationId, ResourceId, ActionId, PermissionName, PermissionKey, Description, IsActive, CreatedAt, UpdatedAt
             FROM [Global].[Permissions]
             WHERE 1=1";
 
@@ -188,50 +199,61 @@ public class RBACQueryRepository
         string? roleName = null,
         string? roleKey = null,
         bool? isSystemRole = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        string? applicationKey = null)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
         var sql = @"
-            SELECT RoleId, RoleName, RoleKey, Description, IsSystemRole, IsActive, CreatedAt, UpdatedAt
-            FROM [Global].[Roles]
+            SELECT r.RoleId, r.ApplicationId, r.RoleName, r.RoleKey, r.Description, r.IsSystemRole, r.IsActive, r.CreatedAt, r.UpdatedAt
+            FROM [Global].[Roles] r
             WHERE 1=1";
 
         var parameters = new DynamicParameters();
 
         if (roleId.HasValue)
         {
-            sql += " AND RoleId = @RoleId";
+            sql += " AND r.RoleId = @RoleId";
             parameters.Add("RoleId", roleId.Value);
         }
 
         if (!string.IsNullOrEmpty(roleName))
         {
-            sql += " AND RoleName LIKE '%' + @RoleName + '%'";
+            sql += " AND r.RoleName LIKE '%' + @RoleName + '%'";
             parameters.Add("RoleName", roleName);
         }
 
         if (!string.IsNullOrEmpty(roleKey))
         {
-            sql += " AND RoleKey = @RoleKey";
+            sql += " AND r.RoleKey = @RoleKey";
             parameters.Add("RoleKey", roleKey);
         }
 
         if (isSystemRole.HasValue)
         {
-            sql += " AND IsSystemRole = @IsSystemRole";
+            sql += " AND r.IsSystemRole = @IsSystemRole";
             parameters.Add("IsSystemRole", isSystemRole.Value);
         }
 
         if (isActive.HasValue)
         {
-            sql += " AND IsActive = @IsActive";
+            sql += " AND r.IsActive = @IsActive";
             parameters.Add("IsActive", isActive.Value);
         }
 
-        sql += " ORDER BY RoleName";
+        if (!string.IsNullOrWhiteSpace(applicationKey))
+        {
+            sql += @"
+            AND r.ApplicationId = (
+                SELECT ApplicationId FROM [Global].[Applications]
+                WHERE ApplicationKey = @ApplicationKey AND IsActive = 1
+            )";
+            parameters.Add("ApplicationKey", applicationKey);
+        }
+
+        sql += " ORDER BY r.RoleName";
 
         return await connection.QueryAsync<Role>(sql, parameters);
     }
@@ -279,14 +301,15 @@ public class RBACQueryRepository
     public async Task<IEnumerable<UserRole>> GetUserRolesAsync(
         int? userId = null,
         int? roleId = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        int? applicationId = null)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
         var sql = @"
-            SELECT UserRoleId, UserId, RoleId, AssignedBy, AssignedAt, ExpiresAt, IsActive
+            SELECT UserRoleId, ApplicationId, UserId, RoleId, AssignedBy, AssignedAt, ExpiresAt, IsActive
             FROM [Global].[UserRoles]
             WHERE 1=1";
 
@@ -308,6 +331,12 @@ public class RBACQueryRepository
         {
             sql += " AND IsActive = @IsActive";
             parameters.Add("IsActive", isActive.Value);
+        }
+
+        if (applicationId.HasValue)
+        {
+            sql += " AND ApplicationId = @ApplicationId";
+            parameters.Add("ApplicationId", applicationId.Value);
         }
 
         sql += " ORDER BY AssignedAt DESC";
@@ -404,6 +433,21 @@ public class RBACQueryRepository
     #endregion
 
     #region Helper Methods
+
+    /// <summary>
+    /// Resuelve el ApplicationId a partir del ApplicationKey.
+    /// Retorna 0 si no se encuentra.
+    /// </summary>
+    public async Task<int> ResolveApplicationIdAsync(string applicationKey)
+    {
+        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        return await connection.QuerySingleOrDefaultAsync<int>(
+            "SELECT ApplicationId FROM [Global].[Applications] WHERE ApplicationKey = @ApplicationKey AND IsActive = 1",
+            new { ApplicationKey = applicationKey });
+    }
 
     /// <summary>
     /// Obtiene todos los permisos efectivos de un usuario (roles + permisos directos - denegaciones).

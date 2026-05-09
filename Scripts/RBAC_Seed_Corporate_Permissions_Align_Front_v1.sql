@@ -134,6 +134,7 @@ INSERT INTO @Resources (ResourceName, ResourceKey, Module, Description) VALUES
 (N'Customers',                       N'corporate.customers',                       N'customers', N'Gestión de clientes Corporate'),
 (N'Contracts',                       N'corporate.contracts',                       N'contracts', N'Contratos por cliente'),
 (N'Invoices',                        N'corporate.invoices',                        N'invoices',  N'Facturas por contrato'),
+(N'Leads',                           N'corporate.leads',                           N'leads',     N'Lead management (contact form submissions + manually created leads)'),
 (N'Billing reports',                 N'corporate.reports.billing',                 N'reports',   N'Reporte de facturación'),
 (N'Amazon orders',                   N'corporate.amazon.orders',                   N'amazon',    N'Pedidos Amazon'),
 (N'Settings – Corporate users',      N'corporate.settings.users',                  N'settings',  N'Usuarios Corporate'),
@@ -190,6 +191,15 @@ INSERT INTO @PermSpec VALUES
 (N'corporate.invoices', N'update',    N'corporate.invoices.update',    N'Invoices · Update'),
 (N'corporate.invoices', N'delete',    N'corporate.invoices.delete',    N'Invoices · Delete'),
 (N'corporate.invoices', N'export',    N'corporate.invoices.export',    N'Invoices · Export');
+
+/* --- corporate.leads --- */
+INSERT INTO @PermSpec VALUES
+(N'corporate.leads', N'page.view', N'corporate.leads.page.view', N'Leads · Page view'),
+(N'corporate.leads', N'read',      N'corporate.leads.read',      N'Leads · Read'),
+(N'corporate.leads', N'create',    N'corporate.leads.create',    N'Leads · Create'),
+(N'corporate.leads', N'update',    N'corporate.leads.update',    N'Leads · Update'),
+(N'corporate.leads', N'delete',    N'corporate.leads.delete',    N'Leads · Delete'),
+(N'corporate.leads', N'export',    N'corporate.leads.export',    N'Leads · Export');
 
 /* --- corporate.reports.billing --- */
 INSERT INTO @PermSpec VALUES

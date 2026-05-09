@@ -32,11 +32,12 @@ public class RBACController : ControllerBase
         [FromQuery] string? resourceName = null,
         [FromQuery] string? resourceKey = null,
         [FromQuery] string? module = null,
-        [FromQuery] bool? isActive = true)
+        [FromQuery] bool? isActive = true,
+        [FromQuery] string? applicationKey = null)
     {
         try
         {
-            var resources = await _rbacService.GetResourcesAsync(resourceId, resourceName, resourceKey, module, isActive);
+            var resources = await _rbacService.GetResourcesAsync(resourceId, resourceName, resourceKey, module, isActive, applicationKey);
             var resourcesList = resources.ToList();
 
             if (!resourcesList.Any())
@@ -145,11 +146,12 @@ public class RBACController : ControllerBase
         [FromQuery] string? roleName = null,
         [FromQuery] string? roleKey = null,
         [FromQuery] bool? isSystemRole = null,
-        [FromQuery] bool? isActive = true)
+        [FromQuery] bool? isActive = true,
+        [FromQuery] string? applicationKey = null)
     {
         try
         {
-            var roles = await _rbacService.GetRolesAsync(roleId, roleName, roleKey, isSystemRole, isActive);
+            var roles = await _rbacService.GetRolesAsync(roleId, roleName, roleKey, isSystemRole, isActive, applicationKey);
             var rolesList = roles.ToList();
 
             if (!rolesList.Any())
@@ -210,11 +212,12 @@ public class RBACController : ControllerBase
     public async Task<IActionResult> GetUserRoles(
         [FromQuery] int? userId = null,
         [FromQuery] int? roleId = null,
-        [FromQuery] bool? isActive = true)
+        [FromQuery] bool? isActive = true,
+        [FromQuery] int? applicationId = null)
     {
         try
         {
-            var userRoles = await _rbacService.GetUserRolesAsync(userId, roleId, isActive);
+            var userRoles = await _rbacService.GetUserRolesAsync(userId, roleId, isActive, applicationId);
             var userRolesList = userRoles.ToList();
 
             if (!userRolesList.Any())
@@ -319,16 +322,26 @@ public class RBACController : ControllerBase
     #region POST - Create
 
     /// <summary>
-    /// Crea un nuevo recurso
+    /// Crea un nuevo recurso. Si ApplicationId no se provee en el body, se puede indicar applicationKey como query param.
     /// </summary>
     [HttpPost("resources")]
-    public async Task<IActionResult> CreateResource([FromBody] Resource resource)
+    public async Task<IActionResult> CreateResource([FromBody] Resource resource, [FromQuery] string? applicationKey = null)
     {
         try
         {
+            if (resource.ApplicationId == 0 && !string.IsNullOrWhiteSpace(applicationKey))
+            {
+                resource.ApplicationId = await _rbacService.ResolveApplicationIdAsync(applicationKey);
+            }
+
             var resourceId = await _rbacService.CreateResourceAsync(resource);
             var response = ResponseStructure<object>.Success(new { resourceId }, "Recurso creado exitosamente");
             return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
         }
         catch (Exception ex)
         {
@@ -376,16 +389,26 @@ public class RBACController : ControllerBase
     }
 
     /// <summary>
-    /// Crea un nuevo rol
+    /// Crea un nuevo rol. Si ApplicationId no se provee en el body, se puede indicar applicationKey como query param.
     /// </summary>
     [HttpPost("roles")]
-    public async Task<IActionResult> CreateRole([FromBody] Role role)
+    public async Task<IActionResult> CreateRole([FromBody] Role role, [FromQuery] string? applicationKey = null)
     {
         try
         {
+            if (role.ApplicationId == 0 && !string.IsNullOrWhiteSpace(applicationKey))
+            {
+                role.ApplicationId = await _rbacService.ResolveApplicationIdAsync(applicationKey);
+            }
+
             var roleId = await _rbacService.CreateRoleAsync(role);
             var response = ResponseStructure<object>.Success(new { roleId }, "Rol creado exitosamente");
             return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
         }
         catch (Exception ex)
         {

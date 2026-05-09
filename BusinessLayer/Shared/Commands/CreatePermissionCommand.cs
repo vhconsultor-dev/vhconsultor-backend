@@ -62,6 +62,7 @@ public class CreatePermissionCommand
         {
             ResourceId = request.ResourceId,
             ActionId = request.ActionId,
+            ApplicationId = resource.ApplicationId,
             PermissionName = request.PermissionName,
             PermissionKey = request.PermissionKey,
             Description = request.Description,

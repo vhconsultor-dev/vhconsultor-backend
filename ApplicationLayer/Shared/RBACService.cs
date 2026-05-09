@@ -28,9 +28,10 @@ public class RBACService
         string? resourceName = null,
         string? resourceKey = null,
         string? module = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        string? applicationKey = null)
     {
-        return await _queryRepository.GetResourcesAsync(resourceId, resourceName, resourceKey, module, isActive);
+        return await _queryRepository.GetResourcesAsync(resourceId, resourceName, resourceKey, module, isActive, applicationKey);
     }
 
     public async Task<int> CreateResourceAsync(Resource resource)
@@ -110,9 +111,10 @@ public class RBACService
         string? roleName = null,
         string? roleKey = null,
         bool? isSystemRole = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        string? applicationKey = null)
     {
-        return await _queryRepository.GetRolesAsync(roleId, roleName, roleKey, isSystemRole, isActive);
+        return await _queryRepository.GetRolesAsync(roleId, roleName, roleKey, isSystemRole, isActive, applicationKey);
     }
 
     public async Task<int> CreateRoleAsync(Role role)
@@ -167,9 +169,10 @@ public class RBACService
     public async Task<IEnumerable<UserRole>> GetUserRolesAsync(
         int? userId = null,
         int? roleId = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        int? applicationId = null)
     {
-        return await _queryRepository.GetUserRolesAsync(userId, roleId, isActive);
+        return await _queryRepository.GetUserRolesAsync(userId, roleId, isActive, applicationId);
     }
 
     public async Task<int> AssignRoleToUserAsync(int userId, int roleId, int applicationId = 0, int? assignedBy = null, DateTime? expiresAt = null)
@@ -261,6 +264,18 @@ public class RBACService
     public async Task<IEnumerable<Permission>> GetEffectiveUserPermissionsAsync(int userId, string? applicationKey = null)
     {
         return await _queryRepository.GetEffectiveUserPermissionsAsync(userId, applicationKey);
+    }
+
+    /// <summary>
+    /// Resuelve applicationKey → applicationId contra [Global].[Applications].
+    /// Lanza InvalidOperationException si no se encuentra.
+    /// </summary>
+    public async Task<int> ResolveApplicationIdAsync(string applicationKey)
+    {
+        var applicationId = await _queryRepository.ResolveApplicationIdAsync(applicationKey);
+        if (applicationId == 0)
+            throw new InvalidOperationException($"Application with key '{applicationKey}' not found or is inactive.");
+        return applicationId;
     }
 
     #endregion

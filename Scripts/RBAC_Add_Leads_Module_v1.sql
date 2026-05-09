@@ -1,6 +1,11 @@
 /*
   RBAC – Add Leads Module to Corporate
   =====================================
+  NOTA (v1): El módulo Leads ya está integrado en el seed principal
+    RBAC_Seed_Corporate_Permissions_Align_Front_v1.sql (desde su actualización).
+    Este script se mantiene por compatibilidad para entornos que ya tienen
+    el seed principal aplicado sin Leads. Es idempotente (no duplica nada).
+
   Fuentes de verdad en código:
     - src/config/features.ts   → featureKey: 'corporate.leads'
     - src/config/permissions.ts → PERMISSIONS.LEADS
