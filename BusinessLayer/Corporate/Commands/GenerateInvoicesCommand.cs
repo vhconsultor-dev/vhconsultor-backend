@@ -89,8 +89,8 @@ public class GenerateInvoicesCommand
         if (!contract.FeeAmount.HasValue || contract.FeeAmount.Value <= 0)
         {
             throw new InvalidOperationException(
-                $"Fixed amount contracts must have a valid FeeAmount greater than zero. " +
-                $"Contract {contract.ContractNumber} has FeeAmount = {contract.FeeAmount}");
+                $"Los contratos de monto fijo deben tener un monto válido mayor a cero. " +
+                $"El contrato {contract.ContractNumber} tiene FeeAmount = {contract.FeeAmount?.ToString() ?? "null"}");
         }
 
         // 9. Para contratos de monto fijo, cada factura tiene el mismo monto
@@ -189,19 +189,27 @@ public class GenerateInvoicesCommand
         var errors = new List<string>();
 
         if (!contract.StartDate.HasValue)
-            errors.Add("Contract must have a StartDate");
+            errors.Add("El contrato debe tener una fecha de inicio (StartDate)");
+        else if (contract.StartDate.Value.Date > DateTime.Now.Date)
+            errors.Add($"La fecha de inicio del contrato ({contract.StartDate.Value:yyyy-MM-dd}) no puede ser futura");
 
         if (!contract.EndDate.HasValue)
-            errors.Add("Contract must have an EndDate");
+            errors.Add("El contrato debe tener una fecha de finalización (EndDate)");
+        else if (contract.StartDate.HasValue && contract.EndDate.Value <= contract.StartDate.Value)
+            errors.Add("La fecha de finalización debe ser posterior a la fecha de inicio");
 
         if (string.IsNullOrEmpty(contract.PaymentFrequency))
-            errors.Add("Contract must have a PaymentFrequency");
+            errors.Add("El contrato debe tener una frecuencia de pago (PaymentFrequency)");
+        else if (!IsValidPaymentFrequency(contract.PaymentFrequency))
+            errors.Add($"Frecuencia de pago inválida: '{contract.PaymentFrequency}'. Valores válidos: Monthly, Quarterly, SemiAnnual, Annual");
 
         if (string.IsNullOrEmpty(contract.CurrencyCode))
-            errors.Add("Contract must have a CurrencyCode");
+            errors.Add("El contrato debe tener un código de moneda (CurrencyCode)");
+        else if (contract.CurrencyCode.Length != 3)
+            errors.Add($"Código de moneda inválido: '{contract.CurrencyCode}'. Debe ser de 3 caracteres (ej: USD, EUR)");
 
         if (errors.Any())
-            throw new InvalidOperationException($"Validation failed: {string.Join(", ", errors)}");
+            throw new InvalidOperationException(string.Join("; ", errors));
     }
 
     /// <summary>
@@ -254,8 +262,13 @@ public class GenerateInvoicesCommand
             "Quarterly" => 3,
             "SemiAnnual" => 6,
             "Annual" => 12,
-            _ => throw new ArgumentException($"Frecuencia no válida: {paymentFrequency}")
+            _ => throw new ArgumentException($"Frecuencia de pago inválida: {paymentFrequency}")
         };
+    }
+
+    private static bool IsValidPaymentFrequency(string paymentFrequency)
+    {
+        return paymentFrequency is "Monthly" or "Quarterly" or "SemiAnnual" or "Annual";
     }
 
     private DateTime CalculateDueDate(DateTime invoiceDate, int? paymentDay)

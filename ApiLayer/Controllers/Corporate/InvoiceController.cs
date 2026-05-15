@@ -28,6 +28,7 @@ public class InvoiceController : ControllerBase
     private readonly CraftMyPdfSettings _craftMyPdfSettings;
     private readonly SendGridService _sendGridService;
     private readonly SendGridSettings _sendGridSettings;
+    private readonly IErrorLogService _errorLogService;
 
     public InvoiceController(
         InvoiceService invoiceService,
@@ -35,7 +36,8 @@ public class InvoiceController : ControllerBase
         CraftMyPdfService craftMyPdfService,
         IOptions<CraftMyPdfSettings> craftMyPdfSettings,
         SendGridService sendGridService,
-        IOptions<SendGridSettings> sendGridSettings)
+        IOptions<SendGridSettings> sendGridSettings,
+        IErrorLogService errorLogService)
     {
         _invoiceService = invoiceService;
         _validationService = validationService;
@@ -43,6 +45,7 @@ public class InvoiceController : ControllerBase
         _craftMyPdfSettings = craftMyPdfSettings.Value;
         _sendGridService = sendGridService;
         _sendGridSettings = sendGridSettings.Value;
+        _errorLogService = errorLogService;
     }
 
     #region POST - Generate Invoices
@@ -66,8 +69,9 @@ public class InvoiceController : ControllerBase
         var validationResult = await _validationService.ValidateAsync(request);
         if (!validationResult.IsValid)
         {
+            var errors = string.Join("; ", validationResult.Errors);
             var response = ResponseStructure<object>.ValidationError(
-                string.Join(", ", validationResult.Errors));
+                $"Validación fallida: {errors}");
             return BadRequest(response);
         }
 
@@ -77,7 +81,7 @@ public class InvoiceController : ControllerBase
 
             if (!result.Success)
             {
-                // Ya existen facturas
+                // Ya existen facturas al máximo permitido
                 var warningResponse = ResponseStructure<GenerateInvoicesResponse>.ValidationError(
                     result.Message);
                 warningResponse.Data = result;
@@ -92,31 +96,35 @@ public class InvoiceController : ControllerBase
         }
         catch (KeyNotFoundException ex)
         {
-            var errorResponse = ResponseStructure<object>.Error(ex.Message, 404);
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Contrato no encontrado: {ex.Message}", 404);
             return NotFound(errorResponse);
         }
         catch (InvalidOperationException ex)
         {
+            // Errores de validación de negocio (tipo de contrato, campos faltantes, etc.)
             var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
             return BadRequest(errorResponse);
         }
         catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
         {
-            // Capturar el inner exception para más detalles
             var innerMessage = ex.InnerException?.Message ?? ex.Message;
-            var fullMessage = $"Error al guardar en la base de datos: {innerMessage}";
+            var additionalData = $"ContractId: {contractId}, Operation: GenerateFixedInvoices";
             
-            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            var errorNumber = await _errorLogService.LogErrorAsync(ex, HttpContext, additionalData);
+            
+            // Mensajes más específicos según el tipo de error de BD
+            var userMessage = GetDatabaseErrorMessage(innerMessage);
+            var errorResponse = ResponseStructure<object>.Error(userMessage, 500, errorNumber);
             return StatusCode(500, errorResponse);
         }
         catch (Exception ex)
         {
-            var innerMessage = ex.InnerException?.Message ?? string.Empty;
-            var fullMessage = $"Error al generar facturas: {ex.Message}";
-            if (!string.IsNullOrEmpty(innerMessage))
-                fullMessage += $" | Inner: {innerMessage}";
+            var additionalData = $"ContractId: {contractId}, Operation: GenerateFixedInvoices";
+            var errorNumber = await _errorLogService.LogErrorAsync(ex, HttpContext, additionalData);
                 
-            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            var errorResponse = ResponseStructure<object>.Error(
+                "Error inesperado al generar las facturas. Contacte al soporte técnico.", 500, errorNumber);
             return StatusCode(500, errorResponse);
         }
     }
@@ -310,8 +318,9 @@ public class InvoiceController : ControllerBase
         var validationResult = await _validationService.ValidateAsync(request);
         if (!validationResult.IsValid)
         {
+            var errors = string.Join("; ", validationResult.Errors);
             var response = ResponseStructure<object>.ValidationError(
-                string.Join(", ", validationResult.Errors));
+                $"Validación fallida: {errors}");
             return BadRequest(response);
         }
 
@@ -327,22 +336,34 @@ public class InvoiceController : ControllerBase
         }
         catch (KeyNotFoundException ex)
         {
-            var errorResponse = ResponseStructure<object>.Error(ex.Message, 404);
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Contrato no encontrado: {ex.Message}", 404);
             return NotFound(errorResponse);
         }
         catch (InvalidOperationException ex)
         {
+            // Errores de validación de negocio (tipo de contrato, límite de facturas, etc.)
             var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
             return BadRequest(errorResponse);
         }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? ex.Message;
+            var additionalData = $"ContractId: {request.ContractId}, Amount: {request.Amount}, Operation: CreateManualInvoice";
+            
+            var errorNumber = await _errorLogService.LogErrorAsync(ex, HttpContext, additionalData);
+            
+            var userMessage = GetDatabaseErrorMessage(innerMessage);
+            var errorResponse = ResponseStructure<object>.Error(userMessage, 500, errorNumber);
+            return StatusCode(500, errorResponse);
+        }
         catch (Exception ex)
         {
-            var innerMessage = ex.InnerException?.Message ?? string.Empty;
-            var fullMessage = $"Error creating manual invoice: {ex.Message}";
-            if (!string.IsNullOrEmpty(innerMessage))
-                fullMessage += $" | Inner: {innerMessage}";
+            var additionalData = $"ContractId: {request.ContractId}, Amount: {request.Amount}, Operation: CreateManualInvoice";
+            var errorNumber = await _errorLogService.LogErrorAsync(ex, HttpContext, additionalData);
                 
-            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            var errorResponse = ResponseStructure<object>.Error(
+                "Error inesperado al crear la factura manual. Contacte al soporte técnico.", 500, errorNumber);
             return StatusCode(500, errorResponse);
         }
     }
@@ -369,8 +390,9 @@ public class InvoiceController : ControllerBase
         var validationResult = await _validationService.ValidateAsync(request);
         if (!validationResult.IsValid)
         {
+            var errors = string.Join("; ", validationResult.Errors);
             var response = ResponseStructure<object>.ValidationError(
-                string.Join(", ", validationResult.Errors));
+                $"Validación fallida: {errors}");
             return BadRequest(response);
         }
 
@@ -380,6 +402,7 @@ public class InvoiceController : ControllerBase
 
             if (!result.Success)
             {
+                // Ya existen facturas al máximo permitido
                 var warningResponse = ResponseStructure<GeneratePercentageInvoicesResponse>.ValidationError(
                     result.Message);
                 warningResponse.Data = result;
@@ -394,22 +417,34 @@ public class InvoiceController : ControllerBase
         }
         catch (KeyNotFoundException ex)
         {
-            var errorResponse = ResponseStructure<object>.Error(ex.Message, 404);
+            var errorResponse = ResponseStructure<object>.Error(
+                $"Contrato no encontrado: {ex.Message}", 404);
             return NotFound(errorResponse);
         }
         catch (InvalidOperationException ex)
         {
+            // Errores de validación de negocio (tipo de contrato, campos faltantes, etc.)
             var errorResponse = ResponseStructure<object>.ValidationError(ex.Message);
             return BadRequest(errorResponse);
         }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            var innerMessage = ex.InnerException?.Message ?? ex.Message;
+            var additionalData = $"ContractId: {contractId}, Operation: GeneratePercentageInvoices";
+            
+            var errorNumber = await _errorLogService.LogErrorAsync(ex, HttpContext, additionalData);
+            
+            var userMessage = GetDatabaseErrorMessage(innerMessage);
+            var errorResponse = ResponseStructure<object>.Error(userMessage, 500, errorNumber);
+            return StatusCode(500, errorResponse);
+        }
         catch (Exception ex)
         {
-            var innerMessage = ex.InnerException?.Message ?? string.Empty;
-            var fullMessage = $"Error generating percentage invoices: {ex.Message}";
-            if (!string.IsNullOrEmpty(innerMessage))
-                fullMessage += $" | Inner: {innerMessage}";
+            var additionalData = $"ContractId: {contractId}, Operation: GeneratePercentageInvoices";
+            var errorNumber = await _errorLogService.LogErrorAsync(ex, HttpContext, additionalData);
                 
-            var errorResponse = ResponseStructure<object>.Error(fullMessage, 500);
+            var errorResponse = ResponseStructure<object>.Error(
+                "Error inesperado al generar las facturas de porcentaje. Contacte al soporte técnico.", 500, errorNumber);
             return StatusCode(500, errorResponse);
         }
     }
@@ -965,6 +1000,55 @@ public class InvoiceController : ControllerBase
                 500);
             return StatusCode(500, errorResponse);
         }
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    /// <summary>
+    /// Convierte errores técnicos de base de datos en mensajes comprensibles para el usuario
+    /// </summary>
+    private static string GetDatabaseErrorMessage(string technicalMessage)
+    {
+        var lowerMessage = technicalMessage.ToLowerInvariant();
+        
+        // Foreign Key violations
+        if (lowerMessage.Contains("foreign key") || lowerMessage.Contains("reference"))
+        {
+            if (lowerMessage.Contains("contract"))
+                return "El contrato especificado no existe o fue eliminado.";
+            if (lowerMessage.Contains("currency"))
+                return "El código de moneda del contrato no es válido.";
+            if (lowerMessage.Contains("user"))
+                return "El usuario especificado no existe.";
+                
+            return "Error de referencia: uno de los datos relacionados no existe.";
+        }
+        
+        // Unique constraint violations
+        if (lowerMessage.Contains("unique") || lowerMessage.Contains("duplicate"))
+        {
+            if (lowerMessage.Contains("invoicenumber"))
+                return "Ya existe una factura con ese número.";
+                
+            return "Error de duplicado: ya existe un registro con esos datos.";
+        }
+        
+        // Check constraints
+        if (lowerMessage.Contains("check constraint"))
+        {
+            return "Los datos no cumplen con las validaciones requeridas.";
+        }
+        
+        // Timeout or connection issues
+        if (lowerMessage.Contains("timeout") || lowerMessage.Contains("connection"))
+        {
+            return "Error de conexión con la base de datos. Intente nuevamente.";
+        }
+        
+        // Generic database error
+        return "Error en la base de datos. Verifique los datos e intente nuevamente.";
     }
 
     #endregion

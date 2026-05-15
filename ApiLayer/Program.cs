@@ -114,6 +114,8 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CalculatePricingCommand>, BusinessLayer.Corporate.Validators.CalculatePricingCommandValidator>();
 // Invoice Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.GenerateInvoicesRequest>, BusinessLayer.Corporate.Validators.GenerateInvoicesValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.GeneratePercentageInvoicesRequest>, BusinessLayer.Corporate.Validators.GeneratePercentageInvoicesValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateManualInvoiceRequest>, BusinessLayer.Corporate.Validators.CreateManualInvoiceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkInvoiceAsPaidRequest>, BusinessLayer.Corporate.Validators.MarkInvoiceAsPaidValidator>();
 // Manual Invoice Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateManualInvoiceHeaderRequest>, BusinessLayer.Corporate.Validators.CreateManualInvoiceHeaderValidator>();

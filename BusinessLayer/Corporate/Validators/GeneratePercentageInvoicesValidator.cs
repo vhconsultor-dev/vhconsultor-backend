@@ -11,6 +11,6 @@ public class GeneratePercentageInvoicesValidator : AbstractValidator<GeneratePer
     public GeneratePercentageInvoicesValidator()
     {
         RuleFor(x => x.ContractId)
-            .GreaterThan(0).WithMessage("Contract ID must be greater than 0");
+            .GreaterThan(0).WithMessage("El ID del contrato debe ser mayor a 0");
     }
 }
