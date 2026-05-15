@@ -8,7 +8,8 @@ namespace ModelLayer.BrandPartner.Entities;
 public class BrandPartnerTwoFactorCode
 {
     public int TwoFactorCodeId { get; set; }
-    public int BrandPartnerUserId { get; set; }
+    /// <summary>FK a <see cref="Shared.Entities.User.UserId"/> ([Global].[Users]).</summary>
+    public int UserId { get; set; }
     public string Code { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime ExpiresAt { get; set; }

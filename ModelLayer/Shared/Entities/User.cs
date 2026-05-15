@@ -17,6 +17,10 @@ public class User
     public bool IsBrandPartner { get; set; }
     public bool IsActive { get; set; }
     public bool EmailVerified { get; set; }
+    /// <summary>Cliente Brand Partner asociado (solo usuarios BP).</summary>
+    public int? CustomerId { get; set; }
+    /// <summary>Obligar cambio de contraseña al próximo login (Brand Partner / flujos con password temporal).</summary>
+    public bool RequirePasswordChangeOnNextLogin { get; set; }
     public int FailedLoginAttempts { get; set; }
     public DateTime? LockedUntil { get; set; }
     public DateTime? LastLogin { get; set; }

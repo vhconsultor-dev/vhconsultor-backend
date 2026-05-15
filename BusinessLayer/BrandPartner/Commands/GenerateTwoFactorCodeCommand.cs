@@ -5,7 +5,7 @@ namespace BusinessLayer.BrandPartner.Commands;
 /// </summary>
 public class GenerateTwoFactorCodeCommand
 {
-    public int BrandPartnerUserId { get; set; }
+    public int UserId { get; set; }
 }
 
 /// <summary>

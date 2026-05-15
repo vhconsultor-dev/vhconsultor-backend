@@ -17,7 +17,7 @@ public class BrandPartnerLoginHistoryQueryRepository
     }
 
     public async Task<List<BrandPartnerUserLoginHistory>> GetLoginHistoryAsync(
-        int? brandPartnerUserId = null,
+        int? globalUserId = null,
         DateTime? loginDateFrom = null,
         DateTime? loginDateTo = null,
         string? ipAddress = null,
@@ -28,8 +28,8 @@ public class BrandPartnerLoginHistoryQueryRepository
     {
         var query = _context.BrandPartnerUserLoginHistory.AsQueryable();
 
-        if (brandPartnerUserId.HasValue)
-            query = query.Where(h => h.BrandPartnerUserId == brandPartnerUserId.Value);
+        if (globalUserId.HasValue)
+            query = query.Where(h => h.UserId == globalUserId.Value);
 
         if (loginDateFrom.HasValue)
             query = query.Where(h => h.LoginDate >= loginDateFrom.Value);

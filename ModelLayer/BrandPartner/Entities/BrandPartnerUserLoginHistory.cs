@@ -7,7 +7,8 @@ namespace ModelLayer.BrandPartner.Entities;
 public class BrandPartnerUserLoginHistory
 {
     public int LoginHistoryId { get; set; }
-    public int BrandPartnerUserId { get; set; }
+    /// <summary>FK a <see cref="Shared.Entities.User.UserId"/> ([Global].[Users]).</summary>
+    public int UserId { get; set; }
     public DateTime LoginDate { get; set; }
     public string IPAddress { get; set; } = string.Empty;
     public string? UserAgent { get; set; }

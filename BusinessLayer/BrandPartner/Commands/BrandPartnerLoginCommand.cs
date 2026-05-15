@@ -1,21 +1,26 @@
 namespace BusinessLayer.BrandPartner.Commands;
 
 /// <summary>
-/// Request body for login API. Only email and password are sent by the client.
-/// IPAddress and UserAgent are set by the backend from the HTTP context.
+/// Request body para login paso 1. Prefer <see cref="EmailOrUsername"/>; <see cref="Email"/> existe por compatibilidad.
+/// IPAddress y UserAgent los establece el backend.
 /// </summary>
 public class BrandPartnerLoginRequest
 {
-    public string Email { get; set; } = string.Empty;
+    /// <summary>Email o nombre de usuario (Global.Users.Username).</summary>
+    public string EmailOrUsername { get; set; } = string.Empty;
+
+    /// <summary>Cliente legado que envía solo «email».</summary>
+    public string? Email { get; set; }
+
     public string Password { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// Command para login Brand Partner (paso 1: validar credenciales). Used internally.
+/// Command login paso 1 (interno).
 /// </summary>
 public class BrandPartnerLoginCommand
 {
-    public string Email { get; set; } = string.Empty;
+    public string EmailOrUsername { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
     public string? IPAddress { get; set; }
     public string? UserAgent { get; set; }
@@ -32,6 +37,7 @@ public class BrandPartnerLoginResult
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public bool RequiresTwoFactor { get; set; }
-    public int? BrandPartnerUserId { get; set; }
+    /// <summary>Email real para el paso verify-2FA (necesario si el usuario inició sesión por username).</summary>
+    public string? Email { get; set; }
     public DateTime? LockedUntil { get; set; }
 }

@@ -5,7 +5,8 @@ namespace BusinessLayer.BrandPartner.Commands;
 /// </summary>
 public class ChangePasswordBrandPartnerCommand
 {
-    public int BrandPartnerUserId { get; set; }
+    /// <summary>[Global].[Users].UserId (claim JWT).</summary>
+    public int UserId { get; set; }
     public string OldPassword { get; set; } = string.Empty;
     public string NewPassword { get; set; } = string.Empty;
 }

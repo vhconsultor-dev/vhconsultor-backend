@@ -164,7 +164,7 @@ public class AmazonVendorAuthService
         try
         {
             // 1. Buscar usuario por email
-            var user = await _brandPartnerUserQueryRepository.GetByEmailAsync(command.Email);
+            var user = await _brandPartnerUserQueryRepository.GetByEmailOrUsernameAsync(command.Email);
             
             if (user == null)
             {
@@ -202,7 +202,7 @@ public class AmazonVendorAuthService
                 // Incrementar intentos fallidos
                 try
                 {
-                    await _brandPartnerUserCommandRepository.IncrementFailedLoginAttemptsAsync(user.BrandPartnerUserId);
+                    await _brandPartnerUserCommandRepository.IncrementFailedLoginAttemptsAsync(user.UserId);
                 }
                 catch
                 {
@@ -229,7 +229,7 @@ public class AmazonVendorAuthService
             // 5. Resetear intentos fallidos tras login exitoso
             try
             {
-                await _brandPartnerUserCommandRepository.ResetFailedLoginAttemptsAsync(user.BrandPartnerUserId);
+                await _brandPartnerUserCommandRepository.ResetFailedLoginAttemptsAsync(user.UserId);
             }
             catch
             {

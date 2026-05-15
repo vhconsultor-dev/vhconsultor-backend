@@ -1,12 +1,12 @@
 namespace ModelLayer.BrandPartner.Entities;
 
 /// <summary>
-/// Entidad para Brand Partner Users - Tabla [BrandPartner].[BrandPartnerUsers]
-/// Usuarios de clientes Brand Partner que inician sesión con email.
+/// DTO de usuario Brand Partner; datos provienen de <see cref="Shared.Entities.User"/> ([Global].[Users]).
 /// </summary>
 public class BrandPartnerUser
 {
-    public int BrandPartnerUserId { get; set; }
+    /// <summary>Igual a <see cref="Shared.Entities.User.UserId"/> para RBAC y JWT.</summary>
+    public int UserId { get; set; }
     public int CustomerId { get; set; }
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;

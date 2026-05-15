@@ -30,7 +30,7 @@ public class UserQueryRepository
             SELECT 
                 UserId, FirstName, LastName, Email, Username, PasswordHash,
                 PhoneNumber, ProfilePictureUrl, IsCorporate, IsBrandPartner,
-                IsActive, EmailVerified, FailedLoginAttempts, LockedUntil,
+                IsActive, EmailVerified, CustomerId, RequirePasswordChangeOnNextLogin, FailedLoginAttempts, LockedUntil,
                 LastLogin, LastLoginIP, LastLoginLocation, LastLoginCountry,
                 LastLoginCity, LastLoginUserAgent, CreatedAt, UpdatedAt,
                 CreatedBy, LastModifiedBy
@@ -53,12 +53,13 @@ public class UserQueryRepository
             SELECT 
                 UserId, FirstName, LastName, Email, Username, PasswordHash,
                 PhoneNumber, ProfilePictureUrl, IsCorporate, IsBrandPartner,
-                IsActive, EmailVerified, FailedLoginAttempts, LockedUntil,
+                IsActive, EmailVerified, CustomerId, RequirePasswordChangeOnNextLogin, FailedLoginAttempts, LockedUntil,
                 LastLogin, LastLoginIP, LastLoginLocation, LastLoginCountry,
                 LastLoginCity, LastLoginUserAgent, CreatedAt, UpdatedAt,
                 CreatedBy, LastModifiedBy
             FROM [Global].[Users]
-            WHERE (Username = @UsernameOrEmail OR Email = @UsernameOrEmail)";
+            WHERE (LOWER(LTRIM(RTRIM(Username)))) = LOWER(LTRIM(RTRIM(@UsernameOrEmail)))
+               OR (LOWER(LTRIM(RTRIM(Email)))) = LOWER(LTRIM(RTRIM(@UsernameOrEmail)))";
 
         return await connection.QueryFirstOrDefaultAsync<User>(sql, new { UsernameOrEmail = usernameOrEmail });
     }
@@ -83,7 +84,7 @@ public class UserQueryRepository
             SELECT 
                 UserId, FirstName, LastName, Email, Username, PasswordHash,
                 PhoneNumber, ProfilePictureUrl, IsCorporate, IsBrandPartner,
-                IsActive, EmailVerified, FailedLoginAttempts, LockedUntil,
+                IsActive, EmailVerified, CustomerId, RequirePasswordChangeOnNextLogin, FailedLoginAttempts, LockedUntil,
                 LastLogin, LastLoginIP, LastLoginLocation, LastLoginCountry,
                 LastLoginCity, LastLoginUserAgent, CreatedAt, UpdatedAt,
                 CreatedBy, LastModifiedBy

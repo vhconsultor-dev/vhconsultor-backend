@@ -7,9 +7,9 @@ public class ChangePasswordBrandPartnerValidator : AbstractValidator<ChangePassw
 {
     public ChangePasswordBrandPartnerValidator()
     {
-        RuleFor(x => x.BrandPartnerUserId)
+        RuleFor(x => x.UserId)
             .GreaterThan(0)
-            .WithMessage("BrandPartnerUserId must be greater than 0");
+            .WithMessage("UserId must be greater than 0");
 
         RuleFor(x => x.OldPassword)
             .NotEmpty()

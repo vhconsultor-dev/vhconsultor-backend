@@ -20,11 +20,11 @@ public class BrandPartnerTwoFactorCodeQueryRepository
     /// <summary>
     /// Obtiene el código activo más reciente (no usado y no expirado)
     /// </summary>
-    public async Task<BrandPartnerTwoFactorCode?> GetActiveCodeAsync(int brandPartnerUserId)
+    public async Task<BrandPartnerTwoFactorCode?> GetActiveCodeAsync(int globalUserId)
     {
         var now = DateTimeService.GetCostaRicaNow();
         return await _context.BrandPartnerTwoFactorCodes
-            .Where(c => c.BrandPartnerUserId == brandPartnerUserId &&
+            .Where(c => c.UserId == globalUserId &&
                        !c.IsUsed &&
                        c.ExpiresAt > now)
             .OrderByDescending(c => c.CreatedAt)
@@ -34,11 +34,11 @@ public class BrandPartnerTwoFactorCodeQueryRepository
     /// <summary>
     /// Valida un código 2FA
     /// </summary>
-    public async Task<BrandPartnerTwoFactorCode?> ValidateCodeAsync(int brandPartnerUserId, string code)
+    public async Task<BrandPartnerTwoFactorCode?> ValidateCodeAsync(int globalUserId, string code)
     {
         var now = DateTimeService.GetCostaRicaNow();
         return await _context.BrandPartnerTwoFactorCodes
-            .Where(c => c.BrandPartnerUserId == brandPartnerUserId &&
+            .Where(c => c.UserId == globalUserId &&
                        c.Code.ToUpper() == code.ToUpper() &&
                        !c.IsUsed &&
                        c.ExpiresAt > now)

@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using ModelLayer;
 using ModelLayer.BrandPartner.Entities;
+using ModelLayer.Shared.Entities;
 
 namespace BusinessLayer.BrandPartner.Queries;
 
 /// <summary>
-/// Repository de queries para usuarios Brand Partner
+/// Consultas de usuarios Brand Partner (origen: [Global].[Users] con IsBrandPartner = true).
 /// </summary>
 public class BrandPartnerUserQueryRepository
 {
@@ -16,21 +17,54 @@ public class BrandPartnerUserQueryRepository
         _context = context;
     }
 
-    public async Task<BrandPartnerUser?> GetByEmailAsync(string email)
+    private static BrandPartnerUser MapFromUser(User u) => new()
     {
-        return await _context.BrandPartnerUsers
-            .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+        UserId = u.UserId,
+        CustomerId = u.CustomerId ?? 0,
+        Email = u.Email,
+        PasswordHash = u.PasswordHash,
+        FirstName = u.FirstName,
+        LastName = u.LastName,
+        PhoneNumber = u.PhoneNumber,
+        IsActive = u.IsActive,
+        EmailVerified = u.EmailVerified,
+        RequirePasswordChangeOnNextLogin = u.RequirePasswordChangeOnNextLogin,
+        FailedLoginAttempts = u.FailedLoginAttempts,
+        LockedUntil = u.LockedUntil,
+        LastLogin = u.LastLogin,
+        LastLoginIP = u.LastLoginIP,
+        LastLoginUserAgent = u.LastLoginUserAgent,
+        CreatedAt = u.CreatedAt,
+        UpdatedAt = u.UpdatedAt,
+        CreatedBy = u.CreatedBy
+    };
+
+    /// <summary>Login paso 1 / verify: coincide email o username (case-insensitive).</summary>
+    public async Task<BrandPartnerUser?> GetByEmailOrUsernameAsync(string emailOrUsername)
+    {
+        var key = emailOrUsername.Trim().ToLowerInvariant();
+        var u = await _context.Users.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.IsBrandPartner &&
+                (x.Email.ToLower() == key || x.Username.ToLower() == key));
+        return u == null ? null : MapFromUser(u);
     }
 
     public async Task<BrandPartnerUser?> GetByEmailAndCustomerAsync(int customerId, string email)
     {
-        return await _context.BrandPartnerUsers
-            .FirstOrDefaultAsync(u => u.CustomerId == customerId && u.Email.ToLower() == email.ToLower());
+        var key = email.Trim().ToLowerInvariant();
+        var u = await _context.Users.AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.IsBrandPartner &&
+                x.CustomerId == customerId &&
+                x.Email.ToLower() == key);
+        return u == null ? null : MapFromUser(u);
     }
 
-    public async Task<BrandPartnerUser?> GetByIdAsync(int brandPartnerUserId)
+    public async Task<BrandPartnerUser?> GetByIdAsync(int userId)
     {
-        return await _context.BrandPartnerUsers.FindAsync(brandPartnerUserId);
+        var u = await _context.Users.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.IsBrandPartner && x.UserId == userId);
+        return u == null ? null : MapFromUser(u);
     }
 
     public async Task<List<BrandPartnerUser>> GetUsersByCustomerIdAsync(
@@ -38,7 +72,8 @@ public class BrandPartnerUserQueryRepository
         bool? isActive = null,
         bool? emailVerified = null)
     {
-        var query = _context.BrandPartnerUsers.Where(u => u.CustomerId == customerId);
+        var query = _context.Users.AsNoTracking()
+            .Where(u => u.IsBrandPartner && u.CustomerId == customerId);
 
         if (isActive.HasValue)
             query = query.Where(u => u.IsActive == isActive.Value);
@@ -46,12 +81,16 @@ public class BrandPartnerUserQueryRepository
         if (emailVerified.HasValue)
             query = query.Where(u => u.EmailVerified == emailVerified.Value);
 
-        return await query.OrderByDescending(u => u.CreatedAt).ToListAsync();
+        var list = await query.OrderByDescending(u => u.CreatedAt).ToListAsync();
+        return list.Select(MapFromUser).ToList();
     }
 
     public async Task<bool> EmailExistsForCustomerAsync(int customerId, string email)
     {
-        return await _context.BrandPartnerUsers
-            .AnyAsync(u => u.CustomerId == customerId && u.Email.ToLower() == email.ToLower());
+        var key = email.Trim().ToLowerInvariant();
+        return await _context.Users.AnyAsync(u =>
+            u.IsBrandPartner &&
+            u.CustomerId == customerId &&
+            u.Email.ToLower() == key);
     }
 }

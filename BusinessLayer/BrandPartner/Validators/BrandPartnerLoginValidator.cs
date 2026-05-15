@@ -7,11 +7,11 @@ public class BrandPartnerLoginValidator : AbstractValidator<BrandPartnerLoginCom
 {
     public BrandPartnerLoginValidator()
     {
-        RuleFor(x => x.Email)
+        RuleFor(x => x.EmailOrUsername)
             .NotEmpty()
-            .WithMessage("Email is required")
-            .EmailAddress()
-            .WithMessage("Invalid email format");
+            .WithMessage("Email or username is required")
+            .MaximumLength(255)
+            .WithMessage("Email or username must be at most 255 characters");
 
         RuleFor(x => x.Password)
             .NotEmpty()

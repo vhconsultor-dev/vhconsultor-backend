@@ -1,9 +1,12 @@
 using BusinessLayer.BrandPartner.Commands;
 using BusinessLayer.BrandPartner.Queries;
 using BusinessLayer.Corporate.Queries;
+using BusinessLayer.Shared.Commands;
+using BusinessLayer.Shared.Queries;
 using ApplicationLayer.Shared;
 using ModelLayer.BrandPartner.Entities;
 using ModelLayer.Shared;
+using ModelLayer.Shared.Entities;
 using Microsoft.Extensions.Options;
 using BusinessLayer.Shared;
 using System.Security.Cryptography;
@@ -23,6 +26,8 @@ public class BrandPartnerAuthService
     private readonly BrandPartnerUserCommandRepository _userCommandRepository;
     private readonly BrandPartnerTwoFactorCodeCommandRepository _twoFactorCommandRepository;
     private readonly CustomerQueryRepository _customerQueryRepository;
+    private readonly UserAuthCommandRepository _globalUserCommandRepository;
+    private readonly UserQueryRepository _globalUserQueryRepository;
     private readonly SendGridService _sendGridService;
     private readonly JwtService _jwtService;
     private readonly IOptions<SendGridSettings> _sendGridSettings;
@@ -35,6 +40,8 @@ public class BrandPartnerAuthService
         BrandPartnerUserCommandRepository userCommandRepository,
         BrandPartnerTwoFactorCodeCommandRepository twoFactorCommandRepository,
         CustomerQueryRepository customerQueryRepository,
+        UserAuthCommandRepository globalUserCommandRepository,
+        UserQueryRepository globalUserQueryRepository,
         SendGridService sendGridService,
         JwtService jwtService,
         IOptions<SendGridSettings> sendGridSettings,
@@ -46,6 +53,8 @@ public class BrandPartnerAuthService
         _userCommandRepository = userCommandRepository;
         _twoFactorCommandRepository = twoFactorCommandRepository;
         _customerQueryRepository = customerQueryRepository;
+        _globalUserCommandRepository = globalUserCommandRepository;
+        _globalUserQueryRepository = globalUserQueryRepository;
         _sendGridService = sendGridService;
         _jwtService = jwtService;
         _sendGridSettings = sendGridSettings;
@@ -53,11 +62,10 @@ public class BrandPartnerAuthService
     }
 
     /// <summary>
-    /// Crea un nuevo usuario Brand Partner
+    /// Crea un nuevo usuario Brand Partner en [Global].[Users]
     /// </summary>
     public async Task<CreateBrandPartnerUserResult> CreateUserAsync(CreateBrandPartnerUserRequest request)
     {
-        // Validar que el Customer existe
         var customer = await _customerQueryRepository.GetByIdAsync(request.CustomerId);
         if (customer == null)
         {
@@ -68,8 +76,9 @@ public class BrandPartnerAuthService
             };
         }
 
-        // Validar que el email no existe para este Customer
-        var emailExists = await _userQueryRepository.EmailExistsForCustomerAsync(request.CustomerId, request.Email);
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+        var emailExists = await _userQueryRepository.EmailExistsForCustomerAsync(request.CustomerId, normalizedEmail);
         if (emailExists)
         {
             return new CreateBrandPartnerUserResult
@@ -79,18 +88,30 @@ public class BrandPartnerAuthService
             };
         }
 
-        // Generar contraseña temporal y enviar por correo (mismo template que reset password)
+        var existingGlobal = await _globalUserQueryRepository.GetByUsernameOrEmailAsync(normalizedEmail);
+        if (existingGlobal != null)
+        {
+            return new CreateBrandPartnerUserResult
+            {
+                Success = false,
+                Message = $"The email '{request.Email}' is already registered in the system."
+            };
+        }
+
         var temporaryPassword = GenerateTemporaryPassword();
         var passwordHash = _userCommandRepository.HashPassword(temporaryPassword);
 
-        var user = new BrandPartnerUser
+        var globalUser = new User
         {
-            CustomerId = request.CustomerId,
-            Email = request.Email.ToLower(),
-            PasswordHash = passwordHash,
             FirstName = request.FirstName,
             LastName = request.LastName,
+            Email = normalizedEmail,
+            Username = normalizedEmail,
+            PasswordHash = passwordHash,
             PhoneNumber = request.PhoneNumber,
+            IsCorporate = false,
+            IsBrandPartner = true,
+            CustomerId = request.CustomerId,
             IsActive = true,
             EmailVerified = false,
             RequirePasswordChangeOnNextLogin = true,
@@ -99,84 +120,59 @@ public class BrandPartnerAuthService
             CreatedBy = request.CreatedBy
         };
 
-        var userId = await _userCommandRepository.CreateUserAsync(user);
-        user.BrandPartnerUserId = userId;
+        var userId = await _globalUserCommandRepository.CreateUserAsync(globalUser);
 
-        // Enviar email con contraseña temporal (template BrandPartnerResetPasswordTemplateId)
-        // SendGrid espera: fullName, username (email), password (contraseña temporal)
-        var fullName = $"{user.FirstName} {user.LastName}".Trim();
+        var fullName = $"{globalUser.FirstName} {globalUser.LastName}".Trim();
         var templateData = new Dictionary<string, object>
         {
             { "fullName", fullName },
-            { "username", user.Email },
+            { "username", globalUser.Email },
             { "password", temporaryPassword }
         };
         try
         {
             await _sendGridService.SendTemplateEmailAsync(
-                user.Email,
+                globalUser.Email,
                 _sendGridSettings.Value.BrandPartnerResetPasswordTemplateId,
                 templateData,
                 null);
         }
         catch
         {
-            // Si falla el envío, el usuario ya está creado; puede usar "Olvidé mi contraseña"
+            // Usuario creado aunque falle el correo
         }
 
         return new CreateBrandPartnerUserResult
         {
             Success = true,
             Message = "Brand Partner user created successfully. A temporary password has been sent to the user's email.",
-            BrandPartnerUserId = userId,
+            UserId = userId,
             User = new
             {
-                user.BrandPartnerUserId,
-                user.CustomerId,
-                user.Email,
-                user.FirstName,
-                user.LastName,
-                user.PhoneNumber,
-                user.IsActive,
-                user.EmailVerified,
-                user.RequirePasswordChangeOnNextLogin
+                userId,
+                customerId = request.CustomerId,
+                email = globalUser.Email,
+                firstName = globalUser.FirstName,
+                lastName = globalUser.LastName,
+                phoneNumber = globalUser.PhoneNumber,
+                isActive = globalUser.IsActive,
+                emailVerified = globalUser.EmailVerified,
+                requirePasswordChangeOnNextLogin = globalUser.RequirePasswordChangeOnNextLogin
             }
         };
     }
 
     /// <summary>
-    /// Paso 1 del login: validar email/password y generar código 2FA
+    /// Paso 1 del login: email o username + password; envía código 2FA
     /// </summary>
     public async Task<BrandPartnerLoginResult> LoginStepOneAsync(BrandPartnerLoginCommand command)
     {
         try
         {
-            var user = await _userQueryRepository.GetByEmailAsync(command.Email);
+            var user = await _userQueryRepository.GetByEmailOrUsernameAsync(command.EmailOrUsername);
 
             if (user == null)
             {
-                // Intentar registrar historial (sin fallar si la tabla no existe)
-                try
-                {
-                    var loginHistory = new BrandPartnerUserLoginHistory
-                    {
-                        BrandPartnerUserId = 0,
-                        LoginDate = DateTimeService.GetCostaRicaNow(),
-                        IPAddress = command.IPAddress ?? "Unknown",
-                        UserAgent = command.UserAgent,
-                        Location = command.Location,
-                        Country = command.Country,
-                        City = command.City,
-                        LoginSuccessful = false,
-                        FailureReason = "User not found"
-                    };
-                    await _userCommandRepository.RecordLoginAttemptAsync(loginHistory);
-                }
-                catch
-                {
-                    // Ignorar errores de historial
-                }
-
                 return new BrandPartnerLoginResult
                 {
                     Success = false,
@@ -184,10 +180,9 @@ public class BrandPartnerAuthService
                 };
             }
 
-            // Registrar intento
             var loginHistoryRecord = new BrandPartnerUserLoginHistory
             {
-                BrandPartnerUserId = user.BrandPartnerUserId,
+                UserId = user.UserId,
                 LoginDate = DateTimeService.GetCostaRicaNow(),
                 IPAddress = command.IPAddress ?? "Unknown",
                 UserAgent = command.UserAgent,
@@ -198,7 +193,6 @@ public class BrandPartnerAuthService
                 FailureReason = null
             };
 
-            // Verificar cuenta activa
             if (!user.IsActive)
             {
                 loginHistoryRecord.FailureReason = "Account inactive";
@@ -210,7 +204,6 @@ public class BrandPartnerAuthService
                 };
             }
 
-            // Verificar bloqueo
             if (user.LockedUntil.HasValue && user.LockedUntil.Value > DateTimeService.GetCostaRicaNow())
             {
                 loginHistoryRecord.FailureReason = "Account locked";
@@ -219,25 +212,18 @@ public class BrandPartnerAuthService
                 {
                     Success = false,
                     Message = $"Account is locked until {user.LockedUntil.Value:yyyy-MM-dd HH:mm:ss}",
-                    LockedUntil = user.LockedUntil.Value
+                    LockedUntil = user.LockedUntil.Value,
+                    Email = user.Email
                 };
             }
 
-            // Verificar contraseña
             var passwordHash = _userCommandRepository.HashPassword(command.Password);
             if (user.PasswordHash != passwordHash)
             {
                 loginHistoryRecord.FailureReason = "Incorrect password";
                 try { await _userCommandRepository.RecordLoginAttemptAsync(loginHistoryRecord); } catch { }
-                
-                try
-                {
-                    await _userCommandRepository.IncrementFailedLoginAttemptsAsync(user.BrandPartnerUserId);
-                }
-                catch
-                {
-                    // Si falla incrementar, continuar
-                }
+
+                try { await _userCommandRepository.IncrementFailedLoginAttemptsAsync(user.UserId); } catch { }
 
                 var failedAttempts = user.FailedLoginAttempts + 1;
                 if (failedAttempts >= 5)
@@ -245,34 +231,27 @@ public class BrandPartnerAuthService
                     return new BrandPartnerLoginResult
                     {
                         Success = false,
-                        Message = "Too many failed attempts. Account locked for 30 minutes."
+                        Message = "Too many failed attempts. Account locked for 30 minutes.",
+                        Email = user.Email
                     };
                 }
 
                 return new BrandPartnerLoginResult
                 {
                     Success = false,
-                    Message = $"Invalid email or password. Remaining attempts: {5 - failedAttempts}"
+                    Message = $"Invalid email or password. Remaining attempts: {5 - failedAttempts}",
+                    Email = user.Email
                 };
             }
 
-            // Credenciales válidas: generar y enviar código 2FA
-            try
-            {
-                await _twoFactorCommandRepository.DeleteExpiredCodesAsync(user.BrandPartnerUserId);
-            }
-            catch
-            {
-                // Ignorar si falla limpiar códigos expirados
-            }
+            try { await _twoFactorCommandRepository.DeleteExpiredCodesAsync(user.UserId); } catch { }
 
-            var twoFactorCode = await _twoFactorCommandRepository.CreateCodeAsync(user.BrandPartnerUserId);
+            var twoFactorCode = await _twoFactorCommandRepository.CreateCodeAsync(user.UserId);
 
-            // Enviar email con código (SendGrid espera: fullName, code, expiresIn)
-            var fullName = $"{user.FirstName} {user.LastName}".Trim();
-            var templateData = new Dictionary<string, object>
+            var fullNameTf = $"{user.FirstName} {user.LastName}".Trim();
+            var templateDataTf = new Dictionary<string, object>
             {
-                { "fullName", fullName },
+                { "fullName", fullNameTf },
                 { "code", twoFactorCode.Code },
                 { "expiresIn", "3 minutes" }
             };
@@ -282,7 +261,7 @@ public class BrandPartnerAuthService
                 await _sendGridService.SendTemplateEmailAsync(
                     user.Email,
                     _sendGridSettings.Value.BrandPartnerTwoFactorCodeTemplateId,
-                    templateData,
+                    templateDataTf,
                     null);
             }
             catch
@@ -290,7 +269,8 @@ public class BrandPartnerAuthService
                 return new BrandPartnerLoginResult
                 {
                     Success = false,
-                    Message = "Failed to send verification code. Please check your email configuration or contact support."
+                    Message = "Failed to send verification code. Please check your email configuration or contact support.",
+                    Email = user.Email
                 };
             }
 
@@ -303,13 +283,11 @@ public class BrandPartnerAuthService
                 Success = true,
                 Message = "2FA code sent to your email. Please check your inbox.",
                 RequiresTwoFactor = true,
-                BrandPartnerUserId = user.BrandPartnerUserId
+                Email = user.Email
             };
         }
         catch
         {
-            // Log the actual error for debugging but return a user-friendly message
-            // TODO: Add proper logging here (ILogger)
             return new BrandPartnerLoginResult
             {
                 Success = false,
@@ -323,7 +301,7 @@ public class BrandPartnerAuthService
     /// </summary>
     public async Task<VerifyTwoFactorCodeResult> VerifyTwoFactorCodeAsync(VerifyTwoFactorCodeCommand command)
     {
-        var user = await _userQueryRepository.GetByEmailAsync(command.Email);
+        var user = await _userQueryRepository.GetByEmailOrUsernameAsync(command.Email);
         if (user == null)
         {
             return new VerifyTwoFactorCodeResult
@@ -333,8 +311,7 @@ public class BrandPartnerAuthService
             };
         }
 
-        // Validar código
-        var validCode = await _twoFactorQueryRepository.ValidateCodeAsync(user.BrandPartnerUserId, command.Code);
+        var validCode = await _twoFactorQueryRepository.ValidateCodeAsync(user.UserId, command.Code);
         if (validCode == null)
         {
             return new VerifyTwoFactorCodeResult
@@ -344,17 +321,14 @@ public class BrandPartnerAuthService
             };
         }
 
-        // Marcar código como usado
         await _twoFactorCommandRepository.MarkCodeAsUsedAsync(validCode.TwoFactorCodeId);
 
-        // Resetear intentos fallidos y actualizar último login
-        await _userCommandRepository.ResetFailedLoginAttemptsAsync(user.BrandPartnerUserId);
-        await _userCommandRepository.UpdateLastLoginInfoAsync(user.BrandPartnerUserId, command.IPAddress ?? "Unknown", command.UserAgent);
+        await _userCommandRepository.ResetFailedLoginAttemptsAsync(user.UserId);
+        await _userCommandRepository.UpdateLastLoginInfoAsync(user.UserId, command.IPAddress ?? "Unknown", command.UserAgent);
 
-        // Registrar login exitoso
         var loginHistory = new BrandPartnerUserLoginHistory
         {
-            BrandPartnerUserId = user.BrandPartnerUserId,
+            UserId = user.UserId,
             LoginDate = DateTimeService.GetCostaRicaNow(),
             IPAddress = command.IPAddress ?? "Unknown",
             UserAgent = command.UserAgent,
@@ -363,13 +337,12 @@ public class BrandPartnerAuthService
         };
         await _userCommandRepository.RecordLoginAttemptAsync(loginHistory);
 
-        // Generar JWT (el payload debe ser SecretKey|Timestamp para que JwtService lo acepte)
         var timestampUtcMinus6 = DateTimeOffset.UtcNow.AddHours(-6).ToUnixTimeMilliseconds();
         var encryptedPayload = EncryptPayload($"{_jwtSettings.Value.SecretKey}|{timestampUtcMinus6}");
         var jwtCommand = new BusinessLayer.Shared.Commands.GenerateJwtCommand
         {
             EncryptedPayload = encryptedPayload,
-            UserId = user.BrandPartnerUserId
+            UserId = user.UserId
         };
         var tokenResult = await _jwtService.GenerateTokenAsync(jwtCommand);
 
@@ -390,28 +363,24 @@ public class BrandPartnerAuthService
             RequiresPasswordChange = user.RequirePasswordChangeOnNextLogin,
             User = new
             {
-                user.BrandPartnerUserId,
-                user.CustomerId,
-                user.Email,
-                user.FirstName,
-                user.LastName,
-                user.PhoneNumber,
-                user.IsActive,
-                user.EmailVerified,
-                user.RequirePasswordChangeOnNextLogin
+                userId = user.UserId,
+                customerId = user.CustomerId,
+                email = user.Email,
+                firstName = user.FirstName,
+                lastName = user.LastName,
+                phoneNumber = user.PhoneNumber,
+                isActive = user.IsActive,
+                emailVerified = user.EmailVerified,
+                requirePasswordChangeOnNextLogin = user.RequirePasswordChangeOnNextLogin
             }
         };
     }
 
-    /// <summary>
-    /// Restablecer contraseña (olvidé mi contraseña)
-    /// </summary>
     public async Task<ResetPasswordBrandPartnerResult> ResetPasswordAsync(ResetPasswordBrandPartnerRequest request)
     {
-        var user = await _userQueryRepository.GetByEmailAsync(request.Email);
+        var user = await _userQueryRepository.GetByEmailOrUsernameAsync(request.Email);
         if (user == null)
         {
-            // Por seguridad, no revelar si el email existe
             return new ResetPasswordBrandPartnerResult
             {
                 Success = true,
@@ -428,15 +397,12 @@ public class BrandPartnerAuthService
             };
         }
 
-        // Generar contraseña temporal
         var temporaryPassword = GenerateTemporaryPassword();
         var newPasswordHash = _userCommandRepository.HashPassword(temporaryPassword);
 
-        // Actualizar contraseña y marcar para cambio obligatorio
-        await _userCommandRepository.UpdatePasswordAsync(user.BrandPartnerUserId, newPasswordHash);
-        await _userCommandRepository.UpdateRequirePasswordChangeAsync(user.BrandPartnerUserId, true);
+        await _userCommandRepository.UpdatePasswordAsync(user.UserId, newPasswordHash);
+        await _userCommandRepository.UpdateRequirePasswordChangeAsync(user.UserId, true);
 
-        // Enviar email (SendGrid espera: fullName, username, password)
         var fullName = $"{user.FirstName} {user.LastName}".Trim();
         var templateData = new Dictionary<string, object>
         {
@@ -459,12 +425,9 @@ public class BrandPartnerAuthService
         };
     }
 
-    /// <summary>
-    /// Cambiar contraseña
-    /// </summary>
     public async Task<ChangePasswordBrandPartnerResult> ChangePasswordAsync(ChangePasswordBrandPartnerCommand command)
     {
-        var user = await _userQueryRepository.GetByIdAsync(command.BrandPartnerUserId);
+        var user = await _userQueryRepository.GetByIdAsync(command.UserId);
         if (user == null)
         {
             return new ChangePasswordBrandPartnerResult
@@ -474,7 +437,6 @@ public class BrandPartnerAuthService
             };
         }
 
-        // Verificar contraseña actual
         var oldPasswordHash = _userCommandRepository.HashPassword(command.OldPassword);
         if (user.PasswordHash != oldPasswordHash)
         {
@@ -485,10 +447,9 @@ public class BrandPartnerAuthService
             };
         }
 
-        // Actualizar contraseña
         var newPasswordHash = _userCommandRepository.HashPassword(command.NewPassword);
-        await _userCommandRepository.UpdatePasswordAsync(command.BrandPartnerUserId, newPasswordHash);
-        await _userCommandRepository.UpdateRequirePasswordChangeAsync(command.BrandPartnerUserId, false);
+        await _userCommandRepository.UpdatePasswordAsync(command.UserId, newPasswordHash);
+        await _userCommandRepository.UpdateRequirePasswordChangeAsync(command.UserId, false);
 
         return new ChangePasswordBrandPartnerResult
         {
@@ -503,25 +464,22 @@ public class BrandPartnerAuthService
     }
 
     public async Task<List<BrandPartnerUserLoginHistory>> GetLoginHistoryAsync(
-        int? brandPartnerUserId, DateTime? dateFrom, DateTime? dateTo, string? ipAddress,
+        int? globalUserId, DateTime? dateFrom, DateTime? dateTo, string? ipAddress,
         string? country, string? city, bool? loginSuccessful, int? limit)
     {
         return await _loginHistoryQueryRepository.GetLoginHistoryAsync(
-            brandPartnerUserId, dateFrom, dateTo, ipAddress, country, city, loginSuccessful, limit);
+            globalUserId, dateFrom, dateTo, ipAddress, country, city, loginSuccessful, limit);
     }
 
-    /// <summary>
-    /// Deactivates a Brand Partner user and resets their password so they cannot log in. No email is sent.
-    /// </summary>
-    public async Task<InactivateBrandPartnerUserResult> InactivateUserAsync(int brandPartnerUserId)
+    public async Task<InactivateBrandPartnerUserResult> InactivateUserAsync(int globalUserId)
     {
-        var user = await _userQueryRepository.GetByIdAsync(brandPartnerUserId);
+        var user = await _userQueryRepository.GetByIdAsync(globalUserId);
         if (user == null)
         {
             return new InactivateBrandPartnerUserResult
             {
                 Success = false,
-                Message = "User not found. The specified Brand Partner user ID does not exist."
+                Message = "User not found. The specified user ID does not exist."
             };
         }
 
@@ -534,7 +492,7 @@ public class BrandPartnerAuthService
             };
         }
 
-        var updated = await _userCommandRepository.SetUserInactiveAsync(brandPartnerUserId);
+        var updated = await _userCommandRepository.SetUserInactiveAsync(globalUserId);
         if (!updated)
         {
             return new InactivateBrandPartnerUserResult
@@ -570,7 +528,7 @@ public class BrandPartnerAuthService
         for (int i = 0; i < 8; i++)
             password.Append(GetRandomChar(all, rng));
 
-        return new string(password.ToString().OrderBy(x => Guid.NewGuid()).ToArray());
+        return new string(password.ToString().OrderBy(_ => Guid.NewGuid()).ToArray());
     }
 
     private char GetRandomChar(string chars, RandomNumberGenerator rng)
@@ -588,25 +546,22 @@ public class BrandPartnerAuthService
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
 
-        // Derivar la clave de 32 bytes (256 bits) desde la ValidationKey
         var key = DeriveKey(_jwtSettings.Value.ValidationKey, 32);
-        
-        // Generar IV aleatorio
+
         aes.GenerateIV();
         aes.Key = key;
 
         using var encryptor = aes.CreateEncryptor();
         using var msEncrypt = new MemoryStream();
-        
-        // Escribir IV al inicio
+
         msEncrypt.Write(aes.IV, 0, aes.IV.Length);
-        
+
         using (var csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
         using (var swEncrypt = new StreamWriter(csEncrypt))
         {
             swEncrypt.Write(payload);
         }
-        
+
         return Convert.ToBase64String(msEncrypt.ToArray());
     }
 
@@ -614,10 +569,10 @@ public class BrandPartnerAuthService
     {
         using var sha256 = SHA256.Create();
         var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        
+
         if (hash.Length >= keyLength)
             return hash.Take(keyLength).ToArray();
-        
+
         var key = new byte[keyLength];
         Array.Copy(hash, key, Math.Min(hash.Length, keyLength));
         return key;

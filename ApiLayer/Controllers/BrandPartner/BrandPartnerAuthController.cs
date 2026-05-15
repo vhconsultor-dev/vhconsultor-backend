@@ -85,27 +85,28 @@ public class BrandPartnerAuthController : ControllerBase
 
     /// <summary>
     /// Inactivate a Brand Partner user. Sets the user as inactive and resets their password so they cannot log in. No email is sent.
-    /// POST /api/brandpartner/auth/users/inactivate?brandPartnerUserId=15
+    /// POST /api/brandpartner/auth/users/inactivate?userId=123 (compat: brandPartnerUserId)
     /// </summary>
     [HttpPost("users/inactivate")]
     [Authorize]
-    public async Task<IActionResult> InactivateUser([FromQuery] int brandPartnerUserId)
+    public async Task<IActionResult> InactivateUser([FromQuery] int? userId = null, [FromQuery] int? brandPartnerUserId = null)
     {
         try
         {
-            if (brandPartnerUserId <= 0)
+            var id = userId ?? brandPartnerUserId ?? 0;
+            if (id <= 0)
             {
                 return Ok(new ResponseStructure<object>
                 {
                     Status = false,
                     StatusCode = 400,
-                    Message = "Invalid user ID. Brand Partner user ID must be greater than zero.",
+                    Message = "Invalid user ID. User ID (Global.Users) must be greater than zero.",
                     Data = null,
                     Timestamp = DateTimeService.GetCostaRicaNow()
                 });
             }
 
-            var result = await _authService.InactivateUserAsync(brandPartnerUserId);
+            var result = await _authService.InactivateUserAsync(id);
 
             if (!result.Success)
             {
@@ -125,7 +126,7 @@ public class BrandPartnerAuthController : ControllerBase
                 Status = true,
                 StatusCode = 200,
                 Message = result.Message,
-                Data = new { brandPartnerUserId, isActive = false },
+                Data = new { userId = id, isActive = false },
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
         }
@@ -151,9 +152,14 @@ public class BrandPartnerAuthController : ControllerBase
     {
         try
         {
+            var identifier = request.EmailOrUsername?.Trim()
+                ?? string.Empty;
+            if (string.IsNullOrEmpty(identifier))
+                identifier = request.Email?.Trim() ?? string.Empty;
+
             var command = new BrandPartnerLoginCommand
             {
-                Email = request.Email,
+                EmailOrUsername = identifier,
                 Password = request.Password,
                 IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
                 UserAgent = Request.Headers["User-Agent"].ToString()
@@ -179,7 +185,9 @@ public class BrandPartnerAuthController : ControllerBase
                 Status = result.Success,
                 StatusCode = result.Success ? 200 : 400,
                 Message = result.Message,
-                Data = result.Success ? new { requiresTwoFactor = result.RequiresTwoFactor } : null,
+                Data = result.Success
+                    ? new { requiresTwoFactor = result.RequiresTwoFactor, email = result.Email }
+                    : null,
                 Timestamp = DateTimeService.GetCostaRicaNow()
             });
         }
@@ -314,9 +322,8 @@ public class BrandPartnerAuthController : ControllerBase
     {
         try
         {
-            // Obtener BrandPartnerUserId del JWT
             var userIdClaim = User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int brandPartnerUserId))
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int jwtUserId))
             {
                 return Ok(new ResponseStructure<object>
                 {
@@ -328,7 +335,7 @@ public class BrandPartnerAuthController : ControllerBase
                 });
             }
 
-            command.BrandPartnerUserId = brandPartnerUserId;
+            command.UserId = jwtUserId;
 
             var validationResult = await _changePasswordValidator.ValidateAsync(command);
             if (!validationResult.IsValid)
@@ -418,11 +425,12 @@ public class BrandPartnerAuthController : ControllerBase
 
     /// <summary>
     /// 7. Obtener historial de login
-    /// GET /api/brandpartner/auth/login-history?brandPartnerUserId=1&dateFrom=2025-01-01&dateTo=2025-12-31&loginSuccessful=true&limit=50
+    /// GET /api/brandpartner/auth/login-history?userId=1 (compat: brandPartnerUserId)
     /// </summary>
     [HttpGet("login-history")]
     [Authorize(Roles = "Admin,Corporate,BrandPartner,ApiClient")]
     public async Task<IActionResult> GetLoginHistory(
+        [FromQuery] int? userId = null,
         [FromQuery] int? brandPartnerUserId = null,
         [FromQuery] DateTime? dateFrom = null,
         [FromQuery] DateTime? dateTo = null,
@@ -435,10 +443,12 @@ public class BrandPartnerAuthController : ControllerBase
         try
         {
             // Si es BrandPartner, solo puede ver su propio historial
+            var filterUserId = userId ?? brandPartnerUserId;
+
             if (User.IsInRole("BrandPartner"))
             {
                 var userIdClaim = User.FindFirst("UserId")?.Value;
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int tokenUserId))
                 {
                     return Ok(new ResponseStructure<object>
                     {
@@ -449,11 +459,11 @@ public class BrandPartnerAuthController : ControllerBase
                         Timestamp = DateTimeService.GetCostaRicaNow()
                     });
                 }
-                brandPartnerUserId = userId;
+                filterUserId = tokenUserId;
             }
 
             var history = await _authService.GetLoginHistoryAsync(
-                brandPartnerUserId, dateFrom, dateTo, ipAddress, country, city, loginSuccessful, limit);
+                filterUserId, dateFrom, dateTo, ipAddress, country, city, loginSuccessful, limit);
 
             return Ok(new ResponseStructure<object>
             {

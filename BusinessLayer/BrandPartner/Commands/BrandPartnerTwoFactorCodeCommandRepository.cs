@@ -22,14 +22,14 @@ public class BrandPartnerTwoFactorCodeCommandRepository
     /// Crea un código 2FA: 1 letra mayúscula (A-Z) + 4 dígitos aleatorios
     /// Expira en 3 minutos
     /// </summary>
-    public async Task<BrandPartnerTwoFactorCode> CreateCodeAsync(int brandPartnerUserId)
+    public async Task<BrandPartnerTwoFactorCode> CreateCodeAsync(int globalUserId)
     {
         var code = GenerateTwoFactorCode();
         var now = DateTimeService.GetCostaRicaNow();
 
         var twoFactorCode = new BrandPartnerTwoFactorCode
         {
-            BrandPartnerUserId = brandPartnerUserId,
+            UserId = globalUserId,
             Code = code,
             CreatedAt = now,
             ExpiresAt = now.AddMinutes(3),
@@ -52,10 +52,10 @@ public class BrandPartnerTwoFactorCodeCommandRepository
         return true;
     }
 
-    public async Task DeleteExpiredCodesAsync(int brandPartnerUserId)
+    public async Task DeleteExpiredCodesAsync(int globalUserId)
     {
         var expiredCodes = await _context.BrandPartnerTwoFactorCodes
-            .Where(c => c.BrandPartnerUserId == brandPartnerUserId && 
+            .Where(c => c.UserId == globalUserId &&
                        c.ExpiresAt < DateTimeService.GetCostaRicaNow())
             .ToListAsync();
 

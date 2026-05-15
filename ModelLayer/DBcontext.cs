@@ -44,8 +44,7 @@ public class DBcontext : DbContext
     // Amazon DbSets
     public DbSet<AmazonToken> AmazonTokens { get; set; }
     
-    // BrandPartner DbSets
-    public DbSet<BrandPartnerUser> BrandPartnerUsers { get; set; }
+    // BrandPartner DbSets (identidad BP vive en [Global].[Users]; BrandPartnerUser es DTO-only, ignorado por EF)
     public DbSet<BrandPartnerUserLoginHistory> BrandPartnerUserLoginHistory { get; set; }
     public DbSet<BrandPartnerTwoFactorCode> BrandPartnerTwoFactorCodes { get; set; }
     public DbSet<InventoryItem> InventoryItems { get; set; }
@@ -73,6 +72,8 @@ public class DBcontext : DbContext
         
         // Configuración base del modelo
         modelBuilder.HasDefaultSchema("dbo");
+
+        modelBuilder.Ignore<BrandPartnerUser>();
 
         // Configuración de Customer (Corporate)
         modelBuilder.Entity<Customer>(entity =>
@@ -351,6 +352,8 @@ public class DBcontext : DbContext
             entity.Property(e => e.IsBrandPartner).IsRequired().HasDefaultValue(false);
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
             entity.Property(e => e.EmailVerified).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.CustomerId);
+            entity.Property(e => e.RequirePasswordChangeOnNextLogin).IsRequired().HasDefaultValue(false);
             entity.Property(e => e.FailedLoginAttempts).IsRequired().HasDefaultValue(0);
             entity.Property(e => e.LockedUntil);
             entity.Property(e => e.LastLogin);
@@ -363,6 +366,8 @@ public class DBcontext : DbContext
             entity.Property(e => e.UpdatedAt);
             entity.Property(e => e.CreatedBy).HasMaxLength(255);
             entity.Property(e => e.LastModifiedBy).HasMaxLength(255);
+
+            entity.HasIndex(e => new { e.IsBrandPartner, e.CustomerId });
         });
 
         // Configuración de UserLoginHistory
@@ -777,42 +782,13 @@ public class DBcontext : DbContext
             entity.Property(e => e.ModifiedBy).HasMaxLength(60);
         });
 
-        // Configuración de BrandPartnerUser
-        modelBuilder.Entity<BrandPartnerUser>(entity =>
-        {
-            entity.ToTable("BrandPartnerUsers", "BrandPartner");
-            entity.HasKey(e => e.BrandPartnerUserId);
-            entity.Property(e => e.BrandPartnerUserId).ValueGeneratedOnAdd();
-            entity.Property(e => e.CustomerId).IsRequired();
-            entity.Property(e => e.Email).HasMaxLength(255).IsRequired();
-            entity.Property(e => e.PasswordHash).HasMaxLength(500).IsRequired();
-            entity.Property(e => e.FirstName).HasMaxLength(100).IsRequired();
-            entity.Property(e => e.LastName).HasMaxLength(100).IsRequired();
-            entity.Property(e => e.PhoneNumber).HasMaxLength(50);
-            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
-            entity.Property(e => e.EmailVerified).IsRequired().HasDefaultValue(false);
-            entity.Property(e => e.RequirePasswordChangeOnNextLogin).IsRequired().HasDefaultValue(false);
-            entity.Property(e => e.FailedLoginAttempts).IsRequired().HasDefaultValue(0);
-            entity.Property(e => e.LockedUntil);
-            entity.Property(e => e.LastLogin);
-            entity.Property(e => e.LastLoginIP).HasMaxLength(45);
-            entity.Property(e => e.LastLoginUserAgent).HasMaxLength(500);
-            entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETUTCDATE()");
-            entity.Property(e => e.UpdatedAt);
-            entity.Property(e => e.CreatedBy).HasMaxLength(255);
-            
-            entity.HasIndex(e => new { e.CustomerId, e.Email }).IsUnique();
-            entity.HasIndex(e => e.CustomerId);
-            entity.HasIndex(e => e.Email);
-        });
-
         // Configuración de BrandPartnerUserLoginHistory
         modelBuilder.Entity<BrandPartnerUserLoginHistory>(entity =>
         {
             entity.ToTable("BrandPartnerUserLoginHistory", "BrandPartner");
             entity.HasKey(e => e.LoginHistoryId);
             entity.Property(e => e.LoginHistoryId).ValueGeneratedOnAdd();
-            entity.Property(e => e.BrandPartnerUserId).IsRequired();
+            entity.Property(e => e.UserId).IsRequired();
             entity.Property(e => e.LoginDate).IsRequired().HasDefaultValueSql("GETUTCDATE()");
             entity.Property(e => e.IPAddress).HasMaxLength(45).IsRequired();
             entity.Property(e => e.UserAgent).HasMaxLength(500);
@@ -823,8 +799,13 @@ public class DBcontext : DbContext
             entity.Property(e => e.FailureReason).HasMaxLength(255);
             entity.Property(e => e.SessionId).HasMaxLength(255);
             
-            entity.HasIndex(e => e.BrandPartnerUserId);
+            entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.LoginDate);
+
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuración de BrandPartnerTwoFactorCode
@@ -833,15 +814,20 @@ public class DBcontext : DbContext
             entity.ToTable("BrandPartnerTwoFactorCodes", "BrandPartner");
             entity.HasKey(e => e.TwoFactorCodeId);
             entity.Property(e => e.TwoFactorCodeId).ValueGeneratedOnAdd();
-            entity.Property(e => e.BrandPartnerUserId).IsRequired();
+            entity.Property(e => e.UserId).IsRequired();
             entity.Property(e => e.Code).HasMaxLength(5).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired().HasDefaultValueSql("GETUTCDATE()");
             entity.Property(e => e.ExpiresAt).IsRequired();
             entity.Property(e => e.IsUsed).IsRequired().HasDefaultValue(false);
             entity.Property(e => e.UsedAt);
             
-            entity.HasIndex(e => e.BrandPartnerUserId);
+            entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.ExpiresAt).HasFilter("IsUsed = 0");
+
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuración de InventoryItem (BrandPartner)
