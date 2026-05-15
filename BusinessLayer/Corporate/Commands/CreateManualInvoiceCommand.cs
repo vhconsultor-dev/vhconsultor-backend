@@ -1,3 +1,4 @@
+using BusinessLayer.Corporate;
 using ModelLayer;
 using ModelLayer.Corporate.Entities;
 using ModelLayer.Shared;
@@ -127,8 +128,8 @@ public class CreateManualInvoiceCommand
 
         if (string.IsNullOrEmpty(contract.PaymentFrequency))
             errors.Add("El contrato debe tener una frecuencia de pago (PaymentFrequency)");
-        else if (!IsValidPaymentFrequency(contract.PaymentFrequency))
-            errors.Add($"Frecuencia de pago inválida: '{contract.PaymentFrequency}'. Valores válidos: Monthly, Quarterly, SemiAnnual, Annual");
+        else if (!PaymentFrequencyHelper.IsAllowed(contract.PaymentFrequency))
+            errors.Add($"Frecuencia de pago inválida: '{contract.PaymentFrequency}'. Valores válidos: {PaymentFrequencyHelper.AllowedValuesDescription}");
 
         if (string.IsNullOrEmpty(contract.CurrencyCode))
             errors.Add("El contrato debe tener un código de moneda (CurrencyCode)");
@@ -142,21 +143,7 @@ public class CreateManualInvoiceCommand
     private int CalculateNumberOfInvoices(DateTime startDate, DateTime endDate, string paymentFrequency)
     {
         int contractMonths = CalculateContractMonths(startDate, endDate);
-        int monthsInFrequency = GetMonthsForFrequency(paymentFrequency);
-
-        if (monthsInFrequency > contractMonths)
-            return 1;
-
-        int numberOfInvoices = paymentFrequency switch
-        {
-            "Monthly" => contractMonths,
-            "Quarterly" => (int)Math.Ceiling(contractMonths / 3.0),
-            "SemiAnnual" => (int)Math.Ceiling(contractMonths / 6.0),
-            "Annual" => (int)Math.Ceiling(contractMonths / 12.0),
-            _ => throw new ArgumentException($"Invalid payment frequency: {paymentFrequency}")
-        };
-
-        return Math.Max(1, numberOfInvoices);
+        return PaymentFrequencyHelper.CalculateInvoiceCount(contractMonths, paymentFrequency);
     }
 
     private int CalculateContractMonths(DateTime startDate, DateTime endDate)
@@ -167,23 +154,6 @@ public class CreateManualInvoiceCommand
             months++;
         
         return months;
-    }
-
-    private int GetMonthsForFrequency(string paymentFrequency)
-    {
-        return paymentFrequency switch
-        {
-            "Monthly" => 1,
-            "Quarterly" => 3,
-            "SemiAnnual" => 6,
-            "Annual" => 12,
-            _ => throw new ArgumentException($"Frecuencia de pago inválida: {paymentFrequency}")
-        };
-    }
-
-    private static bool IsValidPaymentFrequency(string paymentFrequency)
-    {
-        return paymentFrequency is "Monthly" or "Quarterly" or "SemiAnnual" or "Annual";
     }
 
     private async Task<string> GenerateInvoiceNumberAsync()

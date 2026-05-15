@@ -1,3 +1,4 @@
+using BusinessLayer.Corporate;
 using ModelLayer;
 using ModelLayer.Corporate.Entities;
 using ModelLayer.Shared;
@@ -50,7 +51,7 @@ public class GeneratePercentageInvoicesCommand
         if (expectedInvoices <= 0)
         {
             int contractMonths = CalculateContractMonths(contract.StartDate!.Value, contract.EndDate!.Value);
-            int monthsInFrequency = GetMonthsForFrequency(contract.PaymentFrequency!);
+            int monthsInFrequency = PaymentFrequencyHelper.GetMonthsIncrement(contract.PaymentFrequency!);
             throw new InvalidOperationException(
                 $"No se pueden generar facturas. La frecuencia de pago ({monthsInFrequency} meses) es mayor que la duración del contrato ({contractMonths} meses). " +
                 $"Ajuste la frecuencia de pago o la duración del contrato.");
@@ -82,7 +83,7 @@ public class GeneratePercentageInvoicesCommand
         // 8. Generar las facturas que faltan con monto 0
         var invoices = new List<Invoice>();
         DateTime currentDate = contract.StartDate!.Value;
-        int monthsIncrement = GetMonthsForFrequency(contract.PaymentFrequency!);
+        int monthsIncrement = PaymentFrequencyHelper.GetMonthsIncrement(contract.PaymentFrequency!);
 
         var invoiceNumbers = await GenerateInvoiceNumbersAsync(invoicesToCreate);
         int startIndex = existingCount;
@@ -170,8 +171,8 @@ public class GeneratePercentageInvoicesCommand
 
         if (string.IsNullOrEmpty(contract.PaymentFrequency))
             errors.Add("El contrato debe tener una frecuencia de pago (PaymentFrequency)");
-        else if (!IsValidPaymentFrequency(contract.PaymentFrequency))
-            errors.Add($"Frecuencia de pago inválida: '{contract.PaymentFrequency}'. Valores válidos: Monthly, Quarterly, SemiAnnual, Annual");
+        else if (!PaymentFrequencyHelper.IsAllowed(contract.PaymentFrequency))
+            errors.Add($"Frecuencia de pago inválida: '{contract.PaymentFrequency}'. Valores válidos: {PaymentFrequencyHelper.AllowedValuesDescription}");
 
         if (string.IsNullOrEmpty(contract.CurrencyCode))
             errors.Add("El contrato debe tener un código de moneda (CurrencyCode)");
@@ -185,21 +186,7 @@ public class GeneratePercentageInvoicesCommand
     private int CalculateNumberOfInvoices(DateTime startDate, DateTime endDate, string paymentFrequency)
     {
         int contractMonths = CalculateContractMonths(startDate, endDate);
-        int monthsInFrequency = GetMonthsForFrequency(paymentFrequency);
-
-        if (monthsInFrequency > contractMonths)
-            return 1;
-
-        int numberOfInvoices = paymentFrequency switch
-        {
-            "Monthly" => contractMonths,
-            "Quarterly" => (int)Math.Ceiling(contractMonths / 3.0),
-            "SemiAnnual" => (int)Math.Ceiling(contractMonths / 6.0),
-            "Annual" => (int)Math.Ceiling(contractMonths / 12.0),
-            _ => throw new ArgumentException($"Invalid payment frequency: {paymentFrequency}")
-        };
-
-        return Math.Max(1, numberOfInvoices);
+        return PaymentFrequencyHelper.CalculateInvoiceCount(contractMonths, paymentFrequency);
     }
 
     private int CalculateContractMonths(DateTime startDate, DateTime endDate)
@@ -210,23 +197,6 @@ public class GeneratePercentageInvoicesCommand
             months++;
         
         return months;
-    }
-
-    private int GetMonthsForFrequency(string paymentFrequency)
-    {
-        return paymentFrequency switch
-        {
-            "Monthly" => 1,
-            "Quarterly" => 3,
-            "SemiAnnual" => 6,
-            "Annual" => 12,
-            _ => throw new ArgumentException($"Frecuencia de pago inválida: {paymentFrequency}")
-        };
-    }
-
-    private static bool IsValidPaymentFrequency(string paymentFrequency)
-    {
-        return paymentFrequency is "Monthly" or "Quarterly" or "SemiAnnual" or "Annual";
     }
 
     private DateTime CalculateDueDate(DateTime invoiceDate, int? paymentDay)
