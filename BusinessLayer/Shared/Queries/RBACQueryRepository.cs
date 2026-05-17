@@ -142,7 +142,9 @@ public class RBACQueryRepository
         int? resourceId = null,
         int? actionId = null,
         string? permissionKey = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        int? applicationId = null,
+        string? applicationKey = null)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
@@ -183,6 +185,21 @@ public class RBACQueryRepository
         {
             sql += " AND IsActive = @IsActive";
             parameters.Add("IsActive", isActive.Value);
+        }
+
+        if (applicationId.HasValue)
+        {
+            sql += " AND ApplicationId = @ApplicationId";
+            parameters.Add("ApplicationId", applicationId.Value);
+        }
+        else if (!string.IsNullOrWhiteSpace(applicationKey))
+        {
+            sql += @"
+            AND ApplicationId = (
+                SELECT ApplicationId FROM [Global].[Applications]
+                WHERE ApplicationKey = @ApplicationKey AND IsActive = 1
+            )";
+            parameters.Add("ApplicationKey", applicationKey);
         }
 
         sql += " ORDER BY PermissionName";
@@ -264,32 +281,50 @@ public class RBACQueryRepository
 
     public async Task<IEnumerable<RolePermission>> GetRolePermissionsAsync(
         int? roleId = null,
-        int? permissionId = null)
+        int? permissionId = null,
+        int? applicationId = null,
+        string? applicationKey = null)
     {
         var connectionString = _connectionResolver.GetConnectionString("VH-DB");
         using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
 
         var sql = @"
-            SELECT RolePermissionId, RoleId, PermissionId, GrantedBy, GrantedAt
-            FROM [Global].[RolePermissions]
+            SELECT rp.RolePermissionId, rp.RoleId, rp.PermissionId, rp.GrantedBy, rp.GrantedAt
+            FROM [Global].[RolePermissions] rp
+            INNER JOIN [Global].[Permissions] p ON p.PermissionId = rp.PermissionId
             WHERE 1=1";
 
         var parameters = new DynamicParameters();
 
         if (roleId.HasValue)
         {
-            sql += " AND RoleId = @RoleId";
+            sql += " AND rp.RoleId = @RoleId";
             parameters.Add("RoleId", roleId.Value);
         }
 
         if (permissionId.HasValue)
         {
-            sql += " AND PermissionId = @PermissionId";
+            sql += " AND rp.PermissionId = @PermissionId";
             parameters.Add("PermissionId", permissionId.Value);
         }
 
-        sql += " ORDER BY GrantedAt DESC";
+        if (applicationId.HasValue)
+        {
+            sql += " AND p.ApplicationId = @ApplicationId";
+            parameters.Add("ApplicationId", applicationId.Value);
+        }
+        else if (!string.IsNullOrWhiteSpace(applicationKey))
+        {
+            sql += @"
+            AND p.ApplicationId = (
+                SELECT ApplicationId FROM [Global].[Applications]
+                WHERE ApplicationKey = @ApplicationKey AND IsActive = 1
+            )";
+            parameters.Add("ApplicationKey", applicationKey);
+        }
+
+        sql += " ORDER BY rp.GrantedAt DESC";
 
         return await connection.QueryAsync<RolePermission>(sql, parameters);
     }
@@ -432,7 +467,79 @@ public class RBACQueryRepository
 
     #endregion
 
+    #region Applications
+
+    public async Task<IEnumerable<Application>> GetApplicationsAsync(bool? isActive = true)
+    {
+        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        var sql = @"
+            SELECT ApplicationId, ApplicationName, ApplicationKey, Description, IsActive, CreatedAt, UpdatedAt
+            FROM [Global].[Applications]
+            WHERE 1=1";
+
+        var parameters = new DynamicParameters();
+
+        if (isActive.HasValue)
+        {
+            sql += " AND IsActive = @IsActive";
+            parameters.Add("IsActive", isActive.Value);
+        }
+
+        sql += " ORDER BY ApplicationName";
+
+        return await connection.QueryAsync<Application>(sql, parameters);
+    }
+
+    #endregion
+
     #region Helper Methods
+
+    public async Task<Resource?> GetResourceByIdAsync(int resourceId)
+    {
+        var resources = await GetResourcesAsync(resourceId, isActive: null);
+        return resources.FirstOrDefault();
+    }
+
+    public async Task<ModelLayer.Shared.Entities.Action?> GetActionByIdAsync(int actionId)
+    {
+        var actions = await GetActionsAsync(actionId, isActive: null);
+        return actions.FirstOrDefault();
+    }
+
+    public async Task<Permission?> GetPermissionByIdAsync(int permissionId)
+    {
+        var permissions = await GetPermissionsAsync(permissionId, isActive: null);
+        return permissions.FirstOrDefault();
+    }
+
+    public async Task<Role?> GetRoleByIdAsync(int roleId)
+    {
+        var roles = await GetRolesAsync(roleId, isActive: null);
+        return roles.FirstOrDefault();
+    }
+
+    public async Task<bool> PermissionKeyExistsAsync(string permissionKey, int? excludePermissionId = null)
+    {
+        var connectionString = _connectionResolver.GetConnectionString("VH-DB");
+        using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
+
+        var sql = "SELECT COUNT(1) FROM [Global].[Permissions] WHERE PermissionKey = @PermissionKey";
+        var parameters = new DynamicParameters();
+        parameters.Add("PermissionKey", permissionKey);
+
+        if (excludePermissionId.HasValue)
+        {
+            sql += " AND PermissionId <> @ExcludePermissionId";
+            parameters.Add("ExcludePermissionId", excludePermissionId.Value);
+        }
+
+        var count = await connection.QuerySingleAsync<int>(sql, parameters);
+        return count > 0;
+    }
 
     /// <summary>
     /// Resuelve el ApplicationId a partir del ApplicationKey.
@@ -460,9 +567,8 @@ public class RBACQueryRepository
         await connection.OpenAsync();
 
         var sql = @"
-            SELECT DISTINCT p.PermissionId, p.ResourceId, p.ActionId, p.PermissionName, p.PermissionKey, p.Description, p.IsActive, p.CreatedAt, p.UpdatedAt
+            SELECT DISTINCT p.PermissionId, p.ApplicationId, p.ResourceId, p.ActionId, p.PermissionName, p.PermissionKey, p.Description, p.IsActive, p.CreatedAt, p.UpdatedAt
             FROM [Global].[Permissions] p
-            INNER JOIN [Global].[Resources] r ON r.ResourceId = p.ResourceId
             WHERE p.IsActive = 1
             AND (
                 -- Permisos desde roles
@@ -494,7 +600,7 @@ public class RBACQueryRepository
         if (!string.IsNullOrWhiteSpace(applicationKey))
         {
             sql += @"
-            AND r.ApplicationId = (
+            AND p.ApplicationId = (
                 SELECT ApplicationId FROM [Global].[Applications]
                 WHERE ApplicationKey = @ApplicationKey AND IsActive = 1
             )";

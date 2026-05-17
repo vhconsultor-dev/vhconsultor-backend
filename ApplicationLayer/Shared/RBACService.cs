@@ -80,21 +80,31 @@ public class RBACService
         int? resourceId = null,
         int? actionId = null,
         string? permissionKey = null,
-        bool? isActive = true)
+        bool? isActive = true,
+        int? applicationId = null,
+        string? applicationKey = null)
     {
-        return await _queryRepository.GetPermissionsAsync(permissionId, resourceId, actionId, permissionKey, isActive);
+        return await _queryRepository.GetPermissionsAsync(
+            permissionId, resourceId, actionId, permissionKey, isActive, applicationId, applicationKey);
     }
 
-    public async Task<int> CreatePermissionAsync(Permission permission)
+    public async Task<int> CreatePermissionAsync(Permission permission, string? applicationKey = null)
     {
+        await PreparePermissionAsync(permission, applicationKey, excludePermissionId: null);
         permission.CreatedAt = DateTimeService.GetCostaRicaNow();
         permission.IsActive = true;
         return await _commandRepository.CreatePermissionAsync(permission);
     }
 
-    public async Task<bool> UpdatePermissionAsync(Permission permission)
+    public async Task<bool> UpdatePermissionAsync(Permission permission, string? applicationKey = null)
     {
+        await PreparePermissionAsync(permission, applicationKey, excludePermissionId: permission.PermissionId);
         return await _commandRepository.UpdatePermissionAsync(permission);
+    }
+
+    public async Task<IEnumerable<Application>> GetApplicationsAsync(bool? isActive = true)
+    {
+        return await _queryRepository.GetApplicationsAsync(isActive);
     }
 
     public async Task<bool> DeletePermissionAsync(int permissionId)
@@ -140,13 +150,28 @@ public class RBACService
 
     public async Task<IEnumerable<RolePermission>> GetRolePermissionsAsync(
         int? roleId = null,
-        int? permissionId = null)
+        int? permissionId = null,
+        int? applicationId = null,
+        string? applicationKey = null)
     {
-        return await _queryRepository.GetRolePermissionsAsync(roleId, permissionId);
+        return await _queryRepository.GetRolePermissionsAsync(roleId, permissionId, applicationId, applicationKey);
     }
 
     public async Task<int> AssignPermissionToRoleAsync(int roleId, int permissionId, int? grantedBy = null)
     {
+        var role = await _queryRepository.GetRoleByIdAsync(roleId)
+            ?? throw new InvalidOperationException($"Role with ID {roleId} not found.");
+
+        var permission = await _queryRepository.GetPermissionByIdAsync(permissionId)
+            ?? throw new InvalidOperationException($"Permission with ID {permissionId} not found.");
+
+        if (role.ApplicationId != permission.ApplicationId)
+        {
+            throw new InvalidOperationException(
+                $"Cannot assign permission to role: they belong to different applications " +
+                $"(role ApplicationId={role.ApplicationId}, permission ApplicationId={permission.ApplicationId}).");
+        }
+
         var rolePermission = new RolePermission
         {
             RoleId = roleId,
@@ -276,6 +301,51 @@ public class RBACService
         if (applicationId == 0)
             throw new InvalidOperationException($"Application with key '{applicationKey}' not found or is inactive.");
         return applicationId;
+    }
+
+    /// <summary>
+    /// Valida recurso/acción, resuelve ApplicationId y completa PermissionKey/PermissionName si faltan.
+    /// </summary>
+    private async Task PreparePermissionAsync(Permission permission, string? applicationKey, int? excludePermissionId)
+    {
+        if (permission.ResourceId <= 0)
+            throw new InvalidOperationException("ResourceId is required.");
+
+        if (permission.ActionId <= 0)
+            throw new InvalidOperationException("ActionId is required.");
+
+        var resource = await _queryRepository.GetResourceByIdAsync(permission.ResourceId)
+            ?? throw new InvalidOperationException($"Resource with ID {permission.ResourceId} not found.");
+
+        var action = await _queryRepository.GetActionByIdAsync(permission.ActionId)
+            ?? throw new InvalidOperationException($"Action with ID {permission.ActionId} not found.");
+
+        if (permission.ApplicationId <= 0 && !string.IsNullOrWhiteSpace(applicationKey))
+            permission.ApplicationId = await ResolveApplicationIdAsync(applicationKey);
+
+        if (permission.ApplicationId <= 0)
+            permission.ApplicationId = resource.ApplicationId;
+
+        if (permission.ApplicationId != resource.ApplicationId)
+        {
+            throw new InvalidOperationException(
+                $"Permission ApplicationId ({permission.ApplicationId}) must match the resource application " +
+                $"({resource.ApplicationId}, resource '{resource.ResourceKey}').");
+        }
+
+        if (string.IsNullOrWhiteSpace(permission.PermissionKey))
+            permission.PermissionKey = $"{resource.ResourceKey}.{action.ActionKey}";
+
+        if (string.IsNullOrWhiteSpace(permission.PermissionName))
+            permission.PermissionName = $"{resource.ResourceName} · {action.ActionName}";
+
+        permission.PermissionKey = permission.PermissionKey.Trim();
+
+        if (await _queryRepository.PermissionKeyExistsAsync(permission.PermissionKey, excludePermissionId))
+        {
+            throw new InvalidOperationException(
+                $"PermissionKey '{permission.PermissionKey}' already exists.");
+        }
     }
 
     #endregion

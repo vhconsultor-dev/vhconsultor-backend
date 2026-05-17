@@ -21,6 +21,38 @@ public class RBACController : ControllerBase
         _rbacService = rbacService;
     }
 
+    #region GET - Applications
+
+    /// <summary>
+    /// Lista aplicaciones (Corporate, Brand Partner, etc.) para combos de administración RBAC.
+    /// </summary>
+    [HttpGet("applications")]
+    public async Task<IActionResult> GetApplications([FromQuery] bool? isActive = true)
+    {
+        try
+        {
+            var applications = (await _rbacService.GetApplicationsAsync(isActive)).ToList();
+
+            if (!applications.Any())
+            {
+                var notFoundResponse = ResponseStructure<object>.NotFound("No se encontraron aplicaciones");
+                return NotFound(notFoundResponse);
+            }
+
+            var response = ResponseStructure<object>.Success(
+                applications,
+                $"{applications.Count} aplicación(es) encontrada(s)");
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error($"Error al obtener aplicaciones: {ex.Message}");
+            return StatusCode(500, errorResponse);
+        }
+    }
+
+    #endregion
+
     #region GET - Resources
 
     /// <summary>
@@ -108,11 +140,14 @@ public class RBACController : ControllerBase
         [FromQuery] int? resourceId = null,
         [FromQuery] int? actionId = null,
         [FromQuery] string? permissionKey = null,
-        [FromQuery] bool? isActive = true)
+        [FromQuery] bool? isActive = true,
+        [FromQuery] int? applicationId = null,
+        [FromQuery] string? applicationKey = null)
     {
         try
         {
-            var permissions = await _rbacService.GetPermissionsAsync(permissionId, resourceId, actionId, permissionKey, isActive);
+            var permissions = await _rbacService.GetPermissionsAsync(
+                permissionId, resourceId, actionId, permissionKey, isActive, applicationId, applicationKey);
             var permissionsList = permissions.ToList();
 
             if (!permissionsList.Any())
@@ -182,11 +217,14 @@ public class RBACController : ControllerBase
     [HttpGet("role-permissions")]
     public async Task<IActionResult> GetRolePermissions(
         [FromQuery] int? roleId = null,
-        [FromQuery] int? permissionId = null)
+        [FromQuery] int? permissionId = null,
+        [FromQuery] int? applicationId = null,
+        [FromQuery] string? applicationKey = null)
     {
         try
         {
-            var rolePermissions = await _rbacService.GetRolePermissionsAsync(roleId, permissionId);
+            var rolePermissions = await _rbacService.GetRolePermissionsAsync(
+                roleId, permissionId, applicationId, applicationKey);
             var rolePermissionsList = rolePermissions.ToList();
 
             if (!rolePermissionsList.Any())
@@ -370,16 +408,27 @@ public class RBACController : ControllerBase
     }
 
     /// <summary>
-    /// Crea un nuevo permiso
+    /// Crea un nuevo permiso (recurso + acción).
+    /// ApplicationId: en body, o query applicationKey, o se toma del recurso.
+    /// Si PermissionKey/PermissionName vienen vacíos, se generan como {resourceKey}.{actionKey}.
     /// </summary>
     [HttpPost("permissions")]
-    public async Task<IActionResult> CreatePermission([FromBody] Permission permission)
+    public async Task<IActionResult> CreatePermission(
+        [FromBody] Permission permission,
+        [FromQuery] string? applicationKey = null)
     {
         try
         {
-            var permissionId = await _rbacService.CreatePermissionAsync(permission);
-            var response = ResponseStructure<object>.Success(new { permissionId }, "Permiso creado exitosamente");
+            var permissionId = await _rbacService.CreatePermissionAsync(permission, applicationKey);
+            var response = ResponseStructure<object>.Success(
+                new { permissionId, permissionKey = permission.PermissionKey },
+                "Permiso creado exitosamente");
             return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
         }
         catch (Exception ex)
         {
@@ -428,6 +477,11 @@ public class RBACController : ControllerBase
             var rolePermissionId = await _rbacService.AssignPermissionToRoleAsync(request.RoleId, request.PermissionId, request.GrantedBy);
             var response = ResponseStructure<object>.Success(new { rolePermissionId }, "Permiso asignado al rol exitosamente");
             return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
         }
         catch (Exception ex)
         {
@@ -528,12 +582,15 @@ public class RBACController : ControllerBase
     /// Actualiza un permiso
     /// </summary>
     [HttpPut("permissions/{permissionId}")]
-    public async Task<IActionResult> UpdatePermission(int permissionId, [FromBody] Permission permission)
+    public async Task<IActionResult> UpdatePermission(
+        int permissionId,
+        [FromBody] Permission permission,
+        [FromQuery] string? applicationKey = null)
     {
         try
         {
             permission.PermissionId = permissionId;
-            var success = await _rbacService.UpdatePermissionAsync(permission);
+            var success = await _rbacService.UpdatePermissionAsync(permission, applicationKey);
             
             if (!success)
             {
@@ -541,8 +598,15 @@ public class RBACController : ControllerBase
                 return NotFound(notFoundResponse);
             }
 
-            var response = ResponseStructure<object>.Success(null, "Permiso actualizado exitosamente");
+            var response = ResponseStructure<object>.Success(
+                new { permissionKey = permission.PermissionKey },
+                "Permiso actualizado exitosamente");
             return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            var errorResponse = ResponseStructure<object>.Error(ex.Message);
+            return BadRequest(errorResponse);
         }
         catch (Exception ex)
         {

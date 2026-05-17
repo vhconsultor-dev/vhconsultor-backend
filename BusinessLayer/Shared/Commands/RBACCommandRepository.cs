@@ -79,6 +79,7 @@ public class RBACCommandRepository
         var existing = await _context.Permissions.FindAsync(permission.PermissionId);
         if (existing == null) return false;
 
+        existing.ApplicationId = permission.ApplicationId;
         existing.ResourceId = permission.ResourceId;
         existing.ActionId = permission.ActionId;
         existing.PermissionName = permission.PermissionName;
