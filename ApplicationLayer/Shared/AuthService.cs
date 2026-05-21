@@ -73,6 +73,20 @@ public class AuthService
             };
         }
 
+        // Solo usuarios corporate (incluye híbridos IsCorporate + IsBrandPartner)
+        if (!user.IsCorporate)
+        {
+            loginHistory.UserId = user.UserId;
+            loginHistory.FailureReason = "No autorizado para portal Corporate";
+            await _authCommandRepository.RecordLoginAttemptAsync(loginHistory);
+            return new LoginResult
+            {
+                Success = false,
+                Message = "Usuario o contraseña incorrectos",
+                User = null
+            };
+        }
+
         // Verificar si la cuenta está activa
         if (!user.IsActive)
         {
