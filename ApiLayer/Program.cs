@@ -123,6 +123,8 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonMarketplaceRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonMarketplaceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonAccountRequest>, BusinessLayer.Corporate.Validators.CreateAmazonAccountValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonAccountRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonAccountValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateUserCustomerAssignmentRequest>, BusinessLayer.Corporate.Validators.CreateUserCustomerAssignmentValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateUserCustomerAssignmentRequest>, BusinessLayer.Corporate.Validators.UpdateUserCustomerAssignmentValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateAmazonAccountMarketplaceRequest>, BusinessLayer.Corporate.Validators.CreateAmazonAccountMarketplaceValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateAmazonAccountMarketplaceRequest>, BusinessLayer.Corporate.Validators.UpdateAmazonAccountMarketplaceValidator>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Validators.BulkUploadAmazonAccountAsinsValidator>();
@@ -265,6 +267,7 @@ builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountMarketplaceService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.BulkUploadAmazonAccountAsinsService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.AmazonAccountAsinService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.UserCustomerAssignmentService>();
 
 // Brand Partner Services
 builder.Services.AddScoped<ApplicationLayer.BrandPartner.BrandPartnerAuthService>();
@@ -347,6 +350,9 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonMarketpl
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonAccountQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateAmazonAccountCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonAccountCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.UserCustomerAssignmentQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateUserCustomerAssignmentCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateUserCustomerAssignmentCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.AmazonAccountMarketplaceQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateAmazonAccountMarketplaceCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateAmazonAccountMarketplaceCommand>();

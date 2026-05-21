@@ -56,6 +56,7 @@ public class DBcontext : DbContext
     // Shared DbSets
     public DbSet<ErrorLog> ErrorLogs { get; set; }
     public DbSet<User> Users { get; set; }
+    public DbSet<UserCustomerAssignment> UserCustomerAssignments { get; set; }
     public DbSet<UserLoginHistory> UserLoginHistory { get; set; }
     public DbSet<Resource> Resources { get; set; }
     public DbSet<ModelLayer.Shared.Entities.Action> Actions { get; set; }
@@ -368,6 +369,33 @@ public class DBcontext : DbContext
             entity.Property(e => e.LastModifiedBy).HasMaxLength(255);
 
             entity.HasIndex(e => new { e.IsBrandPartner, e.CustomerId });
+        });
+
+        modelBuilder.Entity<UserCustomerAssignment>(entity =>
+        {
+            entity.ToTable("UserCustomerAssignments", "Global");
+            entity.HasKey(e => e.UserCustomerAssignmentId);
+            entity.Property(e => e.UserCustomerAssignmentId).ValueGeneratedOnAdd();
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.CustomerId).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.AssignedAt).IsRequired().HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.AssignedBy);
+            entity.Property(e => e.UpdatedAt);
+
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.CustomerId);
+            entity.HasIndex(e => new { e.UserId, e.CustomerId }).IsUnique();
+
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne<Customer>()
+                .WithMany()
+                .HasForeignKey(e => e.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Configuración de UserLoginHistory
