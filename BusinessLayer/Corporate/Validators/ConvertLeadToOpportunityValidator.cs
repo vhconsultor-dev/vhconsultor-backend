@@ -19,5 +19,10 @@ public class ConvertLeadToOpportunityValidator : AbstractValidator<ConvertLeadTo
             .GreaterThan(0)
             .When(x => x.ViewerUserId.HasValue)
             .WithMessage("Viewer user ID must be greater than 0 when provided.");
+
+        RuleFor(x => x.ConvertedByUserId)
+            .GreaterThan(0)
+            .When(x => x.ConvertedByUserId.HasValue)
+            .WithMessage("Converted by user ID must be greater than 0 when provided.");
     }
 }

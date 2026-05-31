@@ -15,6 +15,10 @@ public class MarkOpportunityAsWonValidator : AbstractValidator<MarkOpportunityAs
             .GreaterThan(0)
             .WithMessage("Customer ID must be greater than 0.");
 
+        RuleFor(x => x.WonByUserId)
+            .GreaterThan(0)
+            .WithMessage("Won by user ID is required and must be greater than 0.");
+
         RuleFor(x => x.ContractId)
             .GreaterThan(0)
             .When(x => x.ContractId.HasValue)

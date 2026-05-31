@@ -11,6 +11,10 @@ public class UpdateOpportunityCommentValidator : AbstractValidator<UpdateOpportu
             .GreaterThan(0)
             .WithMessage("Comment ID must be greater than 0.");
 
+        RuleFor(x => x.AuthorUserId)
+            .GreaterThan(0)
+            .WithMessage("Author user ID is required and must be greater than 0.");
+
         RuleFor(x => x.Body)
             .NotEmpty()
             .WithMessage("Comment body is required.")

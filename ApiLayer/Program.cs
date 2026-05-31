@@ -99,6 +99,7 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateLeadRequest>, BusinessLayer.Corporate.Validators.UpdateLeadValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.ConvertLeadToOpportunityRequest>, BusinessLayer.Corporate.Validators.ConvertLeadToOpportunityValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateFollowUpRequest>, BusinessLayer.Corporate.Validators.CreateFollowUpValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CompleteFollowUpRequest>, BusinessLayer.Corporate.Validators.CompleteFollowUpValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.ChangeOpportunityStageRequest>, BusinessLayer.Corporate.Validators.ChangeOpportunityStageValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkOpportunityAsWonRequest>, BusinessLayer.Corporate.Validators.MarkOpportunityAsWonValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkOpportunityAsLostRequest>, BusinessLayer.Corporate.Validators.MarkOpportunityAsLostValidator>();

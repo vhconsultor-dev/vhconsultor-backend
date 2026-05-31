@@ -17,6 +17,10 @@ public class MarkOpportunityAsLostValidator : AbstractValidator<MarkOpportunityA
             .MaximumLength(50)
             .WithMessage("Lost reason key cannot exceed 50 characters.");
 
+        RuleFor(x => x.LostByUserId)
+            .GreaterThan(0)
+            .WithMessage("Lost by user ID is required and must be greater than 0.");
+
         RuleFor(x => x.LostReasonNotes)
             .MaximumLength(500)
             .When(x => !string.IsNullOrWhiteSpace(x.LostReasonNotes))

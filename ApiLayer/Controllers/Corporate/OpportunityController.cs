@@ -7,7 +7,6 @@ using BusinessLayer.Corporate.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using System.Text.Json;
 
 namespace ApiLayer.Controllers.Corporate;
@@ -57,6 +56,7 @@ public class OpportunityController : ControllerBase
         [FromQuery] string? stageKey = null,
         [FromQuery] int? assignedToUserId = null,
         [FromQuery] int? viewerUserId = null,
+        [FromQuery] int? userId = null,
         [FromQuery] bool? mine = null,
         [FromQuery] string? search = null,
         [FromQuery] DateTime? fromDate = null,
@@ -64,7 +64,9 @@ public class OpportunityController : ControllerBase
     {
         try
         {
-            var currentUserId = GetCurrentUserId();
+            if (mine == true && (!userId.HasValue || userId <= 0))
+                return BadRequest(ResponseStructure<object>.ValidationError(
+                    "userId query parameter is required when mine=true."));
 
             var filter = new OpportunityFilter
             {
@@ -73,7 +75,7 @@ public class OpportunityController : ControllerBase
                 AssignedToUserId = assignedToUserId,
                 ViewerUserId = viewerUserId,
                 MyOpportunities = mine,
-                UserId = currentUserId,
+                UserId = userId,
                 Search = search,
                 FromDate = fromDate,
                 ToDate = toDate
@@ -163,9 +165,6 @@ public class OpportunityController : ControllerBase
 
         try
         {
-            var currentUserId = GetCurrentUserId();
-            request.ConvertedByUserId = currentUserId;
-
             var opportunityId = await _opportunityService.ConvertLeadToOpportunityAsync(request);
             
             return Ok(ResponseStructure<object>.Success(
@@ -298,16 +297,15 @@ public class OpportunityController : ControllerBase
     /// If userId is provided, filters by assigned or viewer user.
     /// </summary>
     [HttpGet("follow-ups/pending")]
-    public async Task<IActionResult> GetPendingFollowUps([FromQuery] int? userId = null)
+    public async Task<IActionResult> GetPendingFollowUps([FromQuery] int userId)
     {
+        if (userId <= 0)
+            return BadRequest(ResponseStructure<object>.ValidationError(
+                "userId query parameter is required and must be greater than 0."));
+
         try
         {
-            var currentUserId = GetCurrentUserId();
-            
-            // If no userId param, use current user
-            var filterUserId = userId ?? currentUserId;
-
-            var pendingFollowUps = await _opportunityService.GetPendingFollowUpsAsync(filterUserId);
+            var pendingFollowUps = await _opportunityService.GetPendingFollowUpsAsync(userId);
             return Ok(ResponseStructure<object>.Success(pendingFollowUps, "Pending follow-ups retrieved successfully."));
         }
         catch (Exception ex)
@@ -389,14 +387,13 @@ public class OpportunityController : ControllerBase
     {
         request.FollowUpId = followUpId;
 
+        var validationResult = await _validationService.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            return BadRequest(ResponseStructure<object>.ValidationError(
+                string.Join(", ", validationResult.Errors)));
+
         try
         {
-            var currentUserId = GetCurrentUserId();
-            if (!currentUserId.HasValue)
-                return Unauthorized(ResponseStructure<object>.Error("User not authenticated."));
-
-            request.CompletedByUserId = currentUserId.Value;
-
             var response = await _opportunityService.CompleteFollowUpAsync(request);
             return Ok(ResponseStructure<object>.Success(response, response.Message));
         }
@@ -471,12 +468,6 @@ public class OpportunityController : ControllerBase
 
         try
         {
-            var currentUserId = GetCurrentUserId();
-            if (!currentUserId.HasValue)
-                return Unauthorized(ResponseStructure<object>.Error("User not authenticated."));
-
-            request.WonByUserId = currentUserId.Value;
-
             await _opportunityService.MarkOpportunityAsWonAsync(request);
             return Ok(ResponseStructure<object>.Success(null, "Opportunity marked as won successfully."));
         }
@@ -511,12 +502,6 @@ public class OpportunityController : ControllerBase
 
         try
         {
-            var currentUserId = GetCurrentUserId();
-            if (!currentUserId.HasValue)
-                return Unauthorized(ResponseStructure<object>.Error("User not authenticated."));
-
-            request.LostByUserId = currentUserId.Value;
-
             await _opportunityService.MarkOpportunityAsLostAsync(request);
             return Ok(ResponseStructure<object>.Success(null, "Opportunity marked as lost successfully."));
         }
@@ -648,17 +633,9 @@ public class OpportunityController : ControllerBase
 
         try
         {
-            var currentUserId = GetCurrentUserId();
-            if (!currentUserId.HasValue)
-                return Unauthorized(ResponseStructure<object>.Error("User not authenticated."));
-
-            request.AuthorUserId = currentUserId.Value;
-
             var response = await _opportunityService.CreateCommentAsync(request);
 
-            var authorName = User.FindFirst("FullName")?.Value
-                ?? User.Identity?.Name
-                ?? $"User {currentUserId.Value}";
+            var authorName = $"User {request.AuthorUserId}";
 
             _ = Task.Run(async () =>
             {
@@ -667,7 +644,7 @@ public class OpportunityController : ControllerBase
                     await _signalRService.NotifyCommentCreatedAsync(
                         opportunityId,
                         response.CommentId,
-                        currentUserId.Value,
+                        request.AuthorUserId,
                         authorName,
                         request.Body,
                         response.MentionedUserIds);
@@ -717,12 +694,6 @@ public class OpportunityController : ControllerBase
 
         try
         {
-            var currentUserId = GetCurrentUserId();
-            if (!currentUserId.HasValue)
-                return Unauthorized(ResponseStructure<object>.Error("User not authenticated."));
-
-            request.AuthorUserId = currentUserId.Value;
-
             await _opportunityService.UpdateCommentAsync(request);
             return Ok(ResponseStructure<object>.Success(null, "Comment updated successfully."));
         }
@@ -746,15 +717,15 @@ public class OpportunityController : ControllerBase
     /// Deletes a comment (only author can delete).
     /// </summary>
     [HttpDelete("comments/{commentId:int}")]
-    public async Task<IActionResult> DeleteComment(int commentId)
+    public async Task<IActionResult> DeleteComment(int commentId, [FromQuery] int authorUserId)
     {
+        if (authorUserId <= 0)
+            return BadRequest(ResponseStructure<object>.ValidationError(
+                "authorUserId query parameter is required and must be greater than 0."));
+
         try
         {
-            var currentUserId = GetCurrentUserId();
-            if (!currentUserId.HasValue)
-                return Unauthorized(ResponseStructure<object>.Error("User not authenticated."));
-
-            await _opportunityService.DeleteCommentAsync(commentId, currentUserId.Value);
+            await _opportunityService.DeleteCommentAsync(commentId, authorUserId);
             return Ok(ResponseStructure<object>.Success(null, "Comment deleted successfully."));
         }
         catch (InvalidOperationException ex)
@@ -767,16 +738,6 @@ public class OpportunityController : ControllerBase
             return StatusCode(500, ResponseStructure<object>.Error(
                 $"An error occurred while deleting comment. Error ID: {errorNumber}. Message: {ex.Message}"));
         }
-    }
-
-    #endregion
-
-    #region Private helpers
-
-    private int? GetCurrentUserId()
-    {
-        var claim = User.FindFirst("UserId") ?? User.FindFirst(ClaimTypes.NameIdentifier);
-        return claim != null && int.TryParse(claim.Value, out var id) ? id : null;
     }
 
     #endregion

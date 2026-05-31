@@ -133,5 +133,5 @@ public class ConvertLeadToOpportunityRequest
     public int SubmissionId { get; set; }
     public int AssignedToUserId { get; set; }
     public int? ViewerUserId { get; set; }
-    public int? ConvertedByUserId { get; set; } // From JWT
+    public int? ConvertedByUserId { get; set; }
 }
