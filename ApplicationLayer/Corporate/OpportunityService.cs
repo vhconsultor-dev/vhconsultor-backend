@@ -1,4 +1,5 @@
 using BusinessLayer.Corporate.Commands;
+using BusinessLayer.Corporate.Models;
 using BusinessLayer.Corporate.Queries;
 using ModelLayer.Corporate.Entities;
 
@@ -23,6 +24,7 @@ public class OpportunityService
     private readonly OpportunityStageQueryRepository _stageQueryRepository;
     private readonly OpportunityLostReasonQueryRepository _lostReasonQueryRepository;
     private readonly OpportunityCommentQueryRepository _commentQueryRepository;
+    private readonly CorporateUserQueryRepository _corporateUserQueryRepository;
     private readonly OpportunityCommentNotificationService _commentNotificationService;
 
     public OpportunityService(
@@ -40,6 +42,7 @@ public class OpportunityService
         OpportunityStageQueryRepository stageQueryRepository,
         OpportunityLostReasonQueryRepository lostReasonQueryRepository,
         OpportunityCommentQueryRepository commentQueryRepository,
+        CorporateUserQueryRepository corporateUserQueryRepository,
         OpportunityCommentNotificationService commentNotificationService)
     {
         _convertLeadCommand = convertLeadCommand;
@@ -56,6 +59,7 @@ public class OpportunityService
         _stageQueryRepository = stageQueryRepository;
         _lostReasonQueryRepository = lostReasonQueryRepository;
         _commentQueryRepository = commentQueryRepository;
+        _corporateUserQueryRepository = corporateUserQueryRepository;
         _commentNotificationService = commentNotificationService;
     }
 
@@ -144,6 +148,21 @@ public class OpportunityService
 
     public async Task<IEnumerable<OpportunityLostReason>> GetAllActiveLostReasonsAsync()
         => await _lostReasonQueryRepository.GetAllActiveAsync();
+
+    public async Task<IEnumerable<OpportunityCommentDetailDto>> GetCommentDetailsByOpportunityIdAsync(int opportunityId)
+        => await _commentQueryRepository.GetDetailsByOpportunityIdAsync(opportunityId);
+
+    public async Task<OpportunityCommentDetailDto?> GetCommentDetailByIdAsync(int commentId)
+        => await _commentQueryRepository.GetDetailByIdAsync(commentId);
+
+    public async Task<IEnumerable<CorporateUserSummaryDto>> GetMentionableCorporateUsersAsync(
+        string? search = null,
+        bool? isActive = true,
+        int limit = 20)
+        => await _corporateUserQueryRepository.GetMentionableUsersAsync(search, isActive, limit);
+
+    public async Task<CorporateUserSummaryDto?> GetCorporateUserByIdAsync(int userId)
+        => await _corporateUserQueryRepository.GetCorporateUserByIdAsync(userId);
 
     public async Task<IEnumerable<OpportunityComment>> GetCommentsByOpportunityIdAsync(int opportunityId)
         => await _commentQueryRepository.GetByOpportunityIdAsync(opportunityId);

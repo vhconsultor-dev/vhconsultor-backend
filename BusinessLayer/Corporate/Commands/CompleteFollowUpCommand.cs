@@ -21,7 +21,6 @@ public class CompleteFollowUpCommand
     {
         // 1. Validate follow-up exists
         var followUp = await _context.OpportunityFollowUps
-            .Include(f => f)
             .FirstOrDefaultAsync(f => f.FollowUpId == request.FollowUpId);
 
         if (followUp == null)

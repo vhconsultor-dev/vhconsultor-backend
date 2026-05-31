@@ -351,6 +351,7 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityFollowUpQu
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityStageQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityLostReasonQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityCommentQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CorporateUserQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CustomerQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CountryQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.IndustrySectorQueryRepository>();

@@ -519,6 +519,54 @@ public class OpportunityController : ControllerBase
 
     #endregion
 
+    #region GET - Corporate users (CRM @mentions)
+
+    /// <summary>
+    /// Lists corporate users for @mention autocomplete while typing comments.
+    /// </summary>
+    [HttpGet("corporate-users")]
+    public async Task<IActionResult> GetCorporateUsers(
+        [FromQuery] string? search = null,
+        [FromQuery] bool? isActive = true,
+        [FromQuery] int limit = 20)
+    {
+        try
+        {
+            var users = await _opportunityService.GetMentionableCorporateUsersAsync(search, isActive, limit);
+            return Ok(ResponseStructure<object>.Success(users, "Corporate users retrieved successfully."));
+        }
+        catch (Exception ex)
+        {
+            var errorNumber = await _errorLogService.LogErrorAsync(ex, HttpContext, JsonSerializer.Serialize(new { search, isActive, limit }));
+            return StatusCode(500, ResponseStructure<object>.Error(
+                $"An error occurred while retrieving corporate users. Error ID: {errorNumber}. Message: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Gets a single corporate user profile (author cards, user popovers).
+    /// </summary>
+    [HttpGet("corporate-users/{userId:int}")]
+    public async Task<IActionResult> GetCorporateUserById(int userId)
+    {
+        try
+        {
+            var user = await _opportunityService.GetCorporateUserByIdAsync(userId);
+            if (user == null)
+                return NotFound(ResponseStructure<object>.NotFound($"Corporate user with ID {userId} not found."));
+
+            return Ok(ResponseStructure<object>.Success(user, "Corporate user retrieved successfully."));
+        }
+        catch (Exception ex)
+        {
+            var errorNumber = await _errorLogService.LogErrorAsync(ex, HttpContext, JsonSerializer.Serialize(new { userId }));
+            return StatusCode(500, ResponseStructure<object>.Error(
+                $"An error occurred while retrieving corporate user. Error ID: {errorNumber}. Message: {ex.Message}"));
+        }
+    }
+
+    #endregion
+
     #region GET - Comments by opportunity
 
     /// <summary>
@@ -529,7 +577,7 @@ public class OpportunityController : ControllerBase
     {
         try
         {
-            var comments = await _opportunityService.GetCommentsByOpportunityIdAsync(opportunityId);
+            var comments = await _opportunityService.GetCommentDetailsByOpportunityIdAsync(opportunityId);
             return Ok(ResponseStructure<object>.Success(comments, "Comments retrieved successfully."));
         }
         catch (Exception ex)
@@ -552,7 +600,7 @@ public class OpportunityController : ControllerBase
     {
         try
         {
-            var comment = await _opportunityService.GetCommentByIdAsync(commentId);
+            var comment = await _opportunityService.GetCommentDetailByIdAsync(commentId);
             
             if (comment == null)
                 return NotFound(ResponseStructure<object>.NotFound($"Comment with ID {commentId} not found."));
@@ -635,7 +683,8 @@ public class OpportunityController : ControllerBase
         {
             var response = await _opportunityService.CreateCommentAsync(request);
 
-            var authorName = $"User {request.AuthorUserId}";
+            var author = await _opportunityService.GetCorporateUserByIdAsync(request.AuthorUserId);
+            var authorName = author?.FullName ?? $"User {request.AuthorUserId}";
 
             _ = Task.Run(async () =>
             {
