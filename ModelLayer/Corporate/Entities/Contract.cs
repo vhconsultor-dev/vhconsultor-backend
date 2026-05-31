@@ -7,6 +7,7 @@ public class Contract
 {
     public int ContractId { get; set; }
     public int CustomerId { get; set; }
+    public int? OpportunityId { get; set; }
     public string ContractNumber { get; set; } = string.Empty;
     public string? ClientLegalName { get; set; }
     public string? ClientTaxId { get; set; }

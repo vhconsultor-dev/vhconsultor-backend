@@ -23,6 +23,9 @@ builder.Services.AddControllers()
         options.SuppressModelStateInvalidFilter = true;
     });
 
+// SignalR
+builder.Services.AddSignalR();
+
 // Configurar límites para multipart/form-data (archivos)
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
@@ -94,6 +97,13 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Shared.Comm
 // Corporate Validators
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateLeadRequest>, BusinessLayer.Corporate.Validators.CreateLeadValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateLeadRequest>, BusinessLayer.Corporate.Validators.UpdateLeadValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.ConvertLeadToOpportunityRequest>, BusinessLayer.Corporate.Validators.ConvertLeadToOpportunityValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateFollowUpRequest>, BusinessLayer.Corporate.Validators.CreateFollowUpValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.ChangeOpportunityStageRequest>, BusinessLayer.Corporate.Validators.ChangeOpportunityStageValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkOpportunityAsWonRequest>, BusinessLayer.Corporate.Validators.MarkOpportunityAsWonValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkOpportunityAsLostRequest>, BusinessLayer.Corporate.Validators.MarkOpportunityAsLostValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateOpportunityCommentRequest>, BusinessLayer.Corporate.Validators.CreateOpportunityCommentValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateOpportunityCommentRequest>, BusinessLayer.Corporate.Validators.UpdateOpportunityCommentValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateCustomerRequest>, BusinessLayer.Corporate.Validators.CreateCustomerValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateCustomerRequest>, BusinessLayer.Corporate.Validators.UpdateCustomerValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateContractRequest>, BusinessLayer.Corporate.Validators.CreateContractValidator>();
@@ -245,6 +255,9 @@ builder.Services.AddScoped<ApplicationLayer.Amazon.Vendor.Reports.VendorReportSe
 
 // Corporate Services
 builder.Services.AddScoped<ApplicationLayer.Corporate.LeadService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.OpportunityService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.OpportunityCommentNotificationService>();
+builder.Services.AddScoped<ApiLayer.Services.OpportunitySignalRService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.CustomerService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.CountryService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.IndustrySectorService>();
@@ -301,6 +314,16 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateLeadCommand>()
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateLeadCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.MarkLeadAsReadCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateLeadNotesCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.ConvertLeadToOpportunityCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateFirstFollowUpCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateFollowUpCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CompleteFollowUpCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.ChangeOpportunityStageCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.MarkOpportunityAsWonCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.MarkOpportunityAsLostCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateOpportunityCommentCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateOpportunityCommentCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteOpportunityCommentCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateCustomerCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateCustomerCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteCustomerCommand>();
@@ -322,6 +345,11 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UploadInvoiceAttachm
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteInvoiceAttachmentCommand>();
 // Queries
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.LeadQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityFollowUpQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityStageQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityLostReasonQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityCommentQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CustomerQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CountryQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.IndustrySectorQueryRepository>();
@@ -485,5 +513,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseGlobalExceptionHandler();
 app.MapControllers();
+app.MapHub<ApiLayer.Hubs.OpportunityHub>("/hubs/opportunities");
 app.Run();
 #endregion

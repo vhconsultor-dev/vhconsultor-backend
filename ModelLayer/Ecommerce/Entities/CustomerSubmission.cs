@@ -28,5 +28,8 @@ public class CustomerSubmission
     public int? ReadByUserId { get; set; }
     public int? CreatedByUserId { get; set; }
     public string? Notes { get; set; }
+    
+    // Opportunity conversion
+    public int? ConvertedToOpportunityId { get; set; }
 }
 

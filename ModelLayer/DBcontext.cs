@@ -38,6 +38,16 @@ public class DBcontext : DbContext
     public DbSet<ReplenishmentCategory> ReplenishmentCategories { get; set; }
     public DbSet<AmazonAccountAsin> AmazonAccountAsins { get; set; }
     
+    // Corporate Opportunities DbSets
+    public DbSet<OpportunityStage> OpportunityStages { get; set; }
+    public DbSet<OpportunityLostReason> OpportunityLostReasons { get; set; }
+    public DbSet<Opportunity> Opportunities { get; set; }
+    public DbSet<OpportunityFollowUp> OpportunityFollowUps { get; set; }
+    public DbSet<OpportunityFollowUpAttachment> OpportunityFollowUpAttachments { get; set; }
+    public DbSet<OpportunityComment> OpportunityComments { get; set; }
+    public DbSet<OpportunityCommentAttachment> OpportunityCommentAttachments { get; set; }
+    public DbSet<OpportunityCommentMention> OpportunityCommentMentions { get; set; }
+    
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
     
@@ -192,6 +202,7 @@ public class DBcontext : DbContext
             entity.HasKey(e => e.ContractId);
             entity.Property(e => e.ContractId).ValueGeneratedOnAdd(); // INT IDENTITY(1,1)
             entity.Property(e => e.CustomerId).IsRequired();
+            entity.Property(e => e.OpportunityId);
             entity.Property(e => e.ContractNumber).HasMaxLength(100).IsRequired();
             entity.Property(e => e.ClientLegalName).HasMaxLength(255);
             entity.Property(e => e.ClientTaxId).HasMaxLength(50);
@@ -312,6 +323,146 @@ public class DBcontext : DbContext
             entity.Property(e => e.ReadByUserId);
             entity.Property(e => e.CreatedByUserId);
             entity.Property(e => e.Notes);
+            entity.Property(e => e.ConvertedToOpportunityId);
+        });
+
+        // Configuración de OpportunityStage
+        modelBuilder.Entity<OpportunityStage>(entity =>
+        {
+            entity.ToTable("OpportunityStages", "Corporate");
+            entity.HasKey(e => e.OpportunityStageId);
+            entity.Property(e => e.OpportunityStageId).ValueGeneratedOnAdd();
+            entity.Property(e => e.StageKey).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.DisplayName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.SortOrder).IsRequired();
+            entity.Property(e => e.DefaultChecklistText).HasMaxLength(500);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        });
+
+        // Configuración de OpportunityLostReason
+        modelBuilder.Entity<OpportunityLostReason>(entity =>
+        {
+            entity.ToTable("OpportunityLostReasons", "Corporate");
+            entity.HasKey(e => e.OpportunityLostReasonId);
+            entity.Property(e => e.OpportunityLostReasonId).ValueGeneratedOnAdd();
+            entity.Property(e => e.ReasonKey).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.DisplayName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.SortOrder).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        });
+
+        // Configuración de Opportunity
+        modelBuilder.Entity<Opportunity>(entity =>
+        {
+            entity.ToTable("Opportunities", "Corporate");
+            entity.HasKey(e => e.OpportunityId);
+            entity.Property(e => e.OpportunityId).ValueGeneratedOnAdd();
+            entity.Property(e => e.SubmissionId);
+            entity.Property(e => e.Status).HasMaxLength(20).IsRequired().HasDefaultValue("Open");
+            entity.Property(e => e.CurrentStageKey).HasMaxLength(50);
+            entity.Property(e => e.Title).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.FirstName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.LastName).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Email).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.PhoneNumber).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Country).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.BrandName).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.NumberOfListings).IsRequired();
+            entity.Property(e => e.ProductPageLink);
+            entity.Property(e => e.StoreLink);
+            entity.Property(e => e.SelectedPlatform).HasMaxLength(50);
+            entity.Property(e => e.AccountType).HasMaxLength(50);
+            entity.Property(e => e.ServiceType).HasMaxLength(50);
+            entity.Property(e => e.AnnualSalesRange).HasMaxLength(100);
+            entity.Property(e => e.AdvertisingBudgetRange).HasMaxLength(100);
+            entity.Property(e => e.PromotionalBudgetRange).HasMaxLength(100);
+            entity.Property(e => e.AdditionalDetails);
+            entity.Property(e => e.AssignedToUserId).IsRequired();
+            entity.Property(e => e.ViewerUserId);
+            entity.Property(e => e.CustomerId);
+            entity.Property(e => e.ContractId);
+            entity.Property(e => e.WonAt);
+            entity.Property(e => e.WonByUserId);
+            entity.Property(e => e.LostAt);
+            entity.Property(e => e.LostByUserId);
+            entity.Property(e => e.LostReasonKey).HasMaxLength(50);
+            entity.Property(e => e.LostReasonNotes).HasMaxLength(500);
+            entity.Property(e => e.ConvertedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.ConvertedByUserId);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.UpdatedAt);
+        });
+
+        // Configuración de OpportunityFollowUp
+        modelBuilder.Entity<OpportunityFollowUp>(entity =>
+        {
+            entity.ToTable("OpportunityFollowUps", "Corporate");
+            entity.HasKey(e => e.FollowUpId);
+            entity.Property(e => e.FollowUpId).ValueGeneratedOnAdd();
+            entity.Property(e => e.OpportunityId).IsRequired();
+            entity.Property(e => e.StageKey).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(20).IsRequired().HasDefaultValue("Pending");
+            entity.Property(e => e.DueAt);
+            entity.Property(e => e.CompletedAt);
+            entity.Property(e => e.CompletedByUserId);
+            entity.Property(e => e.Notes);
+            entity.Property(e => e.IsRequired).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.UpdatedAt);
+        });
+
+        // Configuración de OpportunityFollowUpAttachment
+        modelBuilder.Entity<OpportunityFollowUpAttachment>(entity =>
+        {
+            entity.ToTable("OpportunityFollowUpAttachments", "Corporate");
+            entity.HasKey(e => e.FollowUpAttachmentId);
+            entity.Property(e => e.FollowUpAttachmentId).ValueGeneratedOnAdd();
+            entity.Property(e => e.FollowUpId).IsRequired();
+            entity.Property(e => e.FileUrl).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.FileName).HasMaxLength(255);
+            entity.Property(e => e.ContentType).HasMaxLength(100);
+            entity.Property(e => e.UploadedBy).IsRequired();
+            entity.Property(e => e.UploadedAt).HasDefaultValueSql("GETUTCDATE()");
+        });
+
+        // Configuración de OpportunityComment
+        modelBuilder.Entity<OpportunityComment>(entity =>
+        {
+            entity.ToTable("OpportunityComments", "Corporate");
+            entity.HasKey(e => e.CommentId);
+            entity.Property(e => e.CommentId).ValueGeneratedOnAdd();
+            entity.Property(e => e.OpportunityId).IsRequired();
+            entity.Property(e => e.AuthorUserId).IsRequired();
+            entity.Property(e => e.Body).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.Property(e => e.UpdatedAt);
+        });
+
+        // Configuración de OpportunityCommentAttachment
+        modelBuilder.Entity<OpportunityCommentAttachment>(entity =>
+        {
+            entity.ToTable("OpportunityCommentAttachments", "Corporate");
+            entity.HasKey(e => e.CommentAttachmentId);
+            entity.Property(e => e.CommentAttachmentId).ValueGeneratedOnAdd();
+            entity.Property(e => e.CommentId).IsRequired();
+            entity.Property(e => e.FileUrl).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.FileName).HasMaxLength(255);
+            entity.Property(e => e.ContentType).HasMaxLength(100);
+            entity.Property(e => e.UploadedBy).IsRequired();
+            entity.Property(e => e.UploadedAt).HasDefaultValueSql("GETUTCDATE()");
+        });
+
+        // Configuración de OpportunityCommentMention
+        modelBuilder.Entity<OpportunityCommentMention>(entity =>
+        {
+            entity.ToTable("OpportunityCommentMentions", "Corporate");
+            entity.HasKey(e => e.CommentMentionId);
+            entity.Property(e => e.CommentMentionId).ValueGeneratedOnAdd();
+            entity.Property(e => e.CommentId).IsRequired();
+            entity.Property(e => e.MentionedUserId).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         });
 
         // Configuración de ErrorLog
