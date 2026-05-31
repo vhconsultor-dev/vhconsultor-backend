@@ -6,6 +6,7 @@ using BusinessLayer.Corporate.Commands;
 using BusinessLayer.Corporate.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -174,6 +175,14 @@ public class OpportunityController : ControllerBase
         catch (InvalidOperationException ex)
         {
             return BadRequest(ResponseStructure<object>.ValidationError(ex.Message));
+        }
+        catch (DbUpdateException ex)
+        {
+            var sqlMessage = ex.InnerException?.Message ?? ex.Message;
+            var errorNumber = await _errorLogService.LogErrorAsync(ex, HttpContext, JsonSerializer.Serialize(request));
+
+            return StatusCode(500, ResponseStructure<object>.Error(
+                $"An error occurred while converting lead to opportunity. Error ID: {errorNumber}. Database error: {sqlMessage}"));
         }
         catch (Exception ex)
         {

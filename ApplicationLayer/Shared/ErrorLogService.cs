@@ -25,7 +25,7 @@ public class ErrorLogService : IErrorLogService
         var errorLog = new ErrorLog
         {
             ErrorNumber = GenerateErrorNumber(),
-            Message = exception.Message,
+            Message = GetFullExceptionMessage(exception),
             StackTrace = exception.StackTrace,
             Source = exception.Source,
             ExceptionType = exception.GetType().Name,
@@ -99,5 +99,20 @@ public class ErrorLogService : IErrorLogService
         var random = new Random();
         var randomPart = random.Next(1000, 9999).ToString();
         return $"ERR-{timestamp}-{randomPart}";
+    }
+
+    private static string GetFullExceptionMessage(Exception exception)
+    {
+        var messages = new List<string>();
+        var current = exception;
+
+        while (current != null)
+        {
+            if (!string.IsNullOrWhiteSpace(current.Message))
+                messages.Add(current.Message);
+            current = current.InnerException;
+        }
+
+        return string.Join(" | ", messages.Distinct());
     }
 } 
