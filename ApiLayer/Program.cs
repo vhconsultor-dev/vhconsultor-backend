@@ -105,6 +105,11 @@ builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.C
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.MarkOpportunityAsLostRequest>, BusinessLayer.Corporate.Validators.MarkOpportunityAsLostValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateOpportunityCommentRequest>, BusinessLayer.Corporate.Validators.CreateOpportunityCommentValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateOpportunityCommentRequest>, BusinessLayer.Corporate.Validators.UpdateOpportunityCommentValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateCampaignRequest>, BusinessLayer.Corporate.Validators.CreateCampaignValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateCampaignRequest>, BusinessLayer.Corporate.Validators.UpdateCampaignValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.AddCampaignProspectsRequest>, BusinessLayer.Corporate.Validators.AddCampaignProspectsValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.AddCampaignProspectsFromLeadsRequest>, BusinessLayer.Corporate.Validators.AddCampaignProspectsFromLeadsValidator>();
+builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.SendCampaignRequest>, BusinessLayer.Corporate.Validators.SendCampaignValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateCustomerRequest>, BusinessLayer.Corporate.Validators.CreateCustomerValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.UpdateCustomerRequest>, BusinessLayer.Corporate.Validators.UpdateCustomerValidator>();
 builder.Services.AddScoped<FluentValidation.IValidator<BusinessLayer.Corporate.Commands.CreateContractRequest>, BusinessLayer.Corporate.Validators.CreateContractValidator>();
@@ -257,6 +262,7 @@ builder.Services.AddScoped<ApplicationLayer.Amazon.Vendor.Reports.VendorReportSe
 // Corporate Services
 builder.Services.AddScoped<ApplicationLayer.Corporate.LeadService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.OpportunityService>();
+builder.Services.AddScoped<ApplicationLayer.Corporate.CampaignService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.OpportunityCommentNotificationService>();
 builder.Services.AddScoped<ApiLayer.Services.OpportunitySignalRService>();
 builder.Services.AddScoped<ApplicationLayer.Corporate.CustomerService>();
@@ -325,6 +331,11 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Commands.MarkOpportunityAsLos
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateOpportunityCommentCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateOpportunityCommentCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteOpportunityCommentCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateCampaignCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateCampaignCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UploadCampaignAttachmentsCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.AddCampaignProspectsCommand>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteCampaignProspectCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.CreateCustomerCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.UpdateCustomerCommand>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Commands.DeleteCustomerCommand>();
@@ -352,6 +363,7 @@ builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityStageQuery
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityLostReasonQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.OpportunityCommentQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CorporateUserQueryRepository>();
+builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CampaignQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CustomerQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.CountryQueryRepository>();
 builder.Services.AddScoped<BusinessLayer.Corporate.Queries.IndustrySectorQueryRepository>();

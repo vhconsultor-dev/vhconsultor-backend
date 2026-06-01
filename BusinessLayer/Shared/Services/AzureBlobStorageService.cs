@@ -180,6 +180,39 @@ public class AzureBlobStorageService
     }
 
     /// <summary>
+    /// Downloads a file from Azure Blob Storage by URL.
+    /// </summary>
+    public async Task<(byte[] Content, string ContentType)> DownloadFileAsync(string fileUrl)
+    {
+        try
+        {
+            var uri = new Uri(fileUrl);
+            var blobName = uri.AbsolutePath.TrimStart('/');
+
+            if (blobName.StartsWith(_settings.ContainerName + "/"))
+                blobName = blobName.Substring(_settings.ContainerName.Length + 1);
+
+            var containerClient = _blobServiceClient.GetBlobContainerClient(_settings.ContainerName);
+            var blobClient = containerClient.GetBlobClient(blobName);
+
+            if (!await blobClient.ExistsAsync())
+                throw new InvalidOperationException($"Blob not found: {fileUrl}");
+
+            var download = await blobClient.DownloadContentAsync();
+            var contentType = download.Value.Details.ContentType ?? "application/octet-stream";
+            return (download.Value.Content.ToArray(), contentType);
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to download file from Azure Blob Storage: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
     /// Validates if a file extension is allowed
     /// </summary>
     /// <param name="fileName">Name of the file</param>

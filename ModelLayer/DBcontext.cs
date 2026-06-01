@@ -47,6 +47,11 @@ public class DBcontext : DbContext
     public DbSet<OpportunityComment> OpportunityComments { get; set; }
     public DbSet<OpportunityCommentAttachment> OpportunityCommentAttachments { get; set; }
     public DbSet<OpportunityCommentMention> OpportunityCommentMentions { get; set; }
+
+    // Corporate Campaigns
+    public DbSet<Campaign> Campaigns { get; set; }
+    public DbSet<CampaignAttachment> CampaignAttachments { get; set; }
+    public DbSet<CampaignProspect> CampaignProspects { get; set; }
     
     // Ecommerce DbSets
     public DbSet<CustomerSubmission> CustomerSubmissions { get; set; }
@@ -463,6 +468,44 @@ public class DBcontext : DbContext
             entity.Property(e => e.CommentId).IsRequired();
             entity.Property(e => e.MentionedUserId).IsRequired();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        });
+
+        // Campaign
+        modelBuilder.Entity<Campaign>(entity =>
+        {
+            entity.ToTable("Campaigns", "Corporate");
+            entity.HasKey(e => e.CampaignId);
+            entity.Property(e => e.CampaignId).ValueGeneratedOnAdd();
+            entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Subject).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.BodyContent).IsRequired();
+            entity.Property(e => e.Status).HasMaxLength(20).IsRequired().HasDefaultValue("Pending");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+        });
+
+        modelBuilder.Entity<CampaignAttachment>(entity =>
+        {
+            entity.ToTable("CampaignAttachments", "Corporate");
+            entity.HasKey(e => e.CampaignAttachmentId);
+            entity.Property(e => e.CampaignAttachmentId).ValueGeneratedOnAdd();
+            entity.Property(e => e.FileUrl).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.FileName).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.ContentType).HasMaxLength(100);
+            entity.Property(e => e.UploadedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.HasOne<Campaign>().WithMany(c => c.Attachments).HasForeignKey(e => e.CampaignId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CampaignProspect>(entity =>
+        {
+            entity.ToTable("CampaignProspects", "Corporate");
+            entity.HasKey(e => e.CampaignProspectId);
+            entity.Property(e => e.CampaignProspectId).ValueGeneratedOnAdd();
+            entity.Property(e => e.Email).HasMaxLength(255).IsRequired();
+            entity.Property(e => e.FirstName).HasMaxLength(100);
+            entity.Property(e => e.LastName).HasMaxLength(100);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+            entity.HasIndex(e => new { e.CampaignId, e.Email }).IsUnique();
+            entity.HasOne<Campaign>().WithMany(c => c.Prospects).HasForeignKey(e => e.CampaignId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configuración de ErrorLog

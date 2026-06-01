@@ -37,4 +37,10 @@ public class SendGridSettings
     /// Internal notification email address to receive contact form submissions.
     /// </summary>
     public string ContactFormNotificationEmail { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Template ID for corporate email campaigns.
+    /// Variables: subject, campaignBody, campaignName, recipientFirstName, recipientLastName
+    /// </summary>
+    public string CampaignTemplateId { get; set; } = string.Empty;
 }

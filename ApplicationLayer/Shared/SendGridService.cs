@@ -105,6 +105,59 @@ public class SendGridService
     {
         return await SendTemplateEmailAsync(toEmail, templateId, templateData, ccEmail, null, null);
     }
+
+    /// <summary>
+    /// Sends a template email to a single BCC recipient. To address is the sender (recipients never see each other).
+    /// </summary>
+    public async Task<SendGridEmailResult> SendTemplateEmailBccAsync(
+        string bccEmail,
+        string templateId,
+        object templateData,
+        IList<(byte[] Content, string FileName, string ContentType)>? attachments = null)
+    {
+        try
+        {
+            var from = new EmailAddress(_settings.FromEmail, _settings.FromName);
+            var msg = new SendGridMessage();
+            msg.SetFrom(from);
+            msg.AddTo(from);
+            msg.AddBcc(new EmailAddress(bccEmail));
+            msg.SetTemplateId(templateId);
+            msg.SetTemplateData(templateData);
+
+            if (attachments != null)
+            {
+                foreach (var (content, fileName, contentType) in attachments)
+                {
+                    msg.AddAttachment(fileName, Convert.ToBase64String(content), contentType);
+                }
+            }
+
+            var response = await _client.SendEmailAsync(msg);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new SendGridEmailResult { Success = true, Message = "Email sent successfully" };
+            }
+
+            var responseBody = await response.Body.ReadAsStringAsync();
+            return new SendGridEmailResult
+            {
+                Success = false,
+                Message = $"Failed to send email. Status: {response.StatusCode}",
+                ErrorDetails = responseBody
+            };
+        }
+        catch (Exception ex)
+        {
+            return new SendGridEmailResult
+            {
+                Success = false,
+                Message = "An error occurred while sending email",
+                ErrorDetails = ex.Message
+            };
+        }
+    }
 }
 
 /// <summary>
