@@ -32,7 +32,10 @@ public class LeadController : ControllerBase
     #region GET – List leads
 
     /// <summary>
-    /// Obtiene leads con filtros opcionales. Use brandName para cargar contactos de una empresa.
+    /// Obtiene leads con filtros opcionales.
+    /// - groupByBrand=true: marcas paginadas (listado agrupado en Corporate).
+    /// - brandName: contactos de una empresa (al expandir un grupo).
+    /// - Sin ambos: lista plana de leads (compatibilidad).
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetLeads(
@@ -43,33 +46,7 @@ public class LeadController : ControllerBase
         [FromQuery] DateTime? fromDate = null,
         [FromQuery] DateTime? toDate = null,
         [FromQuery] string? brandName = null,
-        [FromQuery] string? sortField = null,
-        [FromQuery] string? sortOrder = null)
-    {
-        try
-        {
-            var filter = BuildFilter(isRead, submissionType, platform, search, fromDate, toDate, brandName, sortField, sortOrder);
-
-            var leads = await _leadService.GetAllLeadsAsync(filter);
-            return Ok(ResponseStructure<object>.Success(leads, "Leads obtenidos exitosamente"));
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, ResponseStructure<object>.Error($"Error al obtener leads: {ex.Message}"));
-        }
-    }
-
-    /// <summary>
-    /// Obtiene marcas (BrandName) agrupadas y paginadas para el listado de Leads en Corporate.
-    /// </summary>
-    [HttpGet("brands")]
-    public async Task<IActionResult> GetLeadBrandGroups(
-        [FromQuery] bool? isRead = null,
-        [FromQuery] string? submissionType = null,
-        [FromQuery] string? platform = null,
-        [FromQuery] string? search = null,
-        [FromQuery] DateTime? fromDate = null,
-        [FromQuery] DateTime? toDate = null,
+        [FromQuery] bool groupByBrand = false,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 15,
         [FromQuery] string? sortField = null,
@@ -77,16 +54,22 @@ public class LeadController : ControllerBase
     {
         try
         {
-            var filter = BuildFilter(isRead, submissionType, platform, search, fromDate, toDate, brandName: null, sortField, sortOrder);
-            filter.PageNumber = pageNumber;
-            filter.PageSize = pageSize;
+            var filter = BuildFilter(isRead, submissionType, platform, search, fromDate, toDate, brandName, sortField, sortOrder);
 
-            var result = await _leadService.GetBrandGroupsAsync(filter);
-            return Ok(ResponseStructure<object>.Success(result, "Marcas obtenidas exitosamente"));
+            if (groupByBrand)
+            {
+                filter.PageNumber = pageNumber;
+                filter.PageSize = pageSize;
+                var brandGroups = await _leadService.GetBrandGroupsAsync(filter);
+                return Ok(ResponseStructure<object>.Success(brandGroups, "Marcas obtenidas exitosamente"));
+            }
+
+            var leads = await _leadService.GetAllLeadsAsync(filter);
+            return Ok(ResponseStructure<object>.Success(leads, "Leads obtenidos exitosamente"));
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ResponseStructure<object>.Error($"Error al obtener marcas: {ex.Message}"));
+            return StatusCode(500, ResponseStructure<object>.Error($"Error al obtener leads: {ex.Message}"));
         }
     }
 
