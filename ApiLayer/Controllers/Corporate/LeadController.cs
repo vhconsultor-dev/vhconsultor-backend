@@ -32,7 +32,7 @@ public class LeadController : ControllerBase
     #region GET – List leads
 
     /// <summary>
-    /// Obtiene todos los leads con filtros opcionales.
+    /// Obtiene leads con filtros opcionales. Use brandName para cargar contactos de una empresa.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetLeads(
@@ -41,19 +41,14 @@ public class LeadController : ControllerBase
         [FromQuery] string? platform = null,
         [FromQuery] string? search = null,
         [FromQuery] DateTime? fromDate = null,
-        [FromQuery] DateTime? toDate = null)
+        [FromQuery] DateTime? toDate = null,
+        [FromQuery] string? brandName = null,
+        [FromQuery] string? sortField = null,
+        [FromQuery] string? sortOrder = null)
     {
         try
         {
-            var filter = new LeadFilter
-            {
-                IsRead = isRead,
-                SubmissionType = submissionType,
-                Platform = platform,
-                Search = search,
-                FromDate = fromDate,
-                ToDate = toDate
-            };
+            var filter = BuildFilter(isRead, submissionType, platform, search, fromDate, toDate, brandName, sortField, sortOrder);
 
             var leads = await _leadService.GetAllLeadsAsync(filter);
             return Ok(ResponseStructure<object>.Success(leads, "Leads obtenidos exitosamente"));
@@ -61,6 +56,37 @@ public class LeadController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, ResponseStructure<object>.Error($"Error al obtener leads: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Obtiene marcas (BrandName) agrupadas y paginadas para el listado de Leads en Corporate.
+    /// </summary>
+    [HttpGet("brands")]
+    public async Task<IActionResult> GetLeadBrandGroups(
+        [FromQuery] bool? isRead = null,
+        [FromQuery] string? submissionType = null,
+        [FromQuery] string? platform = null,
+        [FromQuery] string? search = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 15,
+        [FromQuery] string? sortField = null,
+        [FromQuery] string? sortOrder = null)
+    {
+        try
+        {
+            var filter = BuildFilter(isRead, submissionType, platform, search, fromDate, toDate, brandName: null, sortField, sortOrder);
+            filter.PageNumber = pageNumber;
+            filter.PageSize = pageSize;
+
+            var result = await _leadService.GetBrandGroupsAsync(filter);
+            return Ok(ResponseStructure<object>.Success(result, "Marcas obtenidas exitosamente"));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ResponseStructure<object>.Error($"Error al obtener marcas: {ex.Message}"));
         }
     }
 
@@ -226,6 +252,29 @@ public class LeadController : ControllerBase
         var claim = User.FindFirst("UserId") ?? User.FindFirst(ClaimTypes.NameIdentifier);
         return claim != null && int.TryParse(claim.Value, out var id) ? id : null;
     }
+
+    private static LeadFilter BuildFilter(
+        bool? isRead,
+        string? submissionType,
+        string? platform,
+        string? search,
+        DateTime? fromDate,
+        DateTime? toDate,
+        string? brandName,
+        string? sortField,
+        string? sortOrder) =>
+        new()
+        {
+            IsRead = isRead,
+            SubmissionType = submissionType,
+            Platform = platform,
+            Search = search,
+            FromDate = fromDate,
+            ToDate = toDate,
+            BrandName = brandName,
+            SortField = sortField,
+            SortOrder = sortOrder,
+        };
 
     #endregion
 }

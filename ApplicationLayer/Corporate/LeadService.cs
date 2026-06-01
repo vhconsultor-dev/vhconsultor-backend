@@ -50,6 +50,9 @@ public class LeadService
     public async Task<IEnumerable<CustomerSubmission>> GetAllLeadsAsync(LeadFilter? filter = null)
         => await _leadQueryRepository.GetAllAsync(filter);
 
+    public async Task<LeadBrandGroupsQueryResult> GetBrandGroupsAsync(LeadFilter? filter = null)
+        => await _leadQueryRepository.GetBrandGroupsAsync(filter);
+
     public async Task<CustomerSubmission?> GetLeadByIdAsync(int submissionId)
         => await _leadQueryRepository.GetByIdAsync(submissionId);
 
