@@ -89,21 +89,19 @@ public class OpportunityService
 
         if (response.MentionedUserIds.Any())
         {
-            _ = Task.Run(async () =>
+            try
             {
-                try
-                {
-                    await _commentNotificationService.SendMentionNotificationsAsync(
-                        response.CommentId,
-                        request.OpportunityId,
-                        request.AuthorUserId,
-                        response.MentionedUserIds);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Failed to send mention notifications: {ex.Message}");
-                }
-            });
+                await _commentNotificationService.SendMentionNotificationsAsync(
+                    response.CommentId,
+                    request.OpportunityId,
+                    request.AuthorUserId,
+                    response.MentionedUserIds);
+            }
+            catch (Exception ex)
+            {
+                // Email failure must not block comment creation; log for diagnostics.
+                Console.WriteLine($"Failed to send mention notifications: {ex.Message}");
+            }
         }
 
         return response;

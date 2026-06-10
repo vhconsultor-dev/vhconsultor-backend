@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 using Microsoft.EntityFrameworkCore;
@@ -13,13 +14,16 @@ public class OpportunityCommentNotificationService
 {
     private readonly IConfiguration _configuration;
     private readonly DBcontext _context;
+    private readonly ILogger<OpportunityCommentNotificationService> _logger;
 
     public OpportunityCommentNotificationService(
         IConfiguration configuration,
-        DBcontext context)
+        DBcontext context,
+        ILogger<OpportunityCommentNotificationService> logger)
     {
         _configuration = configuration;
         _context = context;
+        _logger = logger;
     }
 
     public async Task SendMentionNotificationsAsync(
@@ -134,12 +138,26 @@ This is an automated notification from VH Consultor.
 
             try
             {
-                await client.SendEmailAsync(msg);
+                var sendResponse = await client.SendEmailAsync(msg);
+                if (!sendResponse.IsSuccessStatusCode)
+                {
+                    var body = await sendResponse.Body.ReadAsStringAsync();
+                    _logger.LogWarning(
+                        "SendGrid mention email failed for user {UserId} ({Email}). Status: {Status}. Body: {Body}",
+                        mentionedUser.UserId, mentionedUser.Email, sendResponse.StatusCode, body);
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "Mention notification sent to user {UserId} ({Email}) for comment {CommentId}",
+                        mentionedUser.UserId, mentionedUser.Email, commentId);
+                }
             }
             catch (Exception ex)
             {
-                // Log error but don't throw - email failure should not block comment creation
-                Console.WriteLine($"Failed to send mention notification to user {mentionedUser.UserId}: {ex.Message}");
+                _logger.LogError(ex,
+                    "Failed to send mention notification to user {UserId} ({Email})",
+                    mentionedUser.UserId, mentionedUser.Email);
             }
         }
     }
